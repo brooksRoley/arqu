@@ -14,7 +14,7 @@
 import { defineComponent } from 'vue'
 
 export default defineComponent({
-  name: 'Confirmation',
+  name: 'ReviewConfirmation',
   props: {
     stepData: {
       type: Object,
@@ -22,6 +22,7 @@ export default defineComponent({
     }
   },
   setup(props, { emit }) {
+    console.log(props.stepData)
     const prevStep = () => {
       emit('prev')
     }

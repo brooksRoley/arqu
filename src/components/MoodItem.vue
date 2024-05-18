@@ -1,13 +1,13 @@
 <template>
-  <div class="mood-item">
-    <div class="mood-icon">
+  <div class="flex items-center mb-8 text-lg">
+    <div class="mr-4">
       <slot name="icon"></slot>
     </div>
     <div class="mood-content">
-      <h3 class="mood-heading">
+      <h3>
         <slot name="heading"></slot>
       </h3>
-      <p class="mood-description">
+      <p class="m-0">
         <slot></slot>
       </p>
     </div>
@@ -21,26 +21,3 @@ export default defineComponent({
   name: 'MoodItem'
 })
 </script>
-
-<style scoped>
-.mood-item {
-  display: flex;
-  align-items: center;
-  margin-bottom: 20px;
-}
-
-.mood-icon {
-  margin-right: 20px;
-}
-
-.mood-heading {
-  margin: 0;
-  font-size: 18px;
-  font-weight: bold;
-}
-
-.mood-description {
-  margin: 0;
-  font-size: 16px;
-}
-</style>

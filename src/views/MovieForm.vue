@@ -1,7 +1,10 @@
 <template>
-  <form @submit.prevent="submitForm">
-    <input type="text" v-model="formData.username" placeholder="Username" />
-    <input type="password" v-model="formData.password" placeholder="Password" />
+  <form id="movieform" @submit.prevent="submitForm">
+    <p>
+      <label for="movieform">Movie Recommendations</label>
+    </p>
+    <input type="text" v-model="formData.title" placeholder="Title" />
+    <input type="text" v-model="formData.genre" placeholder="Genre" />
     <button type="submit" @click="submitForm">Submit</button>
   </form>
 </template>
@@ -10,13 +13,13 @@
 import { reactive } from 'vue'
 
 const formData = reactive({
-  username: '',
-  password: ''
+  title: '',
+  genre: ''
 })
 
 const submitForm = () => {
   // Handle form submission logic here
   console.log('Form submitted with data:', formData)
-  alert(formData)
+  alert(formData.title + ' ' + formData.genre)
 }
 </script>

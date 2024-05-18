@@ -2,7 +2,12 @@
   <div>
     <h2>Step 1: Select Your Mood</h2>
     <label v-for="(option, index) in moodOptions" :key="index">
-      <input type="radio" :value="option.value" v-model="selectedMood" />
+      <input
+        class="flex-auto bg-white m-4"
+        type="radio"
+        :value="option.value"
+        v-model="selectedMood"
+      />
       {{ option.label }}
     </label>
     <input
@@ -38,10 +43,8 @@ export default defineComponent({
 
     const nextStep = () => {
       if (selectedMood.value === 'custom') {
-        // If custom mood is selected, use customMood value
         emit('next', { mood: customMood.value })
       } else {
-        // Otherwise, use selectedMood value
         emit('next', { mood: selectedMood.value })
       }
     }
