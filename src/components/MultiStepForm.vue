@@ -6,6 +6,7 @@
       @next="nextStep"
       @prev="prevStep"
       @submit="submitForm"
+      @updateData="updateStepData"
     />
   </div>
 </template>
@@ -16,6 +17,17 @@ import MoodSelection from './MoodSelection.vue'
 import AdditionalInformation from './AdditionalInformation.vue'
 import Confirmation from './Confirmation.vue'
 
+interface Step {
+  component: string
+  data: Record<string, any> | null
+}
+
+interface FormData {
+  mood?: string
+  additionalInfo?: string
+  // Add more fields as needed
+}
+
 export default defineComponent({
   name: 'MultiStepForm',
   components: {
@@ -24,29 +36,54 @@ export default defineComponent({
     Confirmation
   },
   setup() {
-    const steps = [
+    const steps: Step[] = [
       { component: 'MoodSelection', data: null },
       { component: 'AdditionalInformation', data: null },
       { component: 'Confirmation', data: null }
     ]
     const currentStepIndex = ref(0)
     const currentStep = computed(() => steps[currentStepIndex.value])
-    const currentStepData = ref({})
+    const formData = ref<FormData>({})
+
+    const currentStepData = computed(() => ({
+      ...formData.value,
+      ...steps[currentStepIndex.value].data
+    }))
 
     const nextStep = () => {
-      currentStepIndex.value++
-      console.log(steps[currentStepIndex.value].data)
-      currentStep.value = steps[currentStepIndex.value]
+      if (currentStepIndex.value < steps.length - 1) {
+        currentStepIndex.value++
+      }
     }
 
     const prevStep = () => {
-      currentStepIndex.value--
-      currentStep.value = steps[currentStepIndex.value]
+      if (currentStepIndex.value > 0) {
+        currentStepIndex.value--
+      }
     }
 
-    const submitForm = (formData: any) => {
-      console.log('Form data submitted:', formData)
-      alert('Form submitted successfully!')
+    const updateStepData = (newData: Partial<FormData>) => {
+      formData.value = { ...formData.value, ...newData }
+    }
+
+    const submitForm = () => {
+      try {
+        // Perform any final validation here
+        if (!formData.value.mood) {
+          throw new Error('Mood selection is required')
+        }
+        console.log('Form data submitted:', formData.value)
+        alert('Form submitted successfully!')
+        // Reset form after successful submission
+        formData.value = {}
+        currentStepIndex.value = 0
+      } catch (error) {
+        if (error instanceof Error) {
+          alert(`Form submission failed: ${error.message}`)
+        } else {
+          alert('An unknown error occurred')
+        }
+      }
     }
 
     return {
@@ -54,6 +91,7 @@ export default defineComponent({
       currentStepData,
       nextStep,
       prevStep,
+      updateStepData,
       submitForm
     }
   }
