@@ -23,6 +23,11 @@ const router = createRouter({
       path: '/multi',
       name: 'multi',
       component: () => import('../components/MultiStepForm.vue')
+    },
+    {
+      path: '/Supplicant',
+      name: 'Supplicant',
+      component: () => import('../views/Supplicant.vue')
     }
   ]
 })
