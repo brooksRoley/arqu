@@ -12,7 +12,7 @@ import { RouterLink, RouterView } from 'vue-router'
       height="200"
     />
 
-    <div class="wrapper">
+    <div class="wrapper mb-8">
       <nav>
         <RouterLink to="/">Home</RouterLink>
         <RouterLink to="/about">About</RouterLink>
