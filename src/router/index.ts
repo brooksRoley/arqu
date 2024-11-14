@@ -33,6 +33,11 @@ const router = createRouter({
       path: '/descent',
       name: 'Descent',
       component: () => import('../views/Descent.vue')
+    },
+    {
+      path: '/elora',
+      name: 'elora',
+      component: () => import('../views/Elora.vue')
     }
   ]
 })
