@@ -19,6 +19,7 @@ import { RouterLink, RouterView } from 'vue-router'
         <RouterLink to="/movie">Movies</RouterLink>
         <RouterLink to="/multi">Survey</RouterLink>
         <RouterLink to="/supplicant">Supplicant</RouterLink>
+        <RouterLink to="/descent">Descent</RouterLink>
       </nav>
     </div>
   </header>

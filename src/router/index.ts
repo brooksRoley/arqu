@@ -28,6 +28,11 @@ const router = createRouter({
       path: '/Supplicant',
       name: 'Supplicant',
       component: () => import('../views/Supplicant.vue')
+    },
+    {
+      path: '/descent',
+      name: 'Descent',
+      component: () => import('../views/Descent.vue')
     }
   ]
 })
