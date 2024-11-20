@@ -1,7 +1,6 @@
 <template>
   <div class="supplicant-container">
     <article>
-      **Poetry: Rhyme**<br /><br />
       Lust and greed are two lobes holding venom, More harmful than snakes', hurting the holder Lust
       and greed are two sacs holding odour That kills fragrance emitted by good deeds.<br /><br />
 
@@ -42,12 +41,15 @@
       we'll reel her in, piece by piece."<br /><br />
       The air was thick with anticipation as Father Michael smiled, his teeth glinting with
       calculation. "We'll turn this little Pagan into a true believer – one who'll do our bidding
-      without question or hesitation."<br /><br />
-      **Poetry: Rhyme**<br /><br />
+      without question or hesitation."
+      <br /><br />
+
+      <br /><br />
       Venomous whispers spread like fire, As manipulation's dark wings conspire To snuff out love
       and light so bright, And plunge the soul in endless night.<br /><br />
       In lust and greed, the Church does hide, A corrupting force that glides and slides Through
       hearts and minds with insidious ease, Leaving devastation, a heart's dark peace.
+
       <br /><br />
 
       Elora sipped her tea, watching as Osric effortlessly poured himself a cup from the dainty
