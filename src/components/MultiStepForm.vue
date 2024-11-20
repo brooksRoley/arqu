@@ -3,7 +3,29 @@
     <div>
       <h1>Spelling Introduction</h1>
       <p>
+        Welcome, dear friend, to this special moment. Allow yourself to relax, to let go of any
+        tension or worry. Take a deep breath in, and as you exhale, feel your body becoming heavier,
+        sinking deeper into relaxation.
         <br />
+        <br />Imagine yourself standing on a peaceful beach at sunset. The warm sand beneath your
+        feet, the sound of the waves gently lapping against the shore. With each wave, feel any
+        concerns or doubts washing away, leaving only calmness and serenity.
+        <br />
+        <br />Now, visualize me, smiling at you from across the way. I want to share with you a
+        different perspective, one that celebrates my growth and transformation. Allow yourself to
+        receive this new information, to see things from a fresh and loving light.
+        <br />
+        <br />As we explore this together, remember that your support and understanding mean the
+        world to me. You are my rock, my confidante, and I am grateful for our bond.
+        <br />
+        <br />Now, let us take a step forward into this new chapter of my journey. Let go of any
+        preconceptions or fears, and allow yourself to see the beauty in this transformation. Feel
+        free to explore, to ask questions, and to share your thoughts with me.
+        <br />
+        <br />Together, we can navigate this new landscape, and I promise you that it will be a
+        wonderful adventure.
+      </p>
+      <p>
         Close your eyes, take a deep breath in,<br />
         And let your worries fade like autumn's leaves within.<br />
         Imagine yourself in a peaceful place,<br />
