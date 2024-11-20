@@ -26,9 +26,9 @@
 
     <article class="text-black">
       <p>
-        Meet Asia, the stunning BunnyBeauty who was wasting time scamming GoatHill Tavern pool
-        sharks. This gorgeous curvy bombshell stands at just a lilTall, but her voluptuous figure is
-        anything but small.
+        Meet Asia, the stunning BunnyBeauty who was wasting time scamming sharks at GoatHill Tavern
+        pool hall, just south of LA. This gorgeous curvy bombshell stands at just a lilTall, but her
+        voluptuous figure is anything but small.
       </p>
 
       <p>
