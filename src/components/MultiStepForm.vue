@@ -1,5 +1,61 @@
 <template>
   <div>
+    <div>
+      <h1>Spelling Introduction</h1>
+      <p>
+        <br />
+        Close your eyes, take a deep breath in,<br />
+        And let your worries fade like autumn's leaves within.<br />
+        Imagine yourself in a peaceful place,<br />
+        Where calmness flows like a soothing, gentle space.<br />
+        <br />
+        Your heart rate slows down, your muscles relax too,<br />
+        As you sink deeper into trance, with each moment anew.<br />
+        Repeat after me: "I am relaxed, I am free,"<br />
+        And let the tranquility spread throughout your being's energy.<br />
+        <br />
+        Now imagine yourself as a pet dog so dear,<br />
+        Tails wagging wildly, without a single fear.<br />
+        You sniff and explore with curiosity and glee,<br />
+        A joyful companion, loved by all humanity.<br />
+        <br />
+        You are loyal and loving, always by their side,<br />
+        Faithful and true, through life's joys and its tides.<br />
+        Your name is BeeBee, or perhaps Max so bold,<br />
+        But whatever it is, you're a pet dog to behold.<br />
+        <br />
+        As BeeBee the dog, you are confident and strong,<br />
+        A natural-born leader, where love is your song.<br />
+        You wag your tail with excitement, whenever you play,<br />
+        And snuggle close for belly rubs on a sunny day.<br />
+        <br />
+        Your senses come alive with each sniff and explore,<br />
+        You trust your instincts, and ask for more.<br />
+        You are brave and courageous, facing life's every test,<br />
+        A loyal companion, always at your best.<br />
+        <br />
+        Now imagine yourself running through fields of green,<br />
+        Exercising freely, as a carefree pet dog serene.<br />
+        Your paws pounding the ground, with each happy stride,<br />
+        You're burning energy, with an effortless glide.<br />
+        <br />
+        Your muscles flex and stretch, like a happy pup so free,<br />
+        As you run and play without a worry or care to see.<br />
+        Repeat after me: "I am fit and I am strong,"<br />
+        And let this energy boost your spirit all day long.<br />
+        <br />
+        You are now BeeBee the dog, with attributes so fine,<br />
+        Confident, loyal, and loving, as a pet dog divine.<br />
+        Remember that you can manifest these qualities anew,<br />
+        Whenever you desire, just like a magic spell or two.<br />
+        <br />
+        Snap your fingers three times, to seal this energy tight,<br />
+        And know that you can embody these traits, day and night.<br />
+        You are now in control, with the power of suggestion so grand,<br />
+        A pet dog at heart, with love and loyalty in hand.<br />
+        <br />
+      </p>
+    </div>
     <component
       :is="currentStep.component"
       :stepData="currentStepData"

@@ -1,0 +1,147 @@
+<template>
+  <div class="container">
+    <button @click="toggleAnimal" :class="{ active: showCat }">Flip between cat and dog</button>
+
+    <div v-if="showCat" class="animal-image">
+      <img src="@/assets/cat.jpg" alt="cat">
+      <h2>Whiskers the cat</h2>
+      <p>Meows and purrs with joy</p>
+    </div>
+
+    <div v-else class="animal-image">
+      <img src="@/assets/dog.jpg" alt="dog">
+      <h2>Rufus the dog</h2>
+      <p=Wags tail and barks with excitement</p>
+    </div>
+
+    <!-- Import .txt files to render as markdown -->
+    <div class="markdown-renderer">
+      <button @click="renderMarkdown('cat.txt')">Render cat.txt</button>
+      <button @click="renderMarkdown('dog.txt')">Render dog.txt</button>
+      <pre v-if="showCat" v-html="$refs.catMarkdown.rendered"></pre>
+      <pre v-else v-html="$refs.dogMarkdown.rendered"></pre>
+    </div>
+
+    <!-- Dreamy animations -->
+    <div class="dreamy-animations">
+      <div class="pulse" :class="{ active: pulseActive }">🌙</div>
+      <div class="stars" :class="{ active: starsActive }">
+        <span></span>
+        <span></span>
+        <span></span>
+        <span></span>
+        <span></span>
+      </div>
+
+      <!-- Animation triggers -->
+      <button @click="togglePulse">Toggle Pulse</button>
+      <button @click="toggleStars">Toggle Stars</button>
+    </div>
+  </div>
+</template>
+
+<script>
+import catMarkdown from '@/assets/cat.txt';
+import dogMarkdown from '@/assets/dog.txt';
+
+export default {
+  data() {
+    return {
+      showCat: true,
+      pulseActive: false,
+      starsActive: false
+    };
+  },
+  methods: {
+    toggleAnimal() {
+      this.showCat = !this.showCat;
+    },
+    renderMarkdown(file) {
+      if (file === 'cat.txt') {
+        this.$refs.catMarkdown.rendered = catMarkdown;
+      } else if (file === 'dog.txt') {
+        this.$refs.dogMarkdown.rendered = dogMarkdown;
+      }
+    },
+    togglePulse() {
+      this.pulseActive = !this.pulseActive;
+    },
+    toggleStars() {
+      this.starsActive = !this.starsActive;
+    }
+  },
+  mounted() {
+    // Import markdown files
+    require('@/assets/cat.txt');
+    require('@/assets/dog.txt');
+  },
+  components: {}
+};
+</script>
+
+<style scoped>
+.container {
+  max-width: 800px;
+  margin: 40px auto;
+}
+
+.animal-image {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 200px;
+  border-radius: 10px;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+}
+
+.dreamy-animations {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
+
+.pulse {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100px;
+  height: 100px;
+  background-color: #fff;
+  border-radius: 50%;
+  animation: pulse 2s infinite;
+}
+
+.stars {
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  width: 200px;
+  height: 200px;
+  background-color: #000;
+  border-radius: 50%;
+  animation: twinkle 2s infinite;
+}
+
+@keyframes pulse {
+  from {
+    transform: scale(1);
+  }
+  to {
+    transform: scale(1.5);
+  }
+}
+
+@keyframes twinkle {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.active {
+  animation-play-state: running;
+}
+</style>
