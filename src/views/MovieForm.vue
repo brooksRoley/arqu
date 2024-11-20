@@ -63,69 +63,65 @@
     </div>
 
     <article>
-      **The Devil and Angel on the Shoulder of Dr. Rachel**
-      <br /><br />
+      Lucifer and Ariel bicker on the Shoulder of Dr. Rachel's shoulder as she observed her
+      patients' session.<br /><br />
       (The scene is set in a quiet office, with a single spotlight shining down on Dr. Rachel, a
-      renowned stage and relationship hypnotherapist. Her shoulders are personified by two
-      characters: Lucifer, the Devil, and Ariel, the Angel.)
+      renowned stage and relationship psychiatrist and hypnotherapist. Standing at her shoulders, id
+      and ego are personified by two characters: Lucifer, or Luci the devil, and Ariel, or Aries the
+      Seraph Sprite) <br /><br />
+      Luci: Ahahahaha! Come on, Doc. You know what sells tickets – and I'm not just talking about
+      your entrancing stage shows. Your clients are eating up the drama of on stage S&M, the thrill
+      of physical intimacy, and the excitement of exploring their desires. It's like a wild ride,
+      and they can't get enough!
       <br /><br />
-      **Lucifer (The Devil):** Ahahahaha! Come on, Doc. You know what sells tickets – and I'm not
-      just talking about your hypnosis shows. Your clients are eating up the drama of non-monogamy,
-      the thrill of physical intimacy, and the excitement of exploring their desires. It's like a
-      wild ride, and they can't get enough!
+      Ariel: But, Rachel, don't you see? By catering to those desires, you're sometimes perpetuating
+      the very problems you claim to help fix. The more people focus on the thrill of new
+      connections, the less they prioritize real emotional intimacy and commitment.
       <br /><br />
-      **Ariel (The Angel):** But, Rachel, don't you see? By catering to those desires, you're
-      sometimes perpetuating the very problems you claim to help fix. The more people focus on the
-      thrill of new connections, the less they prioritize real emotional intimacy and commitment.
+      Dr. Rachel: (sighing) Oh, Ariel, I know what you're saying. But honestly, it's about balance.
+      My clients want excitement, yes... but they also crave connection. And with non-monogamy, it
+      can be a beautiful way to explore those desires in a safe and consensual manner.
       <br /><br />
-      **Dr. Rachel:** (sighing) Oh, Ariel, I know what you're saying. But honestly, it's about
-      balance. My clients want excitement, yes... but they also crave connection. And with
-      non-monogamy, it can be a beautiful way to explore those desires in a safe and consensual
-      manner.
+      Luci: Exactly! And the more they open up, the more they learn about themselves – and each
+      other. It's like peeling back layers of an onion; the drama, the passion... it all contributes
+      to a deeper understanding of what they want from life.
       <br /><br />
-      **Lucifer:** Exactly! And the more they open up, the more they learn about themselves – and
-      each other. It's like peeling back layers of an onion; the drama, the passion... it all
-      contributes to a deeper understanding of what they want from life.
-      <br /><br />
-      **Ariel:** But at what cost? You're often focusing on the external aspects of relationships:
+      Ariel: But at what cost? You're often focusing on the external aspects of relationships:
       physical attraction, social status, and the thrill of conquest. Meanwhile, you're neglecting
       the true foundation of any successful partnership – trust, communication, and shared values.
       <br /><br />
-      **Dr. Rachel:** (smiling wryly) Ah, Ariel, always so quick to remind me of the importance of
-      heart over hormones. You're right, those are crucial components of any healthy relationship.
-      But what about when people come to see me with issues? What about the ones who've been hurt or
+      Dr. Rachel: (smiling wryly) Ah, Ariel, always so quick to remind me of the importance of heart
+      over hormones. You're right, those are crucial components of any healthy relationship. But
+      what about when people come to see me with issues? What about the ones who've been hurt or
       feel lost?
       <br /><br />
-      **Lucifer:** (grinning mischievously) Ah, now we get to the fun part! When people let go of
-      their inhibitions and explore their desires, they often discover new aspects of themselves.
-      And with your guidance, Doc... well, it's like watching a flower bloom!
+      Luci: (grinning mischievously) Ah, now we get to the fun part! When people let go of their
+      inhibitions and explore their desires, they often discover new aspects of themselves. And with
+      your guidance, Doc... well, it's like watching a flower bloom!
       <br /><br />
-      **Ariel:** (shaking her head) That may be true, but what about when those petals get bruised?
-      The trauma, the pain... that's where the real work begins. And not just on an individual
-      level, either – couples and communities are affected too.
+      Ariel: (shaking her head) That may be true, but what about when those petals get bruised? The
+      trauma, the pain... that's where the real work begins. And not just on an individual level,
+      either – couples and communities are affected too.
       <br /><br />
-      **Dr. Rachel:** (nodding thoughtfully) You're right, Ariel. As a hypnotherapist, I see both
-      sides of the coin. It's about finding balance between excitement and intimacy, between
-      exploration and commitment.
+      Dr. Rachel: (nodding thoughtfully) You're right, Ariel. As a hypnotherapist, I see both sides
+      of the coin. It's about finding balance between excitement and intimacy, between exploration
+      and commitment.
       <br /><br />
       (Lucifer looks at Ariel with a hint of frustration.)
       <br /><br />
-      **Lucifer:** Fine. Play it safe, Doc. See how that works out for you. (he disappears in a puff
-      of smoke)
+      Luci: Fine. Play it safe, Doc. See how that works out for you. (he disappears in a puff of
+      smoke)
       <br /><br />
       (Ariel smiles warmly at Dr. Rachel.)
       <br /><br />
-      **Ariel:** Remember, Rachel – your work is valuable because you help people grow and learn
-      about themselves. Don't let the thrill of excitement overshadow the importance of true
-      intimacy and commitment.
+      Ariel: Remember, Rachel – your work is valuable because you help people grow and learn about
+      themselves. Don't let the thrill of excitement overshadow the importance of true intimacy and
+      commitment.
       <br /><br />
       (Dr. Rachel takes a deep breath, nodding in understanding.)
       <br /><br />
-      **Dr. Rachel:** I'll keep that in mind, Ariel. After all, it's not just about selling tickets
-      – it's about helping people find their way to genuine connection and happiness.
-      <br /><br />
-      (The spotlight fades, and the office returns to normal.) **Healthy Relationship Counseling
-      Session**
+      Dr. Rachel: I'll keep that in mind, Ariel. After all, it's not just about selling tickets –
+      it's about helping people find their way to genuine connection and happiness.
       <br /><br />
       (The scene is set in a cozy, upscale living room. Dr. Rachel sits comfortably between two
       couples: Michael and Mike (MM) and Emily and Sarah (FF). The atmosphere is relaxed, with
@@ -134,16 +130,14 @@
       Dr. Rachel: Good evening, everyone. I'm glad you're here to work through some challenges
       together. Can we start by each of you sharing a little about what's been going on?
       <br /><br />
-      Michael: (MM) We've been having issues with trust since Mike started using that dating app
-      again.
+      Michael: We've been having issues with trust since Mike started using that dating app again.
       <br /><br />
-      Emily: (FF) Yeah, and it feels like Sarah is always getting distracted by her phone during
-      dinner.
+      Emily: Yeah, and it feels like Sarah is always getting distracted by her phone during dinner.
       <br /><br />
       Sarah: I'm just trying to unwind after work, but they get mad at me for being on my phone.
       <br /><br />
-      Mike: (MM) It's not just about the phone; we've been having trust issues since we started
-      exploring non-monogamy together.
+      Mike: It's not just about the phone; we've been having trust issues since we started exploring
+      non-monogamy together.
       <br /><br />
       Dr. Rachel: Okay, let's take a step back and look at this from all angles. Michael and Mike,
       can you tell me more about what happens when Mike uses that dating app? And Emily and Sarah,
@@ -165,8 +159,6 @@
       <br /><br />
       (The couples engage in a constructive conversation, with Dr. Rachel facilitating the
       discussion and offering guidance.)
-      <br /><br />
-      **As an Entertainer**
       <br /><br />
       (The scene shifts to a crowded nightclub or stage show. Dr. Rachel is now dressed in a
       provocative outfit, with bold makeup and a confident smile.)
@@ -198,8 +190,6 @@
       <br /><br />
       (Alex starts to moan softly as Dr. Rachel continues to guide him through the trance.)
       <br /><br />
-      **Turning on the Baser Parts of Desire**
-      <br /><br />
       (The scene shifts back to the nightclub, with the crowd fully engaged in the show.)
       <br /><br />
       Dr. Rachel: (with a sly smile) Now, let's take it up a notch! Who's ready for some real fun?
@@ -224,33 +214,25 @@
       (The scene fades to black as the crowd cheers and whistles, with Dr. Rachel smiling
       triumphantly.)
       <br /><br />
-      **The Hypnotized Couple**
-      <br /><br />
       Dr. Rachel is working with a new couple, Alex and Maddie, who have come in for hypnosis
       therapy. They're both curious about exploring their desires and fantasies, but are hesitant to
       take the leap.
       <br /><br />
-      **The Devil's Perspective**
-      <br /><br />
       (The scene shifts to Dr. Rachel's shoulder, where the Devil is whispering in her ear.)
       <br /><br />
-      Devil: Ahahahaha! Come on, Doc! These two are just waiting for you to show them the ropes!
+      Luci: Ahahahaha! Come on, Doc! These two are just waiting for you to show them the ropes!
       They're eager to explore their kinks and desires... don't hold back!
       <br /><br />
       Dr. Rachel (thinking): Hmm, I could suggest that they try having a threesome with another
       couple... or maybe even exploring some more exotic fantasies...
       <br /><br />
-      **The Angel's Perspective**
-      <br /><br />
-      (The scene shifts to Dr. Rachel's other shoulder, where the Angel is whispering in her ear.)
+      (The scene shifts to Dr. Rachel's other shoulder, where Ariel is whispering in her ear.)
       <br /><br />
       Angel: Rachel, be careful! These two are just starting out on this journey... make sure you
       guide them gently and with compassion.
       <br /><br />
       Dr. Rachel (thinking): Ah, yes... I don't want to overwhelm them or push them into something
       they're not ready for. Maybe we can start with some smaller, more manageable steps...
-      <br /><br />
-      **The Hypnosis Session**
       <br /><br />
       (Back in the hypnosis session)
       <br /><br />
@@ -266,16 +248,12 @@
       <br /><br />
       Alex and Maddie: (in unison) Oh...
       <br /><br />
-      **The Devil's Suggestion**
-      <br /><br />
       (The scene shifts back to Dr. Rachel's shoulder, where the Devil is whispering in her ear.)
       <br /><br />
-      Devil: Ahahahaha! Come on, Doc! You've got them right where you want them... suggest that they
-      try a MFMF MMF FFM scenario!
+      Luci: Ahahahaha! Come on, Doc! You've got them right where you want them... suggest that they
+      get the party going, last person in the pool has to sub in the orgy.
       <br /><br />
       Dr. Rachel (thinking): Hmm, maybe I should push the boundaries just a little bit...
-      <br /><br />
-      **The Angel's Intervention**
       <br /><br />
       (The scene shifts to Dr. Rachel's other shoulder, where the Angel is whispering in her ear.)
       <br /><br />
@@ -284,8 +262,6 @@
       <br /><br />
       Dr. Rachel (thinking): Ah, yes... you're right. I don't want to overwhelm them or push them
       into something they're not ready for...
-      <br /><br />
-      **The Hypnosis Session Continues**
       <br /><br />
       (Back in the hypnosis session)
       <br /><br />
@@ -296,8 +272,6 @@
       <br /><br />
       (The scene fades to black as Dr. Rachel continues to guide the couple through their hypnosis
       session, weighing her options between the Devil's suggestion and the Angel's guidance.)
-      <br /><br />
-      **The Magical Amulet**
       <br /><br />
       As the patient, Alex, says this, he unknowingly activates the magical amulet, which starts to
       glow with an otherworldly energy. The room begins to feel charged with a strange, almost
@@ -320,8 +294,6 @@
       Dr. Rachel: (trying to regain control of the situation) Okay, everyone, let's just take a deep
       breath and try to calm down. We can work through this together.
       <br /><br />
-      **The Amulet's Influence**
-      <br /><br />
       As the others continue to feel the effects of the amulet's magic, they start to act out in
       ways that are not entirely their own. Mike begins to make suggestive comments to Emily, while
       Maddie starts to flirt shamelessly with Alex.
@@ -343,8 +315,6 @@
       (The scene ends with Dr. Rachel trying to break up the amulet-induced chaos, while the others
       continue to act out under its influence.)
       <br /><br />
-      **The Amulet's Power**
-      <br /><br />
       As Dr. Rachel wrestles hold of the amulet, its magic is suddenly extinguished, and the
       patients stop in their tracks. They look at each other, confused and disoriented.
       <br /><br />
@@ -359,8 +329,6 @@
       (She looks around the room, seeing only empty space where her patients had been. She stands
       up, still trying to make sense of what has occurred.)
       <br /><br />
-      **The Parallel Reality**
-      <br /><br />
       As she looks down at the floor, Dr. Rachel sees a shimmering light that seems to be pulling
       her in. Without thinking, she swims and her strokes take her through the floor, following the
       slipstream left by her patients.
@@ -373,8 +341,6 @@
       (She looks around, seeing people from all walks of life living their lives in a world where
       all of their desires have been fulfilled. People are laughing, smiling, and embracing each
       other with open arms.)
-      <br /><br />
-      **The Wishes Fulfilled**
       <br /><br />
       As she wanders through this parallel reality, Dr. Rachel sees that the patients' wishes have
       come true. Mike is standing on stage, leading a triumphant procession of people cheering for
@@ -391,8 +357,6 @@
       have been fulfilled. The patients' wishes have come true, and they are living in a world where
       love, joy, and acceptance reign supreme.)
       <br /><br />
-      **The New Reality**
-      <br /><br />
       As Dr. Rachel looks around this new reality, she sees a world that is full of wonder, magic,
       and possibility. She realizes that the amulet's power has created a place where anything can
       happen, and where people are free to live their lives as they see fit.
@@ -405,8 +369,6 @@
       <br /><br />
       (The scene fades to black as Dr. Rachel disappears into the unknown, leaving behind our world
       and entering the magical realm where all desires are fulfilled.)
-      <br /><br />
-      **The Magic Takes Effect**
       <br /><br />
       As soon as Dr. Rachel makes her unconscious wish, the magic of the amulet kicks in, and she
       feels a strange sensation wash over her.
@@ -437,8 +399,6 @@
       <br /><br />
       (The patients all start to admire themselves in the mirror, admiring their new figures and
       feeling a newfound sense of confidence and self-assurance.)
-      <br /><br />
-      **The New Reality**
       <br /><br />
       As they gaze at their reflections, Dr. Rachel realizes that they have been transported to a
       new reality where their wishes have come true.

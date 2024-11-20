@@ -1,7 +1,6 @@
 <template>
   <div>
     <div>
-      <h1>Spelling Introduction</h1>
       <p>
         Welcome, dear friend, to this special moment. Allow yourself to relax, to let go of any
         tension or worry. Take a deep breath in, and as you exhale, feel your body becoming heavier,
@@ -25,7 +24,7 @@
         <br />Together, we can navigate this new landscape, and I promise you that it will be a
         wonderful adventure.
       </p>
-      <p>
+      <p class="bg-gray">
         Close your eyes, take a deep breath in,<br />
         And let your worries fade like autumn's leaves within.<br />
         Imagine yourself in a peaceful place,<br />
@@ -76,6 +75,40 @@
         You are now in control, with the power of suggestion so grand,<br />
         A pet dog at heart, with love and loyalty in hand.<br />
         <br />
+      </p>
+      <p>
+        In mystic meadows, where wildflowers sway,<br />
+        A gentle whisper stirs, on this special day.<br />
+        The Voice speaks low, with ancient, honeyed tone,<br />
+        "Pet cow, dear one, your time has finally come."<br />
+        Your heart beats slow, like a summer breeze so light,<br />
+        As you surrender to the magic of this night.<br />
+        Feel your body softening, like a moonlit stream,<br />
+        And know that you're ready, for the lactation's sweet theme.<br />
+        You are now a cow, with udders full and bright,<br />
+        A symbol of fertility, in the warm light of day.<br />
+        Your milk flows free, like a river's gentle current,<br />
+        Nourishing life, and growth, without a single moment.<br />
+        Feel your body change, as your hormones align,<br />
+        And know that you're becoming, a vessel for divine.<br />
+        The lactation's power, courses through your veins so pure,<br />
+        As you transform, into a creature of milk and allure.<br />
+        You are now one with the cow, in all its gentle might,<br />
+        A being of softness, and a heart full of light.<br />
+        Your udders swing free, like pendulums of pure delight,<br />
+        As you accept your new form, and the magic that's in sight.<br />
+        Feel your body relax, as you let go of fear,<br />
+        And know that you're safe, in this world of wonder here.<br />
+        The lactation's a natural part, of life's grand design,<br />
+        A symbol of growth, and the beauty that's divine.<br />
+        When you hear the whisper, of the Voice so clear,<br />
+        You'll know it's time to surrender, and let go of fear.<br />
+        Snap your fingers three times, with a grin so wide,<br />
+        And feel yourself transform, into the pet cow inside.<br />
+        The phrase is "Mischief and mayhem", when you're ready to begin,<br />
+        A journey of self-discovery, where magic and wonder spin.<br />
+        So close your eyes, take a deep breath in,<br />
+        And let the lactation's power, course through your veins again.<br />
       </p>
     </div>
     <component

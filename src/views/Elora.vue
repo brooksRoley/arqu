@@ -41,15 +41,12 @@
       we'll reel her in, piece by piece."<br /><br />
       The air was thick with anticipation as Father Michael smiled, his teeth glinting with
       calculation. "We'll turn this little Pagan into a true believer – one who'll do our bidding
-      without question or hesitation."
-      <br /><br />
+      without question or hesitation."<br /><br />
 
-      <br /><br />
       Venomous whispers spread like fire, As manipulation's dark wings conspire To snuff out love
       and light so bright, And plunge the soul in endless night.<br /><br />
       In lust and greed, the Church does hide, A corrupting force that glides and slides Through
       hearts and minds with insidious ease, Leaving devastation, a heart's dark peace.
-
       <br /><br />
 
       Elora sipped her tea, watching as Osric effortlessly poured himself a cup from the dainty
@@ -106,9 +103,6 @@
 
       And so, she stayed, transfixed by the hypnotic dance between them, as they waltzed through a
       minefield of emotions, each step carefully choreographed by Osric's masterful hand...
-      <br /><br />
-
-      **Poetry: "The Art of Persuasion"**
       <br /><br />
 
       In eyes that sparkle like diamonds bright, A soul is trapped, in endless night. A game is
@@ -210,9 +204,6 @@
       and trepidation...
       <br /><br />
 
-      **Poetry: "The Tides of Attraction"**
-      <br /><br />
-
       In secret gardens, where shadows play, A Pagan heart beats out its own way. Elora's soul is
       torn, like a leaf on the wind, Between reason and passion, forever entwined.
       <br /><br />
@@ -284,86 +275,79 @@
       maelstrom of passion and desire that would consume them both...
       <br /><br />
 
-      **Poetry: "The Pandora's Box"**
-      <br /><br />
-      In secret chambers of the heart,<br />
-      A Pandora's box lies waiting to start.<br />
-      Strongest matches whisper sweet nothings low,<br />
-      Awakening passions that only love can know.<br />
-      <br /><br /><br />
-      Craving, desire, excitement, fervor too,<br />
-      Greed, hunger, libido, longing – all anew.<br />
-      Sensuality, thirst, and appetite combine,<br />
-      To unleash a torrent of emotions that's truly divine.<br />
-      <br /><br /><br />
-      Animalism, aphrodisia, appetence take hold,<br />
-      Avidity, carnality, concupiscence unfold.<br />
-      Covetousness, cupidity, eroticism ignite,<br />
-      Lasciviousness, lechery, lewdness – all ablaze tonight.<br />
-      <br /><br /><br />
-      Prurience, pruriency, salaciousness entwine,<br />
-      Salacity, sensualism, urge, and wantonness align.<br />
-      Weakness, yen – the heart beats fast and true,<br />
-      As Pandora's box is opened, and passion breaks through.<br />
-      <br /><br />
-      And in this moment of surrender, Elora finds herself becoming one with Osric, their desires
-      merging like the fusion of two flames...
-      <br />
+      <italic>
+        In secret chambers of the heart,<br />
+        A Pandora's box lies waiting to start.<br />
+        Strongest matches whisper sweet nothings low,<br />
+        Awakening passions that only love can know.<br />
+        <br /><br /><br />
+        Craving, desire, excitement, fervor too,<br />
+        Greed, hunger, libido, longing – all anew.<br />
+        Sensuality, thirst, and appetite combine,<br />
+        To unleash a torrent of emotions that's truly divine.<br />
+        <br /><br /><br />
+        Animalism, aphrodisia, appetence take hold,<br />
+        Avidity, carnality, concupiscence unfold.<br />
+        Covetousness, cupidity, eroticism ignite,<br />
+        Lasciviousness, lechery, lewdness – all ablaze tonight.<br />
+        <br /><br /><br />
+        Prurience, pruriency, salaciousness entwine,<br />
+        Salacity, sensualism, urge, and wantonness align.<br />
+        Weakness, yen – the heart beats fast and true,<br />
+        As Pandora's box is opened, and passion breaks through.<br />
+        <br /><br />
+        And in this moment of surrender, Elora finds herself becoming one with Osric, their desires
+        merging like the fusion of two flames...
+      </italic>
 
-      **Elora:** (standing tall, surrounded by her tribe) "We will not be intimidated! Our ways are
+      <br />
+      Elora: (standing tall, surrounded by her tribe) "We will not be intimidated! Our ways are
       ancient and true!"<br />
       <br />
 
-      **Osric (The Mountain):** (sneering) "You call it 'ancient' when you're nothing but savages?
-      The Church has come to bring light and order to your... 'ways'. Surrender now, and perhaps we
-      can show mercy."<br />
+      Osric: (sneering) "You call it 'ancient' when you're nothing but savages? The Church has come
+      to bring light and order to your... 'ways'. Surrender now, and perhaps we can show mercy."<br />
       <br />
 
-      **Elora:** (raising her hands to summon a great bear) "I think not! Our ways have given us
-      life, just as yours will take it from you!"<br />
+      Elora: (raising her hands to summon a great bear) "I think not! Our ways have given us life,
+      just as yours will take it from you!"<br />
       <br />
 
-      **Osric:** (sneering) "Foolish woman. You're no match for the power of the Church. And if I
-      must break your spirit... so be it."<br />
+      Osric: (sneering) "Foolish woman. You're no match for the power of the Church. And if I must
+      break your spirit... so be it."<br />
       <br />
 
-      **[A voice echoes in the background]**<br />
-      <br />
-
-      **God (whispering to The Devil):** "Ah, Lucifer... our little wager is coming due. Will you
+      [A voice echoes in the background] "Ah, Lucifer... our little wager is coming due. Will you
       take this soul? The domestication that comes with their surrender will be... interesting,
-      don't you think?"<br />
+      don't you think?"<br /><br />
+
+      Luci: (grinning) "Oh, yes. I'll collect her spirit and break her spirit too. And when the
+      Church takes all she has, they'll own not just her heart but her very essence."<br />
       <br />
 
-      **The Devil:** (grinning) "Oh, yes. I'll collect her spirit and break her spirit too. And when
-      the Church takes all she has, they'll own not just her heart but her very essence."<br />
+      **God:** "Mmmm... indeed. But remember, our wager was for the soul of Elora's tribe which,
+      thank to our pork and transmogriphy and gerrymandering is all you need. Not this... lovely
+      creature. Do make sure to deliver."<br />
       <br />
 
-      **God:** "Mmmm... indeed. But remember, our wager was for the soul of Elora's tribe leader.
-      Not this... lovely creature. Do make sure to deliver."<br />
+      [Osric's face darkens with a cruel smile]br /><br />
+
+      (her voice rising in defiance) "No! You'll never take us! We are the land itself, Sings
+      free!"<br /><br />
+
+      (suddenly cold) "That is the cost of progress my dear. There is nothing I can do to slow the
+      scythe of progress."<br />
       <br />
 
-      **[Osric's face darkens with a cruel smile]**<br />
-      <br />
-
-      **Elora:** (her voice rising in defiance) "No! You'll never take us! We are the land itself,
-      alive and free!"<br />
-      <br />
-
-      **Osric:** (suddenly cold) "We'll see about that. Let this be a warning to all who would
-      resist the Church's authority."<br />
-      <br />
-
-      **[The scene fades as Osric raises his hand, and Elora's world begins to darken]**<br />
+      **[The scene fades as Osric holds her firmly, and Elora's world begins to darken]**<br />
       <br />
 
       **Scene: A small, cozy cottage nestled in the mountains**<br />
       <br />
 
-      **Osric (The Mountain) sits on a worn couch, surrounded by candles and books, his black robes
-      replaced with a comfortable pair of trousers and a soft white shirt. He's holding a cup of
-      steaming tea, and Elora is waking up from a peaceful sleep, stretching her limbs and
-      yawning.**<br />
+      **Osric sits on a worn couch, surrounded by candles and books, his black robes replaced with a
+      comfortable pair of trousers and a soft white shirt. He's holding a cup of steaming tea, and
+      Elora is waking up from a peaceful sleep, stretching her limbs and yawning.**<br />
       <br />
 
       **Elora:** (groggily) "Where... where am I?"<br />
@@ -448,9 +432,8 @@
       to her lips, and as she sips, her eyes seem to glaze over, lost in thought.**<br />
       <br />
 
-      **Osric (The Mountain) sits across from her, his face a mask of concern and interest. He
-      watches as Elora's gaze drifts into the distance, her thoughts consumed by the wine's hypnotic
-      effects.**<br />
+      **Osric sits across from her, his face a mask of concern and interest. He watches as Elora's
+      gaze drifts into the distance, her thoughts consumed by the wine's hypnotic effects.**<br />
       <br />
 
       **Elora:** (her voice barely above a whisper) "It's just so... easy to forget sometimes. To
