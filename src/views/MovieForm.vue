@@ -63,8 +63,8 @@
     </div>
 
     <article>
-      Lucifer and Ariel bicker on the Shoulder of Dr. Rachel's shoulder as she observed her
-      patients' session.<br /><br />
+      Lucifer and Ariel from their perches extended far along the broad shoulders of Dr. Rachel as
+      she observed her morning session.<br /><br />
       (The scene is set in a quiet office, with a single spotlight shining down on Dr. Rachel, a
       renowned stage and relationship psychiatrist and hypnotherapist. Standing at her shoulders, id
       and ego are personified by two characters: Lucifer, or Luci the devil, and Ariel, or Aries the

@@ -77,6 +77,54 @@
         <br />
       </p>
       <p>
+        Close your eyes, take a deep breath in,<br />
+        And let your worries fade like mist that disappears within.<br />
+        Imagine yourself in a peaceful place,<br />
+        Where calmness flows like a soothing, gentle space.<br />
+        Your heart rate slows down, your muscles relax too,<br />
+        As you sink deeper into trance, with each moment anew.<br />
+        Repeat after me: "I am relaxed, I am free,"<br />
+        And let the tranquility spread throughout your being's energy.<br />
+        Now imagine yourself as a pet cat so fine,<br />
+        Purring softly, with eyes that shine like stars in line.<br />
+        You prowl and explore with curiosity and play,<br />
+        A gentle companion, loved by all each day.<br />
+        Your name is Whiskers, or perhaps Luna so bright,<br />
+        But whatever it is, you're a pet cat, pure delight.<br />
+        You're agile and quick, with reflexes so grand,<br />
+        And your soft fur feels wonderful in this peaceful land.<br />
+        As Whiskers the cat, you are confident and sly,<br />
+        A natural-born hunter, where stealth is your guise.<br />
+        You stalk and pounce with excitement, whenever you play,<br />
+        And snuggle close for pets on a sunny day.<br />
+        Your senses come alive with each whisker so fine,<br />
+        You trust your instincts, and ask for more in line.<br />
+        You are brave and courageous, facing life's every test,<br />
+        A loyal companion, always at your best.<br />
+        Now imagine yourself running through fields of green,<br />
+        Exercising freely, as a carefree pet cat serene.<br />
+        Your paws pounding the ground, with each happy stride,<br />
+        You're burning energy, with an effortless glide.<br />
+        Your muscles flex and stretch, like a happy pup so free,<br />
+        As you run and play without a worry or care to see.<br />
+        Repeat after me: "I am fit and I am strong,"<br />
+        And let this energy boost your spirit all day long.<br />
+        Now imagine yourself returning to that peaceful place,<br />
+        Where calmness flows like a soothing, gentle space.<br />
+        Your heart rate slows down, your muscles relax too,<br />
+        As you sink deeper into trance, with each moment anew.<br />
+        Repeat after me: "I am relaxed, I am free,"<br />
+        And let the tranquility spread throughout your being's energy.<br />
+        Remember that you can manifest these qualities anew,<br />
+        Whenever you desire, just like a magic spell or two.<br />
+        <br />
+        Snap your fingers three times, to seal this energy tight,<br />
+        And know that you can embody these traits, day and night.<br />
+        You are now in control, with the power of suggestion so grand,<br />
+        A pet cat at heart, with love and loyalty in hand.<br />
+        **Snap Snap Snap**
+      </p>
+      <p>
         In mystic meadows, where wildflowers sway,<br />
         A gentle whisper stirs, on this special day.<br />
         The Voice speaks low, with ancient, honeyed tone,<br />
