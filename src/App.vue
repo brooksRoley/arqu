@@ -16,13 +16,13 @@ import { RouterLink, RouterView } from 'vue-router'
       <nav>
         <RouterLink to="/">Home</RouterLink>
         <RouterLink to="/about">About</RouterLink>
-        <RouterLink to="/elora">Elora and The Mountain</RouterLink>
-        <RouterLink to="/movie">Movies</RouterLink>
+        <RouterLink to="/elora">Mountain</RouterLink>
+        <RouterLink to="/Koming">Koming</RouterLink>
         <RouterLink to="/nature">Nature</RouterLink>
-        <RouterLink to="/multi">Become a puppy</RouterLink>
+        <RouterLink to="/multi">Puppy</RouterLink>
         <RouterLink to="/supplicant">Supplicant</RouterLink>
-        <RouterLink to="/descent">Shapeshifter's Descent</RouterLink>
-        <RouterLink to="/therapy">Couple's Therapy</RouterLink>
+        <RouterLink to="/descent">Shapeshifter:Descent</RouterLink>
+        <RouterLink to="/therapy">DevilsWager:Therapy</RouterLink>
       </nav>
       <img src="@/assets/zero.jpg" alt="Supplicant Logo" />
     </div>

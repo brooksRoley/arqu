@@ -38,7 +38,7 @@ const loadTextContent = async () => {
   isLoading.value = true
   error.value = null
   try {
-    const response = await fetch('TheGardenofEchoes.txt')
+    const response = await fetch('src/assets/TheGardenofEchoes.txt')
     if (!response.ok) throw new Error('Failed to load content')
     txtContent.value = await response.text()
   } catch (e) {

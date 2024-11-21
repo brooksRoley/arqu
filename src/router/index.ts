@@ -15,9 +15,9 @@ const router = createRouter({
       component: () => import('../views/AboutView.vue')
     },
     {
-      path: '/movie',
-      name: 'movie',
-      component: () => import('../views/MovieForm.vue')
+      path: '/koming',
+      name: 'koming',
+      component: () => import('../views/Koming.vue')
     },
     {
       path: '/multi',
