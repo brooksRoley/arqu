@@ -1,7 +1,6 @@
 <template>
   <div class="supplicant-container">
     <div class="header">
-      <h1>Elora, the Supplicant</h1>
       <p>
         Elora, a marked Supplicant, is taken to the High Church in Caerthwyn where her unique
         heterochromia ties her to forbidden pagan powers. Under the oppressive rituals of the
@@ -73,26 +72,25 @@
       <div class="song">
         <p>
           (Soft, soothing music plays in the background)
-          <br />
-          Verse 1:<br />
+          <br /><br />
           Come closer, Elora, dear child of mine Look into my eyes, and let your worries unwind Feel
           the warmth of love that shines so bright and true As you gaze upon me, let your heart
           renew
-          <br />Chorus:<br />
+          <br /><br />
           Relax, relax, like a summer breeze on a day Let go of doubts, and fears that come what may
           Imagine peace, as petals unfold in sight In our sanctuary, where love is the guiding light
-          <br />Verse 2:<br />
+          <br /><br />
           Envision yourself standing at our door so fine Feeling safe, with love that's truly divine
           The scent of lavender and rosemary fills the air As we journey deeper, with love that's
-          beyond compare <br />Chorus:<br />
+          beyond compare <br /><br />
           Relax, relax, like a summer breeze on a day Let go of doubts, and fears that come what may
           Imagine peace, as petals unfold in sight In our sanctuary, where love is the guiding light
           Bridge: Remember childhood joys, when faith was pure and true The warmth of your mother's
           touch, and love that shone through Our Church offers you this gift so rare and fine A
-          commitment to love, that's always on your mind <br />Verse 3:<br />
+          commitment to love, that's always on your mind <br /><br />
           As we move closer to the altar, feel our deity shine Guiding you forward, with a love
           that's truly divine Inhale deeply, and let this peace reside within Elora, dear child,
-          know that you're loved, and guided from above <br />Chorus:<br />
+          know that you're loved, and guided from above <br /><br />
           Relax, relax, like a summer breeze on a day Let go of doubts, and fears that come what may
           Imagine peace, as petals unfold in sight In our sanctuary, where love is the guiding light
         </p>
@@ -125,15 +123,9 @@
   </div>
 </template>
 
-<script setup lang="ts">
-// import { ref } from 'vue'
-// const showSong = ref(true)
-// const showMinister = ref(false)
-</script>
-
 <style scoped>
 .header {
-  color: thistle;
+  color: rgb(39, 8, 39);
 }
 .story {
   color: cornflowerblue;
@@ -142,6 +134,6 @@
   color: green;
 }
 .elora {
-  color: pink;
+  color: mediumpurple;
 }
 </style>

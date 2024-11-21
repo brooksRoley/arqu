@@ -1,12 +1,6 @@
 <template>
-  <div class="wonka-factory">
+  <div class="wonka-factory candy-text">
     <h1 class="factory-title">Welcome to the Whimsical World of Data Confectionery!</h1>
-
-    <p class="candy-text">
-      Step into our marvelous Multi-Step Form Factory, where we craft personalized experiences
-      sweeter than any Everlasting Gobstopper! Our Mood-o-Meter and Analysis Fudge-Packer work in
-      tandem to create a parfait of perfection just for you!
-    </p>
 
     <div class="button-box">
       <button @click="triggerChocolateRiver" class="wonka-button chocolate">
@@ -24,11 +18,11 @@
       <div v-if="showGoldenTicket" class="golden-ticket"></div>
     </div>
 
-    <article class="text-black">
+    <article>
       <p>
-        Meet Asia, the stunning BunnyBeauty who was wasting time scamming sharks at GoatHill Tavern
-        pool hall, just south of LA. This gorgeous curvy bombshell stands at just a lilTall, but her
-        voluptuous figure is anything but small.
+        Meet Asia, the bratty baffling buxom bunny who was wasting time scamming sharks at GoatHill
+        Tavern pool hall, just south of LA. This gorgeous curvy bombshell stands at just a lilTall,
+        but her voluptuous figure is anything but small.
       </p>
 
       <p>
