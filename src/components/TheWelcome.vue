@@ -7,7 +7,6 @@ import CustomIcon from './icons/IconCustom.vue'
 </script>
 
 <template>
-  <!-- <h1>Hypnotic Induction Script</h1>
   <p>
     Welcome, dear friend, to this special moment. Allow yourself to relax, to let go of any tension
     or worry. Take a deep breath in, and as you exhale, feel your body becoming heavier, sinking
@@ -35,7 +34,7 @@ import CustomIcon from './icons/IconCustom.vue'
   <p>
     Together, we can navigate this new landscape, and I promise you that it will be a wonderful
     adventure.
-  </p> -->
+  </p>
   <MoodItem>
     <template #icon><HappyIcon /></template>
     <template #heading>Feeling Happy</template>
