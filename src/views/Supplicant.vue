@@ -19,7 +19,6 @@
         pulse of power that's mine Osric's whispers guide me through the night To a fate that
         beckons, like a guiding light"
       </p>
-      <img src="@/assets/zero.jpg" alt="Supplicant Logo" />
     </div>
     <div class="story-container">
       <div class="story">

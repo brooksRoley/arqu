@@ -38,6 +38,16 @@ const router = createRouter({
       path: '/elora',
       name: 'elora',
       component: () => import('../views/Elora.vue')
+    },
+    {
+      path: '/nature',
+      name: 'nature',
+      component: () => import('../views/NatureNurture.vue')
+    },
+    {
+      path: '/therapy',
+      name: 'therapy',
+      component: () => import('../views/CouplesTherapy.vue')
     }
   ]
 })

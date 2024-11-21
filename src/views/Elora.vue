@@ -275,7 +275,7 @@
       maelstrom of passion and desire that would consume them both...
       <br /><br />
 
-      <italic>
+      <p>
         In secret chambers of the heart,<br />
         A Pandora's box lies waiting to start.<br />
         Strongest matches whisper sweet nothings low,<br />
@@ -298,7 +298,7 @@
         <br /><br />
         And in this moment of surrender, Elora finds herself becoming one with Osric, their desires
         merging like the fusion of two flames...
-      </italic>
+      </p>
 
       <br />
       Elora: (standing tall, surrounded by her tribe) "We will not be intimidated! Our ways are

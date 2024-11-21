@@ -12,16 +12,19 @@ import { RouterLink, RouterView } from 'vue-router'
       height="200"
     />
 
-    <div class="wrapper mb-8">
+    <div class="wrapper m-4">
       <nav>
         <RouterLink to="/">Home</RouterLink>
         <RouterLink to="/about">About</RouterLink>
         <RouterLink to="/elora">Elora and The Mountain</RouterLink>
         <RouterLink to="/movie">Movies</RouterLink>
+        <RouterLink to="/nature">Nature</RouterLink>
         <RouterLink to="/multi">Become a puppy</RouterLink>
         <RouterLink to="/supplicant">Supplicant</RouterLink>
         <RouterLink to="/descent">Shapeshifter's Descent</RouterLink>
+        <RouterLink to="/therapy">Couple's Therapy</RouterLink>
       </nav>
+      <img src="@/assets/zero.jpg" alt="Supplicant Logo" />
     </div>
   </header>
 
