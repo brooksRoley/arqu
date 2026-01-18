@@ -48,6 +48,11 @@ const router = createRouter({
       path: '/therapy',
       name: 'therapy',
       component: () => import('../views/CouplesTherapy.vue')
+    },
+    {
+      path: '/storybook',
+      name: 'storybook',
+      component: () => import('../views/StoryBook.vue')
     }
   ]
 })

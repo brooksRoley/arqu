@@ -23,6 +23,7 @@ import { RouterLink, RouterView } from 'vue-router'
         <RouterLink to="/supplicant">Supplicant</RouterLink>
         <RouterLink to="/descent">Shapeshifter:Descent</RouterLink>
         <RouterLink to="/therapy">DevilsWager:Therapy</RouterLink>
+        <RouterLink to="/storybook">StoryBook</RouterLink>
       </nav>
       <img src="@/assets/zero.jpg" alt="Supplicant Logo" />
     </div>
