@@ -1,64 +1,73 @@
 <script setup lang="ts">
-import { RouterLink, RouterView } from 'vue-router'
+import { RouterView } from 'vue-router'
 </script>
 
 <template>
-  <header>
-    <img
-      alt="Zero logo"
-      class="logo"
-      src="@/assets/BRLogoTransparent.png"
-      width="200"
-      height="200"
-    />
+  <div class="app-container">
+    <header class="app-header">
+      <h1 class="app-title">Channel Zero</h1>
+      <p class="app-subtitle">Speed Reader</p>
+    </header>
 
-    <div class="wrapper m-4">
-      <nav>
-        <RouterLink to="/">Home</RouterLink>
-        <RouterLink to="/about">About</RouterLink>
-        <RouterLink to="/elora">Mountain</RouterLink>
-        <RouterLink to="/Koming">Koming</RouterLink>
-        <RouterLink to="/nature">Nature</RouterLink>
-        <RouterLink to="/multi">Puppy</RouterLink>
-        <RouterLink to="/supplicant">Supplicant</RouterLink>
-        <RouterLink to="/descent">Shapeshifter:Descent</RouterLink>
-        <RouterLink to="/therapy">DevilsWager:Therapy</RouterLink>
-      </nav>
-      <img src="@/assets/zero.jpg" alt="Supplicant Logo" />
-    </div>
-  </header>
+    <main class="app-main">
+      <RouterView />
+    </main>
 
-  <RouterView />
+    <footer class="app-footer">
+      <p>Channel Zero - Text to Voice Story Reader</p>
+    </footer>
+  </div>
 </template>
 
 <style scoped>
-.logo {
-  display: block;
-  margin: 0 auto 2rem;
+.app-container {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background-color: #1a1a1a;
+  color: #e2e8f0;
 }
 
-nav {
-  width: 100%;
-  font-size: 12px;
+.app-header {
+  padding: 1rem 2rem;
   text-align: center;
-  margin-top: 2rem;
+  background-color: rgba(0, 0, 0, 0.3);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }
 
-nav a.router-link-exact-active {
-  color: var(--color-text);
+.app-title {
+  font-size: 1.5rem;
+  font-weight: bold;
+  margin: 0;
+  color: #e2e8f0;
 }
 
-nav a.router-link-exact-active:hover {
-  background-color: transparent;
+.app-subtitle {
+  font-size: 0.875rem;
+  color: #94a3b8;
+  margin: 0.25rem 0 0 0;
 }
 
-nav a {
-  display: inline-block;
-  padding: 0 1rem;
-  border-left: 1px solid var(--color-border);
+.app-main {
+  flex: 1;
+  padding: 2rem;
+  max-width: 900px;
+  width: 100%;
+  margin: 0 auto;
 }
 
-nav a:first-of-type {
-  border: 0;
+.app-footer {
+  padding: 1rem;
+  text-align: center;
+  background-color: rgba(0, 0, 0, 0.3);
+  font-size: 0.75rem;
+  color: #64748b;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+@media (max-width: 768px) {
+  .app-main {
+    padding: 1rem;
+  }
 }
 </style>
