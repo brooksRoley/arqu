@@ -2,13 +2,17 @@
 import { ref, watch } from 'vue'
 import { useStoryStore } from '@/composables/useStoryStore'
 
-const { currentWord } = useStoryStore()
+const { currentWord, storyText, isPlaying, play } = useStoryStore()
 const iframeRef = ref<HTMLIFrameElement | null>(null)
 let iframeReady = false
 
 function onIframeLoad() {
   iframeReady = true
   sendWord(currentWord.value)
+  // Autoplay the default text when the page loads
+  if (storyText.value && !isPlaying.value) {
+    play()
+  }
 }
 
 function sendWord(word: string) {

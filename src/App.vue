@@ -36,7 +36,6 @@ const isFullBleed = computed(() => {
 .app-main {
   flex: 1;
   padding: 2rem;
-  padding-left: 4rem;
   max-width: 900px;
   width: 100%;
   margin: 0 auto;
@@ -50,8 +49,7 @@ const isFullBleed = computed(() => {
 
 .app-footer {
   padding: 0.75rem;
-  padding-left: 4rem;
-  text-align: left;
+  text-align: center;
   font-size: 0.7rem;
   color: #475569;
 }
@@ -59,7 +57,6 @@ const isFullBleed = computed(() => {
 @media (max-width: 768px) {
   .app-main {
     padding: 1rem;
-    padding-left: 3rem;
   }
 }
 </style>

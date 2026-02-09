@@ -129,7 +129,7 @@ function scheduleDockHide() {
 }
 
 function handleMouseMove(e: MouseEvent) {
-  if (e.clientX < 60) {
+  if (e.clientY < 40) {
     showDock()
   } else if (!isHovered.value) {
     scheduleDockHide()
@@ -180,8 +180,21 @@ function loadText() {
   play()
 }
 
+function handleTouchStart(e: TouchEvent) {
+  const nav = document.querySelector('.dock')
+  const toggle = document.querySelector('.dock-toggle')
+  if (
+    isActive.value &&
+    nav && !nav.contains(e.target as Node) &&
+    toggle && !toggle.contains(e.target as Node)
+  ) {
+    isActive.value = false
+  }
+}
+
 onMounted(() => {
   window.addEventListener('mousemove', handleMouseMove)
+  window.addEventListener('touchstart', handleTouchStart, { passive: true })
   isActive.value = true
   scheduleDockHide()
   initAudio()
@@ -189,6 +202,7 @@ onMounted(() => {
 
 onUnmounted(() => {
   window.removeEventListener('mousemove', handleMouseMove)
+  window.removeEventListener('touchstart', handleTouchStart)
   if (hideTimeout) clearTimeout(hideTimeout)
   if (audioElement.value) {
     audioElement.value.pause()
@@ -197,6 +211,11 @@ onUnmounted(() => {
 </script>
 
 <template>
+  <!-- Mobile toggle button -->
+  <button class="dock-toggle" @click="isActive = !isActive" aria-label="Toggle menu">
+    <span class="dock-toggle-icon">{{ isActive ? '✕' : '☰' }}</span>
+  </button>
+
   <nav
     :class="['dock', { 'dock--active': isActive, 'dock--hovered': isHovered }]"
     @mouseenter="onDockEnter"
@@ -308,33 +327,59 @@ onUnmounted(() => {
 </template>
 
 <style scoped>
+/* Mobile toggle button */
+.dock-toggle {
+  display: none;
+  position: fixed;
+  top: 0.5rem;
+  right: 0.5rem;
+  z-index: 1001;
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 0.5rem;
+  color: #e2e8f0;
+  width: 2.5rem;
+  height: 2.5rem;
+  cursor: pointer;
+  align-items: center;
+  justify-content: center;
+}
+
+.dock-toggle-icon {
+  font-size: 1.25rem;
+}
+
 .dock {
   position: fixed;
   left: 0;
-  top: 50%;
-  transform: translateY(-50%) translateX(calc(-100% + 10px));
+  right: 0;
+  top: 0;
+  transform: translateY(calc(-100% + 6px));
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: center;
   gap: 0.25rem;
-  padding: 0.5rem;
+  padding: 0.4rem 0.75rem;
   background: rgba(0, 0, 0, 0.8);
   backdrop-filter: blur(10px);
-  border-radius: 0 0.75rem 0.75rem 0;
+  border-radius: 0 0 0.75rem 0.75rem;
   z-index: 1000;
   transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .dock--active {
-  transform: translateY(-50%) translateX(0);
+  transform: translateY(0);
 }
 
 .dock-item {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: 0.35rem;
   color: #94a3b8;
   text-decoration: none;
-  padding: 0.5rem;
+  padding: 0.35rem 0.5rem;
   border-radius: 0.5rem;
   font-size: 0.8rem;
   transition: all 0.2s ease;
@@ -350,8 +395,8 @@ onUnmounted(() => {
 }
 
 .dock-icon {
-  font-size: 1.25rem;
-  min-width: 1.5rem;
+  font-size: 1.1rem;
+  min-width: 1.25rem;
   text-align: center;
 }
 
@@ -378,15 +423,16 @@ onUnmounted(() => {
 }
 
 .music-toggle {
-  margin-top: 0.5rem;
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
-  padding-top: 0.75rem;
+  margin-left: 0.25rem;
+  border-left: 1px solid rgba(255, 255, 255, 0.1);
+  padding-left: 0.5rem;
 }
 
 .dock-divider {
-  height: 1px;
+  width: 1px;
+  height: 1.5rem;
   background: rgba(255, 255, 255, 0.1);
-  margin: 0.25rem 0;
+  margin: 0 0.15rem;
 }
 
 .dock-stats {
@@ -397,9 +443,9 @@ onUnmounted(() => {
 
 .track-picker {
   position: absolute;
-  left: calc(100% + 0.5rem);
-  top: 50%;
-  transform: translateY(-50%);
+  top: calc(100% + 0.5rem);
+  left: 50%;
+  transform: translateX(-50%);
   background: rgba(0, 0, 0, 0.9);
   backdrop-filter: blur(10px);
   border-radius: 0.75rem;
@@ -433,6 +479,51 @@ onUnmounted(() => {
 .track-option--active {
   color: #e2e8f0;
   background-color: rgba(99, 102, 241, 0.3);
+}
+
+@media (max-width: 768px) {
+  .dock-toggle {
+    display: flex;
+  }
+
+  .dock {
+    transform: translateY(-100%);
+    flex-direction: column;
+    align-items: stretch;
+    padding: 0.75rem;
+    padding-top: 3rem;
+    border-radius: 0 0 1rem 1rem;
+  }
+
+  .dock--active {
+    transform: translateY(0);
+  }
+
+  .dock-label {
+    opacity: 1;
+    max-width: 100px;
+  }
+
+  .dock-divider {
+    width: 100%;
+    height: 1px;
+    margin: 0.25rem 0;
+  }
+
+  .music-toggle {
+    margin-left: 0;
+    border-left: none;
+    padding-left: 0.5rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    padding-top: 0.5rem;
+  }
+
+  .track-picker {
+    position: static;
+    transform: none;
+    margin-top: 0.25rem;
+    margin-left: 1.5rem;
+  }
 }
 
 /* Text edit modal */
