@@ -13,6 +13,16 @@ const router = createRouter({
       path: '/reader',
       name: 'reader',
       component: () => import('@/views/ReaderView.vue')
+    },
+    {
+      path: '/zeromind',
+      name: 'zeromind',
+      component: () => import('@/views/ZeromindView.vue')
+    },
+    {
+      path: '/resume',
+      name: 'resume',
+      component: () => import('@/views/ResumeView.vue')
     }
   ]
 })

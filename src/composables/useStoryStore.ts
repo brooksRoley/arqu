@@ -1,0 +1,89 @@
+import { ref, computed } from 'vue'
+
+// Shared state — module-level so it persists across all consumers
+const storyText = ref(
+  `You are feeling very relaxed. Watch the words flow across your vision. Each word sinks deeper into your mind. You are calm. You are focused. The spiral turns and your thoughts follow. Deeper and deeper with each word. Let go and just read. Just absorb. Just accept.`
+)
+const currentIndex = ref(0)
+const isPlaying = ref(false)
+
+let intervalId: number | null = null
+const wpm = ref(250) // words per minute
+
+const words = computed(() => storyText.value.split(/\s+/).filter((w) => w.length > 0))
+const currentWord = computed(() => words.value[currentIndex.value] || '')
+const progress = computed(() =>
+  words.value.length > 0 ? ((currentIndex.value + 1) / words.value.length) * 100 : 0
+)
+
+function advanceWord() {
+  if (currentIndex.value < words.value.length - 1) {
+    currentIndex.value++
+  } else {
+    pause()
+  }
+}
+
+function play() {
+  if (currentIndex.value >= words.value.length - 1) {
+    currentIndex.value = 0
+  }
+
+  isPlaying.value = true
+  const msPerWord = 60000 / wpm.value
+  intervalId = window.setInterval(advanceWord, msPerWord)
+}
+
+function pause() {
+  isPlaying.value = false
+  if (intervalId) {
+    clearInterval(intervalId)
+    intervalId = null
+  }
+}
+
+function reset() {
+  pause()
+  currentIndex.value = 0
+}
+
+function seekToWord(index: number) {
+  currentIndex.value = index
+}
+
+function setStoryText(text: string) {
+  pause()
+  currentIndex.value = 0
+  storyText.value = text
+}
+
+function clearStoryText() {
+  setStoryText('')
+}
+
+function setWpm(value: number) {
+  wpm.value = value
+  if (isPlaying.value) {
+    pause()
+    play()
+  }
+}
+
+export function useStoryStore() {
+  return {
+    storyText,
+    words,
+    currentWord,
+    currentIndex,
+    progress,
+    isPlaying,
+    wpm,
+    setStoryText,
+    clearStoryText,
+    play,
+    pause,
+    reset,
+    seekToWord,
+    setWpm
+  }
+}

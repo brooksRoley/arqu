@@ -1,8 +1,10 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
+import { useStoryStore } from '@/composables/useStoryStore'
 
 const router = useRouter()
+const { setStoryText } = useStoryStore()
 const textContent = ref('')
 const fileName = ref('')
 
@@ -21,7 +23,7 @@ const handleFileUpload = (event: Event) => {
 
 const startReading = () => {
   if (!textContent.value.trim()) return
-  sessionStorage.setItem('readerText', textContent.value)
+  setStoryText(textContent.value)
   router.push('/reader')
 }
 </script>

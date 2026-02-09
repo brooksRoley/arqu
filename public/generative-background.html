@@ -1,0 +1,683 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Generative Background Animation</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        overflow: hidden;
+        font-family: 'Courier New', monospace;
+        background: #000;
+      }
+
+      #canvas {
+        position: fixed;
+        top: 0;
+        left: 0;
+        z-index: 1;
+      }
+
+      .speed-reader {
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        z-index: 10;
+        text-align: center;
+        pointer-events: none;
+      }
+
+      .word-display {
+        font-size: 4rem;
+        font-weight: bold;
+        color: white;
+        text-shadow:
+          0 0 20px rgba(255, 255, 255, 0.8),
+          0 0 40px rgba(255, 255, 255, 0.5),
+          2px 2px 8px rgba(0, 0, 0, 0.9);
+        min-height: 5rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        letter-spacing: 0.05em;
+      }
+    </style>
+  </head>
+  <body>
+    <canvas id="canvas"></canvas>
+
+    <div class="speed-reader">
+      <div class="word-display" id="wordDisplay"></div>
+    </div>
+
+    <script>
+      const canvas = document.getElementById('canvas')
+      const ctx = canvas.getContext('2d')
+      const wordDisplay = document.getElementById('wordDisplay')
+
+      let width, height
+      let t = 0
+      let currentPattern = 0
+      let particles = []
+      let animationId
+
+      // Resize canvas
+      function resize() {
+        width = canvas.width = window.innerWidth
+        height = canvas.height = window.innerHeight
+      }
+
+      // Simple 2D Perlin-ish noise
+      class Noise {
+        constructor(seed = 0) {
+          this.seed = seed
+          this.permutation = []
+          for (let i = 0; i < 256; i++) {
+            this.permutation[i] = i
+          }
+          // Shuffle
+          for (let i = 255; i > 0; i--) {
+            const j = Math.floor(this.random() * (i + 1))
+            ;[this.permutation[i], this.permutation[j]] = [this.permutation[j], this.permutation[i]]
+          }
+          this.permutation = this.permutation.concat(this.permutation)
+        }
+
+        random() {
+          const x = Math.sin(this.seed++) * 10000
+          return x - Math.floor(x)
+        }
+
+        fade(t) {
+          return t * t * t * (t * (t * 6 - 15) + 10)
+        }
+
+        lerp(a, b, t) {
+          return a + t * (b - a)
+        }
+
+        grad(hash, x, y) {
+          const h = hash & 3
+          const u = h < 2 ? x : y
+          const v = h < 2 ? y : x
+          return (h & 1 ? -u : u) + (h & 2 ? -v : v)
+        }
+
+        noise(x, y) {
+          const X = Math.floor(x) & 255
+          const Y = Math.floor(y) & 255
+
+          x -= Math.floor(x)
+          y -= Math.floor(y)
+
+          const u = this.fade(x)
+          const v = this.fade(y)
+
+          const a = this.permutation[X] + Y
+          const b = this.permutation[X + 1] + Y
+
+          return this.lerp(
+            this.lerp(
+              this.grad(this.permutation[a], x, y),
+              this.grad(this.permutation[b], x - 1, y),
+              u
+            ),
+            this.lerp(
+              this.grad(this.permutation[a + 1], x, y - 1),
+              this.grad(this.permutation[b + 1], x - 1, y - 1),
+              u
+            ),
+            v
+          )
+        }
+      }
+
+      const noise = new Noise(Math.random() * 1000)
+
+      // Easing function
+      function ease(p, g = 2.5) {
+        if (p < 0.5) {
+          return 0.5 * Math.pow(2 * p, g)
+        } else {
+          return 1 - 0.5 * Math.pow(2 * (1 - p), g)
+        }
+      }
+
+      // Initialize particles
+      function initParticles(count = 300) {
+        particles = []
+        for (let i = 0; i < count; i++) {
+          particles.push({
+            x: Math.random() * width,
+            y: Math.random() * height,
+            baseX: Math.random() * width,
+            baseY: Math.random() * height,
+            offset: Math.random(),
+            radius: Math.random() * 3 + 1,
+            speed: Math.random() * 0.5 + 0.5,
+            angle: Math.random() * Math.PI * 2
+          })
+        }
+      }
+
+      // Pattern 1: Noise displacement particles
+      function pattern1() {
+        ctx.fillStyle = 'rgba(10, 10, 20, 0.1)'
+        ctx.fillRect(0, 0, width, height)
+
+        const noiseRadius = 200
+
+        particles.forEach((p) => {
+          const phase = (t * p.speed + p.offset) % 1
+          const noiseAngle = phase * Math.PI * 2
+
+          const nx = noise.noise(
+            p.baseX * 0.002 + noiseRadius * Math.cos(noiseAngle),
+            p.baseY * 0.002 + noiseRadius * Math.sin(noiseAngle)
+          )
+          const ny = noise.noise(
+            p.baseX * 0.002 + 100 + noiseRadius * Math.cos(noiseAngle),
+            p.baseY * 0.002 + 100 + noiseRadius * Math.sin(noiseAngle)
+          )
+
+          p.x = p.baseX + nx * 100
+          p.y = p.baseY + ny * 100
+
+          const alpha = ease(Math.sin(phase * Math.PI))
+          ctx.fillStyle = `rgba(150, 200, 255, ${alpha * 0.6})`
+          ctx.beginPath()
+          ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2)
+          ctx.fill()
+        })
+      }
+
+      // Pattern 2: Spiral wave propagation
+      function pattern2() {
+        ctx.fillStyle = 'rgba(5, 5, 15, 0.15)'
+        ctx.fillRect(0, 0, width, height)
+
+        const centerX = width / 2
+        const centerY = height / 2
+        const count = 50
+
+        for (let i = 0; i < count; i++) {
+          const angle = (i / count) * Math.PI * 2
+          const phase = (t * 2 + i / count) % 1
+          const r = 50 + ease(phase, 2) * 300
+
+          const x = centerX + Math.cos(angle) * r
+          const y = centerY + Math.sin(angle) * r
+
+          const size = 20 * ease(Math.sin(phase * Math.PI), 3)
+          const alpha = ease(Math.sin(phase * Math.PI))
+
+          ctx.fillStyle = `rgba(255, 100, 150, ${alpha * 0.7})`
+          ctx.beginPath()
+          ctx.arc(x, y, size, 0, Math.PI * 2)
+          ctx.fill()
+        }
+      }
+
+      // Pattern 3: Grid displacement field
+      function pattern3() {
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.1)'
+        ctx.fillRect(0, 0, width, height)
+
+        const gridSize = 40
+        const cols = Math.ceil(width / gridSize)
+        const rows = Math.ceil(height / gridSize)
+
+        for (let i = 0; i < cols; i++) {
+          for (let j = 0; j < rows; j++) {
+            const x = i * gridSize
+            const y = j * gridSize
+
+            const dist = Math.sqrt(Math.pow(x - width / 2, 2) + Math.pow(y - height / 2, 2))
+            const maxDist = Math.sqrt(width * width + height * height) / 2
+            const normalizedDist = dist / maxDist
+
+            const phase = (t + normalizedDist) % 1
+            const angle = Math.atan2(y - height / 2, x - width / 2)
+
+            const offsetX = Math.cos(angle + t * Math.PI * 2) * 20 * ease(phase)
+            const offsetY = Math.sin(angle + t * Math.PI * 2) * 20 * ease(phase)
+
+            const alpha = ease(Math.sin(phase * Math.PI))
+            const hue = (angle / Math.PI / 2 + t) * 360
+
+            ctx.fillStyle = `hsla(${hue}, 70%, 60%, ${alpha * 0.5})`
+            ctx.beginPath()
+            ctx.arc(x + offsetX, y + offsetY, 5, 0, Math.PI * 2)
+            ctx.fill()
+          }
+        }
+      }
+
+      // Pattern 4: Parametric curves
+      function pattern4() {
+        ctx.fillStyle = 'rgba(10, 0, 20, 0.08)'
+        ctx.fillRect(0, 0, width, height)
+
+        const centerX = width / 2
+        const centerY = height / 2
+        const curves = 8
+
+        for (let c = 0; c < curves; c++) {
+          ctx.beginPath()
+          const points = 200
+          const offset = c / curves
+
+          for (let i = 0; i <= points; i++) {
+            const p = i / points
+            const angle = p * Math.PI * 2
+            const phase = (t + offset + p * 0.3) % 1
+
+            const r1 = 100 + 80 * Math.sin(3 * angle + t * Math.PI * 2)
+            const r2 = 80 * ease(phase)
+            const r = r1 + r2
+
+            const x = centerX + Math.cos(angle) * r
+            const y = centerY + Math.sin(angle) * r
+
+            if (i === 0) ctx.moveTo(x, y)
+            else ctx.lineTo(x, y)
+          }
+
+          ctx.closePath()
+          const alpha = 0.3 + 0.2 * Math.sin((t + offset) * Math.PI * 2)
+          ctx.strokeStyle = `rgba(100, 255, 200, ${alpha})`
+          ctx.lineWidth = 2
+          ctx.stroke()
+        }
+      }
+
+      // Pattern 5: Concentric rings with replacement technique
+      function pattern5() {
+        ctx.fillStyle = 'rgba(15, 5, 25, 0.12)'
+        ctx.fillRect(0, 0, width, height)
+
+        const centerX = width / 2
+        const centerY = height / 2
+        const maxRadius = Math.max(width, height)
+        const ringCount = 30
+
+        for (let i = 0; i < ringCount; i++) {
+          const normalizedI = i / ringCount
+          const phase = (t * 2 - normalizedI + 1) % 1
+          const radius = normalizedI * maxRadius * 0.7
+
+          const alpha = ease(Math.sin(phase * Math.PI), 2)
+          const thickness = 3 + 15 * ease(phase, 3)
+
+          ctx.strokeStyle = `rgba(255, 150, 100, ${alpha * 0.6})`
+          ctx.lineWidth = thickness
+          ctx.beginPath()
+          ctx.arc(centerX, centerY, radius, 0, Math.PI * 2)
+          ctx.stroke()
+        }
+      }
+
+      // Pattern 6: Particle flow field
+      function pattern6() {
+        ctx.fillStyle = 'rgba(5, 10, 15, 0.1)'
+        ctx.fillRect(0, 0, width, height)
+
+        particles.forEach((p) => {
+          const nx = noise.noise(p.x * 0.005, p.y * 0.005 + t * 2)
+          const ny = noise.noise(p.x * 0.005 + 100, p.y * 0.005 + t * 2)
+
+          p.x += nx * 3
+          p.y += ny * 3
+
+          // Wrap around
+          if (p.x < 0) p.x = width
+          if (p.x > width) p.x = 0
+          if (p.y < 0) p.y = height
+          if (p.y > height) p.y = 0
+
+          const speed = Math.sqrt(nx * nx + ny * ny)
+          const alpha = Math.min(speed * 2, 1)
+
+          ctx.fillStyle = `rgba(100, 200, 255, ${alpha * 0.5})`
+          ctx.beginPath()
+          ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2)
+          ctx.fill()
+        })
+      }
+
+      // Pattern 7: Hypnotic spiral
+      function pattern7() {
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.15)'
+        ctx.fillRect(0, 0, width, height)
+
+        const centerX = width / 2
+        const centerY = height / 2
+        const arms = 5
+        const rotations = 8
+
+        for (let arm = 0; arm < arms; arm++) {
+          ctx.beginPath()
+          const armOffset = (arm / arms) * Math.PI * 2
+          const points = 400
+
+          for (let i = 0; i <= points; i++) {
+            const p = i / points
+            const angle = p * Math.PI * 2 * rotations + armOffset - t * Math.PI * 2
+            const r = p * Math.min(width, height) * 0.6
+
+            // Pulsing effect
+            const pulse = 1 + 0.15 * Math.sin(p * 10 - t * 8)
+
+            const x = centerX + Math.cos(angle) * r * pulse
+            const y = centerY + Math.sin(angle) * r * pulse
+
+            if (i === 0) ctx.moveTo(x, y)
+            else ctx.lineTo(x, y)
+          }
+
+          const hue = ((arm / arms) * 360 + t * 50) % 360
+          ctx.strokeStyle = `hsla(${hue}, 80%, 60%, 0.6)`
+          ctx.lineWidth = 3
+          ctx.stroke()
+        }
+      }
+
+      // Pattern 8: Pendulum swing
+      function pattern8() {
+        ctx.fillStyle = 'rgba(0, 0, 10, 0.08)'
+        ctx.fillRect(0, 0, width, height)
+
+        const centerX = width / 2
+        const topY = height * 0.1
+        const pendulumCount = 15
+
+        for (let i = 0; i < pendulumCount; i++) {
+          const offset = i / pendulumCount
+          const phase = (t + offset * 0.5) % 1
+
+          // Smooth pendulum motion
+          const angle = Math.sin(phase * Math.PI * 2) * 0.8
+          const length = 200 + i * 15
+
+          const bobX = centerX + Math.sin(angle) * length
+          const bobY = topY + Math.cos(angle) * length
+
+          // Trail effect
+          ctx.strokeStyle = `rgba(150, 100, 255, ${0.3 - offset * 0.2})`
+          ctx.lineWidth = 2
+          ctx.beginPath()
+          ctx.moveTo(centerX, topY)
+          ctx.lineTo(bobX, bobY)
+          ctx.stroke()
+
+          // Pendulum bob
+          const alpha = ease(Math.sin(phase * Math.PI))
+          const bobSize = 10 + 8 * alpha
+          ctx.fillStyle = `rgba(200, 150, 255, ${0.8 - offset * 0.4})`
+          ctx.beginPath()
+          ctx.arc(bobX, bobY, bobSize, 0, Math.PI * 2)
+          ctx.fill()
+        }
+      }
+
+      // Pattern 9: Pulsing concentric focus
+      function pattern9() {
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.1)'
+        ctx.fillRect(0, 0, width, height)
+
+        const centerX = width / 2
+        const centerY = height / 2
+        const pulseCount = 25
+
+        for (let i = 0; i < pulseCount; i++) {
+          const offset = i / pulseCount
+          const phase = (t * 1.5 + offset) % 1
+
+          const eased = ease(phase, 2)
+          const radius = eased * Math.min(width, height) * 0.8
+
+          // Alternating colors for depth
+          const alpha = Math.sin(phase * Math.PI) * 0.6
+          const isEven = i % 2 === 0
+          const color = isEven ? `rgba(100, 50, 255, ${alpha})` : `rgba(255, 50, 150, ${alpha})`
+
+          ctx.strokeStyle = color
+          ctx.lineWidth = 8 + 12 * ease(Math.sin(phase * Math.PI), 3)
+          ctx.beginPath()
+          ctx.arc(centerX, centerY, radius, 0, Math.PI * 2)
+          ctx.stroke()
+        }
+      }
+
+      // Pattern 10: Cascading layers
+      function pattern10() {
+        ctx.fillStyle = 'rgba(10, 0, 20, 0.12)'
+        ctx.fillRect(0, 0, width, height)
+
+        const layers = 12
+        const centerX = width / 2
+
+        for (let layer = 0; layer < layers; layer++) {
+          const y = (layer / layers) * height
+          const offset = layer / layers
+          const phase = (t + offset * 0.8) % 1
+
+          const waveCount = 80
+          ctx.beginPath()
+
+          for (let i = 0; i <= waveCount; i++) {
+            const x = (i / waveCount) * width
+            const wave1 = Math.sin((i / waveCount) * Math.PI * 4 + phase * Math.PI * 2) * 30
+            const wave2 = Math.sin((i / waveCount) * Math.PI * 2 - phase * Math.PI * 2) * 20
+            const waveY = y + wave1 + wave2
+
+            if (i === 0) ctx.moveTo(x, waveY)
+            else ctx.lineTo(x, waveY)
+          }
+
+          const alpha = 0.4 + 0.3 * Math.sin((phase + offset) * Math.PI)
+          const hue = (offset * 60 + 240) % 360
+          ctx.strokeStyle = `hsla(${hue}, 70%, 60%, ${alpha})`
+          ctx.lineWidth = 3
+          ctx.stroke()
+        }
+      }
+
+      // Pattern 11: Eye fixation point
+      function pattern11() {
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.08)'
+        ctx.fillRect(0, 0, width, height)
+
+        const centerX = width / 2
+        const centerY = height / 2
+        const ringCount = 20
+
+        // Outer rings expanding
+        for (let i = 0; i < ringCount; i++) {
+          const phase = (t * 2 + i / ringCount) % 1
+          const radius = ease(phase, 2) * Math.min(width, height) * 0.5
+          const alpha = (1 - phase) * 0.5
+
+          ctx.strokeStyle = `rgba(100, 200, 255, ${alpha})`
+          ctx.lineWidth = 2
+          ctx.beginPath()
+          ctx.arc(centerX, centerY, radius, 0, Math.PI * 2)
+          ctx.stroke()
+        }
+
+        // Central pulsing point
+        const pulsePhase = (t * 3) % 1
+        const pulseSize = 20 + 30 * ease(Math.sin(pulsePhase * Math.PI), 3)
+
+        // Outer glow
+        const gradient = ctx.createRadialGradient(
+          centerX,
+          centerY,
+          0,
+          centerX,
+          centerY,
+          pulseSize * 2
+        )
+        gradient.addColorStop(0, 'rgba(255, 255, 255, 0.8)')
+        gradient.addColorStop(0.5, 'rgba(150, 200, 255, 0.4)')
+        gradient.addColorStop(1, 'rgba(150, 200, 255, 0)')
+
+        ctx.fillStyle = gradient
+        ctx.beginPath()
+        ctx.arc(centerX, centerY, pulseSize * 2, 0, Math.PI * 2)
+        ctx.fill()
+
+        // Center point
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.9)'
+        ctx.beginPath()
+        ctx.arc(centerX, centerY, pulseSize * 0.3, 0, Math.PI * 2)
+        ctx.fill()
+      }
+
+      // Pattern 12: Mesmerizing wave interference
+      function pattern12() {
+        ctx.fillStyle = 'rgba(5, 0, 15, 0.1)'
+        ctx.fillRect(0, 0, width, height)
+
+        const gridSize = 20
+        const cols = Math.ceil(width / gridSize)
+        const rows = Math.ceil(height / gridSize)
+
+        // Multiple wave sources
+        const sources = [
+          { x: width * 0.3, y: height * 0.3 },
+          { x: width * 0.7, y: height * 0.7 },
+          { x: width * 0.5, y: height * 0.5 }
+        ]
+
+        for (let i = 0; i < cols; i++) {
+          for (let j = 0; j < rows; j++) {
+            const x = i * gridSize
+            const y = j * gridSize
+
+            let totalWave = 0
+            sources.forEach((source, idx) => {
+              const dist = Math.sqrt(Math.pow(x - source.x, 2) + Math.pow(y - source.y, 2))
+              const wave = Math.sin(dist * 0.02 - t * 8 + idx * Math.PI * 0.66)
+              totalWave += wave
+            })
+
+            const normalized = (totalWave / sources.length + 1) / 2 // 0 to 1
+            const size = 2 + normalized * 8
+            const alpha = 0.3 + normalized * 0.5
+
+            const hue = (normalized * 120 + 200 + t * 30) % 360
+            ctx.fillStyle = `hsla(${hue}, 80%, 60%, ${alpha})`
+            ctx.beginPath()
+            ctx.arc(x, y, size, 0, Math.PI * 2)
+            ctx.fill()
+          }
+        }
+      }
+
+      // Pattern 13: Rotating kaleidoscope
+      function pattern13() {
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.15)'
+        ctx.fillRect(0, 0, width, height)
+
+        const centerX = width / 2
+        const centerY = height / 2
+        const segments = 8
+
+        ctx.save()
+        ctx.translate(centerX, centerY)
+
+        for (let seg = 0; seg < segments; seg++) {
+          ctx.save()
+          ctx.rotate((seg / segments) * Math.PI * 2 + t * Math.PI * 0.5)
+
+          // Draw pattern in segment
+          const points = 30
+          for (let i = 0; i < points; i++) {
+            const r = (i / points) * Math.min(width, height) * 0.4
+            const angle = (i / points) * Math.PI * 0.25
+            const phase = (t * 2 + i / points) % 1
+
+            const x = r * Math.cos(angle)
+            const y = r * Math.sin(angle)
+
+            const size = 5 + 10 * ease(Math.sin(phase * Math.PI), 2)
+            const alpha = ease(Math.sin(phase * Math.PI))
+            const hue = ((i / points) * 360 + t * 100) % 360
+
+            ctx.fillStyle = `hsla(${hue}, 80%, 60%, ${alpha * 0.6})`
+            ctx.beginPath()
+            ctx.arc(x, y, size, 0, Math.PI * 2)
+            ctx.fill()
+          }
+
+          ctx.restore()
+        }
+
+        ctx.restore()
+      }
+
+      const patterns = [
+        pattern1,
+        pattern2,
+        pattern3,
+        pattern4,
+        pattern5,
+        pattern6,
+        pattern7,
+        pattern8,
+        pattern9,
+        pattern10,
+        pattern11,
+        pattern12,
+        pattern13
+      ]
+
+      function animate() {
+        patterns[currentPattern]()
+        t += 0.005
+        animationId = requestAnimationFrame(animate)
+      }
+
+      function randomizePattern() {
+        const newPattern = Math.floor(Math.random() * patterns.length)
+        currentPattern = newPattern
+
+        // Clear canvas for clean transition
+        ctx.fillStyle = '#000'
+        ctx.fillRect(0, 0, width, height)
+
+        // Reinitialize particles for patterns that use them
+        if ([0, 5].includes(currentPattern)) {
+          initParticles()
+        }
+
+        t = 0
+      }
+
+      // Listen for word updates from parent
+      window.addEventListener('message', (event) => {
+        if (event.data?.type === 'wordUpdate') {
+          wordDisplay.textContent = event.data.word || ''
+        }
+      })
+
+      // Click canvas to change pattern
+      window.addEventListener('resize', resize)
+      canvas.addEventListener('click', randomizePattern)
+
+      // Initialize
+      resize()
+      initParticles()
+      currentPattern = Math.floor(Math.random() * patterns.length)
+      animate()
+    </script>
+  </body>
+</html>
