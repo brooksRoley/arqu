@@ -49,11 +49,7 @@ const startReading = () => {
         rows="10"
       ></textarea>
 
-      <button
-        @click="startReading"
-        :disabled="!textContent.trim()"
-        class="start-btn"
-      >
+      <button @click="startReading" :disabled="!textContent.trim()" class="start-btn">
         Start Reading
       </button>
     </div>
@@ -70,6 +66,7 @@ const startReading = () => {
   font-weight: bold;
   margin-bottom: 0.5rem;
   color: #e2e8f0;
+  margin-top: 2rem;
 }
 
 .subtitle {

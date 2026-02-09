@@ -20,7 +20,8 @@ function advanceWord() {
   if (currentIndex.value < words.value.length - 1) {
     currentIndex.value++
   } else {
-    pause()
+    reset()
+    play()
   }
 }
 
