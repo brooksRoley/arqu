@@ -2,7 +2,7 @@ import { ref, computed } from 'vue'
 
 // Shared state — module-level so it persists across all consumers
 const storyText = ref(
-  `You are feeling very relaxed. Watch the words flow across your vision. Each word sinks deeper into your mind. You are calm. You are focused. The spiral turns and your thoughts follow. Deeper and deeper with each word. Let go and just read. Just absorb. Just accept.`
+  `Use the reader to let the words flow. You are calm. You are focused. Deeper and deeper with each word. Let go and just read and absorb. Pick your next story with 'Edit Text'.`
 )
 const currentIndex = ref(0)
 const isPlaying = ref(false)

@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import { computed, ref, onMounted, onUnmounted } from 'vue'
-import { RouterLink, useRouter } from 'vue-router'
+import { computed, ref, watch, onMounted, onUnmounted } from 'vue'
+import { RouterLink, useRouter, useRoute } from 'vue-router'
 import { useStoryStore } from '@/composables/useStoryStore'
 
 const router = useRouter()
+const route = useRoute()
 const {
   storyText,
   words,
@@ -19,10 +20,13 @@ const {
   clearBackgroundMedia
 } = useStoryStore()
 
-// Dock visibility state
-const isActive = ref(false)
-const isHovered = ref(false)
-let hideTimeout: number | null = null
+// Panel toggle
+const menuOpen = ref(false)
+
+// Close panel on route change
+watch(() => route.path, () => {
+  menuOpen.value = false
+})
 
 // Text edit modal state
 const showTextModal = ref(false)
@@ -60,6 +64,7 @@ function getRouteIcon(name: string): string {
     home: '🏠',
     reader: '📖',
     zeromind: '🌀',
+    audio: '🎵',
     glass: '💧',
     resume: '📄'
   }
@@ -73,7 +78,6 @@ const audioTracks = [
 ]
 const currentTrackIndex = ref(0)
 const musicPlaying = ref(false)
-const showTrackPicker = ref(false)
 const audioElement = ref<HTMLAudioElement | null>(null)
 
 function initAudio() {
@@ -86,7 +90,6 @@ function initAudio() {
       musicPlaying.value = true
     })
     .catch(() => {
-      // Autoplay blocked by browser; user must interact first
       musicPlaying.value = false
     })
 }
@@ -108,7 +111,6 @@ function toggleMusic() {
 
 function selectTrack(index: number) {
   if (index === currentTrackIndex.value && musicPlaying.value) {
-    showTrackPicker.value = false
     return
   }
   currentTrackIndex.value = index
@@ -120,40 +122,6 @@ function selectTrack(index: number) {
   audioElement.value.volume = 0.3
   audioElement.value.play()
   musicPlaying.value = true
-  showTrackPicker.value = false
-}
-
-function showDock() {
-  if (hideTimeout) {
-    clearTimeout(hideTimeout)
-    hideTimeout = null
-  }
-  isActive.value = true
-}
-
-function scheduleDockHide() {
-  if (isHovered.value) return
-  hideTimeout = window.setTimeout(() => {
-    isActive.value = false
-  }, 2000)
-}
-
-function handleMouseMove(e: MouseEvent) {
-  if (e.clientY < 40) {
-    showDock()
-  } else if (!isHovered.value) {
-    scheduleDockHide()
-  }
-}
-
-function onDockEnter() {
-  isHovered.value = true
-  showDock()
-}
-
-function onDockLeave() {
-  isHovered.value = false
-  scheduleDockHide()
 }
 
 function togglePlayback() {
@@ -168,6 +136,7 @@ function openTextModal() {
   textInputValue.value = storyText.value
   fileName.value = ''
   showTextModal.value = true
+  menuOpen.value = false
 }
 
 function handleFileUpload(event: Event) {
@@ -199,32 +168,27 @@ function loadText() {
   play()
 }
 
-function handleTouchStart(e: TouchEvent) {
-  const nav = document.querySelector('.dock')
-  const toggle = document.querySelector('.dock-toggle')
-  if (
-    isActive.value &&
-    nav &&
-    !nav.contains(e.target as Node) &&
-    toggle &&
-    !toggle.contains(e.target as Node)
-  ) {
-    isActive.value = false
+function openBgModal() {
+  showBgModal.value = true
+  menuOpen.value = false
+}
+
+// Close panel on outside click
+function handleOutsideClick(e: MouseEvent) {
+  if (!menuOpen.value) return
+  const nav = document.querySelector('.navbar')
+  if (nav && !nav.contains(e.target as Node)) {
+    menuOpen.value = false
   }
 }
 
 onMounted(() => {
-  window.addEventListener('mousemove', handleMouseMove)
-  window.addEventListener('touchstart', handleTouchStart, { passive: true })
-  isActive.value = true
-  scheduleDockHide()
+  document.addEventListener('click', handleOutsideClick)
   initAudio()
 })
 
 onUnmounted(() => {
-  window.removeEventListener('mousemove', handleMouseMove)
-  window.removeEventListener('touchstart', handleTouchStart)
-  if (hideTimeout) clearTimeout(hideTimeout)
+  document.removeEventListener('click', handleOutsideClick)
   if (audioElement.value) {
     audioElement.value.pause()
   }
@@ -232,86 +196,79 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <!-- Mobile toggle button -->
-  <button class="dock-toggle" @click="isActive = !isActive" aria-label="Toggle menu">
-    <span class="dock-toggle-icon">{{ isActive ? '✕' : '☰' }}</span>
-  </button>
+  <nav class="navbar">
+    <div class="navbar-top">
+      <div class="nav-links">
+        <RouterLink
+          v-for="r in navRoutes"
+          :key="r.name"
+          :to="r.path"
+          class="nav-link"
+          active-class="nav-link--active"
+        >
+          <span class="nav-link-icon">{{ r.icon }}</span>
+          <span class="nav-link-label">{{ r.label }}</span>
+        </RouterLink>
+      </div>
 
-  <nav
-    :class="['dock', { 'dock--active': isActive, 'dock--hovered': isHovered }]"
-    @mouseenter="onDockEnter"
-    @mouseleave="onDockLeave"
-  >
-    <RouterLink
-      v-for="route in navRoutes"
-      :key="route.name"
-      :to="route.path"
-      class="dock-item"
-      active-class="dock-item--active"
-      :title="route.label"
-    >
-      <span class="dock-icon">{{ route.icon }}</span>
-      <span class="dock-label">{{ route.label }}</span>
-    </RouterLink>
-
-    <button
-      class="dock-item music-toggle"
-      :title="musicPlaying ? 'Pause Music' : 'Play Music'"
-      @click="toggleMusic"
-    >
-      <span class="dock-icon">{{ musicPlaying ? '🎵' : '🔇' }}</span>
-      <span class="dock-label">Music</span>
-    </button>
-
-    <button class="dock-item" title="Choose Track" @click="showTrackPicker = !showTrackPicker">
-      <span class="dock-icon">🎶</span>
-      <span class="dock-label">Tracks</span>
-    </button>
-
-    <div v-if="showTrackPicker" class="track-picker">
-      <button
-        v-for="(track, index) in audioTracks"
-        :key="track.file"
-        :class="['track-option', { 'track-option--active': index === currentTrackIndex }]"
-        @click="selectTrack(index)"
-      >
-        {{ track.name }}
+      <button class="menu-btn" @click="menuOpen = !menuOpen" aria-label="Toggle controls">
+        {{ menuOpen ? '✕' : '☰' }}
       </button>
     </div>
 
-    <div class="dock-divider"></div>
+    <transition name="panel">
+      <div v-if="menuOpen" class="navbar-panel">
+        <!-- Music controls -->
+        <div class="panel-section">
+          <span class="section-label">Music</span>
+          <div class="section-row">
+            <button
+              class="panel-btn"
+              :class="{ 'panel-btn--active': musicPlaying }"
+              @click="toggleMusic"
+            >
+              {{ musicPlaying ? '⏸ Pause' : '▶ Play' }}
+            </button>
+            <button
+              v-for="(track, index) in audioTracks"
+              :key="track.file"
+              class="panel-btn"
+              :class="{ 'panel-btn--active': index === currentTrackIndex && musicPlaying }"
+              @click="selectTrack(index)"
+            >
+              {{ track.name }}
+            </button>
+          </div>
+        </div>
 
-    <button class="dock-item" title="Edit Text" @click="openTextModal">
-      <span class="dock-icon">📝</span>
-      <span class="dock-label">Text</span>
-    </button>
+        <!-- Tools -->
+        <div class="panel-section">
+          <span class="section-label">Tools</span>
+          <div class="section-row">
+            <button class="panel-btn" @click="openTextModal">📝 Edit Text</button>
+            <button class="panel-btn" @click="openBgModal">🖼️ Background</button>
+          </div>
+        </div>
 
-    <button class="dock-item" title="Background" @click="showBgModal = true">
-      <span class="dock-icon">🖼️</span>
-      <span class="dock-label">Background</span>
-    </button>
-
-    <!-- Reader controls — visible when a story is loaded -->
-    <template v-if="storyText">
-      <button class="dock-item" :title="isPlaying ? 'Pause' : 'Play'" @click="togglePlayback">
-        <span class="dock-icon">{{ isPlaying ? '⏸' : '▶️' }}</span>
-        <span class="dock-label">{{ isPlaying ? 'Pause' : 'Play' }}</span>
-      </button>
-      <button class="dock-item" title="Reset" @click="reset">
-        <span class="dock-icon">⏮</span>
-        <span class="dock-label">Reset</span>
-      </button>
-      <div class="dock-item dock-stats" title="Word progress">
-        <span class="dock-icon">📊</span>
-        <span class="dock-label">{{ currentIndex + 1 }}/{{ words.length }}</span>
+        <!-- Reader controls (conditional) -->
+        <div v-if="storyText" class="panel-section">
+          <span class="section-label">Reader</span>
+          <div class="section-row">
+            <button class="panel-btn" @click="togglePlayback">
+              {{ isPlaying ? '⏸ Pause' : '▶ Play' }}
+            </button>
+            <button class="panel-btn" @click="reset">⏮ Reset</button>
+            <span class="panel-stat">{{ currentIndex + 1 }} / {{ words.length }}</span>
+          </div>
+        </div>
       </div>
-    </template>
+    </transition>
   </nav>
 
   <!-- Text edit modal -->
   <Teleport to="body">
-    <div v-if="showTextModal" class="text-modal-overlay" @click.self="showTextModal = false">
-      <div class="text-modal">
+    <div v-if="showTextModal" class="modal-overlay" @click.self="showTextModal = false">
+      <div class="modal">
         <h2>Enter Text</h2>
 
         <label class="modal-file-upload">
@@ -345,8 +302,8 @@ onUnmounted(() => {
 
   <!-- Background upload modal -->
   <Teleport to="body">
-    <div v-if="showBgModal" class="text-modal-overlay" @click.self="showBgModal = false">
-      <div class="text-modal">
+    <div v-if="showBgModal" class="modal-overlay" @click.self="showBgModal = false">
+      <div class="modal">
         <h2>Set Background</h2>
 
         <div v-if="backgroundMedia" class="bg-preview">
@@ -385,207 +342,197 @@ onUnmounted(() => {
 </template>
 
 <style scoped>
-/* Mobile toggle button */
-.dock-toggle {
-  display: none;
-  position: fixed;
-  top: 0.5rem;
-  right: 0.5rem;
-  z-index: 1001;
-  background: rgba(0, 0, 0, 0.7);
-  backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  border-radius: 0.5rem;
-  color: #e2e8f0;
-  width: 2.5rem;
-  height: 2.5rem;
-  cursor: pointer;
-  align-items: center;
-  justify-content: center;
-}
-
-.dock-toggle-icon {
-  font-size: 1.25rem;
-}
-
-.dock {
-  position: fixed;
-  left: 0;
-  right: 0;
+/* ── Sticky top bar ── */
+.navbar {
+  position: sticky;
   top: 0;
-  transform: translateY(calc(-100% + 6px));
+  z-index: 1000;
+  background: rgba(10, 10, 20, 0.9);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.navbar-top {
   display: flex;
-  flex-direction: row;
-  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.4rem 0.75rem;
+}
+
+/* ── Nav links row ── */
+.nav-links {
+  display: flex;
   align-items: center;
   gap: 0.25rem;
-  padding: 0.4rem 0.75rem;
-  background: rgba(0, 0, 0, 0.8);
-  backdrop-filter: blur(10px);
-  border-radius: 0 0 0.75rem 0.75rem;
-  z-index: 1000;
-  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  flex: 1;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
 }
 
-.dock--active {
-  transform: translateY(0);
+.nav-links::-webkit-scrollbar {
+  display: none;
 }
 
-.dock-item {
+.nav-link {
   display: flex;
   align-items: center;
-  gap: 0.35rem;
+  gap: 0.3rem;
+  padding: 0.35rem 0.6rem;
+  border-radius: 0.4rem;
   color: #94a3b8;
   text-decoration: none;
-  padding: 0.35rem 0.5rem;
-  border-radius: 0.5rem;
   font-size: 0.8rem;
-  transition: all 0.2s ease;
-  background: transparent;
-  border: none;
-  cursor: pointer;
   white-space: nowrap;
+  transition: color 0.15s, background-color 0.15s;
 }
 
-.dock-item:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
+.nav-link:hover {
+  color: #e2e8f0;
+  background: rgba(255, 255, 255, 0.08);
 }
 
-.dock-icon {
-  font-size: 1.1rem;
-  min-width: 1.25rem;
-  text-align: center;
+.nav-link--active {
+  color: #e2e8f0;
+  background: rgba(99, 102, 241, 0.25);
 }
 
-.dock-label {
-  opacity: 0;
-  max-width: 0;
-  overflow: hidden;
+.nav-link-icon {
+  font-size: 1rem;
+}
+
+.nav-link-label {
+  font-size: 0.8rem;
+}
+
+/* ── Hamburger / menu button ── */
+.menu-btn {
+  flex-shrink: 0;
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 0.4rem;
+  color: #94a3b8;
+  width: 2rem;
+  height: 2rem;
+  font-size: 1rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.15s, border-color 0.15s;
+}
+
+.menu-btn:hover {
+  color: #e2e8f0;
+  border-color: rgba(255, 255, 255, 0.25);
+}
+
+/* ── Expandable panel ── */
+.navbar-panel {
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  padding: 0.5rem 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.panel-enter-active,
+.panel-leave-active {
   transition: all 0.2s ease;
+  overflow: hidden;
 }
 
-.dock--hovered .dock-label {
+.panel-enter-from,
+.panel-leave-to {
+  opacity: 0;
+  max-height: 0;
+  padding-top: 0;
+  padding-bottom: 0;
+}
+
+.panel-enter-to,
+.panel-leave-from {
   opacity: 1;
-  max-width: 100px;
+  max-height: 300px;
 }
 
-.dock-item:hover {
-  color: #e2e8f0;
-  background-color: rgba(255, 255, 255, 0.1);
+.panel-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
 }
 
-.dock-item--active {
-  color: #e2e8f0;
-  background-color: rgba(100, 100, 255, 0.3);
-}
-
-.music-toggle {
-  margin-left: 0.25rem;
-  border-left: 1px solid rgba(255, 255, 255, 0.1);
-  padding-left: 0.5rem;
-}
-
-.dock-divider {
-  width: 1px;
-  height: 1.5rem;
-  background: rgba(255, 255, 255, 0.1);
-  margin: 0 0.15rem;
-}
-
-.dock-stats {
-  cursor: default;
-  font-size: 0.75rem;
+.section-label {
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
   color: #64748b;
 }
 
-.track-picker {
-  position: absolute;
-  top: calc(100% + 0.5rem);
-  left: 50%;
-  transform: translateX(-50%);
-  background: rgba(0, 0, 0, 0.9);
-  backdrop-filter: blur(10px);
-  border-radius: 0.75rem;
-  padding: 0.5rem;
+.section-row {
   display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-  min-width: 160px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem;
 }
 
-.track-option {
-  background: transparent;
-  border: none;
-  color: #94a3b8;
-  padding: 0.5rem 0.75rem;
-  border-radius: 0.5rem;
-  cursor: pointer;
-  text-align: left;
-  font-size: 0.8rem;
+.panel-btn {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: #cbd5e1;
+  padding: 0.3rem 0.6rem;
+  border-radius: 0.35rem;
+  font-size: 0.78rem;
   font-family: inherit;
+  cursor: pointer;
   white-space: nowrap;
-  transition: all 0.2s ease;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
 }
 
-.track-option:hover {
+.panel-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
   color: #e2e8f0;
-  background-color: rgba(255, 255, 255, 0.1);
 }
 
-.track-option--active {
+.panel-btn--active {
+  background: rgba(99, 102, 241, 0.25);
+  border-color: rgba(99, 102, 241, 0.4);
   color: #e2e8f0;
-  background-color: rgba(99, 102, 241, 0.3);
 }
 
-@media (max-width: 768px) {
-  .dock-toggle {
-    display: flex;
+.panel-stat {
+  font-size: 0.78rem;
+  color: #64748b;
+  padding: 0.3rem 0.5rem;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── Desktop tweaks ── */
+@media (min-width: 769px) {
+  .navbar-panel {
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 1rem;
   }
 
-  .dock {
-    transform: translateY(-100%);
-    flex-direction: column;
-    align-items: stretch;
-    padding: 0.75rem;
-    padding-top: 3rem;
-    border-radius: 0 0 1rem 1rem;
+  .panel-section {
+    flex-direction: row;
+    align-items: center;
+    gap: 0.5rem;
   }
 
-  .dock--active {
-    transform: translateY(0);
+  .section-label {
+    font-size: 0.7rem;
   }
 
-  .dock-label {
-    opacity: 1;
-    max-width: 100px;
-  }
-
-  .dock-divider {
-    width: 100%;
-    height: 1px;
-    margin: 0.25rem 0;
-  }
-
-  .music-toggle {
-    margin-left: 0;
-    border-left: none;
-    padding-left: 0.5rem;
-    border-top: 1px solid rgba(255, 255, 255, 0.1);
-    padding-top: 0.5rem;
-  }
-
-  .track-picker {
-    position: static;
-    transform: none;
-    margin-top: 0.25rem;
-    margin-left: 1.5rem;
+  .panel-section + .panel-section {
+    padding-left: 1rem;
+    border-left: 1px solid rgba(255, 255, 255, 0.06);
   }
 }
 
-/* Text edit modal */
-.text-modal-overlay {
+/* ── Modals (shared) ── */
+.modal-overlay {
   position: fixed;
   inset: 0;
   background: rgba(0, 0, 0, 0.6);
@@ -596,7 +543,7 @@ onUnmounted(() => {
   backdrop-filter: blur(4px);
 }
 
-.text-modal {
+.modal {
   background: rgba(20, 20, 40, 0.95);
   padding: 2rem;
   border-radius: 1rem;
@@ -608,7 +555,7 @@ onUnmounted(() => {
   gap: 1rem;
 }
 
-.text-modal h2 {
+.modal h2 {
   color: #e2e8f0;
   font-size: 1.25rem;
   margin: 0;

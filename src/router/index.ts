@@ -25,6 +25,11 @@ const router = createRouter({
       component: () => import('@/views/GlassView.vue')
     },
     {
+      path: '/audio',
+      name: 'audio',
+      component: () => import('@/views/AudioplayerView.vue')
+    },
+    {
       path: '/resume',
       name: 'resume',
       component: () => import('@/views/ResumeView.vue')

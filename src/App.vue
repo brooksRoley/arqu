@@ -6,7 +6,7 @@ import NavBar from '@/components/NavBar.vue'
 const route = useRoute()
 
 const isFullBleed = computed(() => {
-  return ['zeromind', 'glass', 'resume'].includes(route.name as string)
+  return ['reader', 'zeromind', 'glass', 'resume'].includes(route.name as string)
 })
 </script>
 
@@ -32,21 +32,21 @@ const isFullBleed = computed(() => {
 
 .app-main {
   flex: 1;
-  padding: 3.5rem 2rem 4rem;
+  padding: 1.5rem 2rem 4rem;
   max-width: 900px;
   width: 100%;
   margin: 0 auto;
 }
 
 .app-main--fullbleed {
-  padding: 3rem 0 3.5rem;
+  padding: 0;
   max-width: none;
   position: relative;
 }
 
 @media (max-width: 768px) {
   .app-main {
-    padding: 3.5rem 1rem 4rem;
+    padding: 1rem 1rem 4rem;
   }
 }
 </style>

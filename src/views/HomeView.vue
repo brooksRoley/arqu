@@ -16,7 +16,7 @@ const navCards = [
     icon: '🎵',
     title: 'Audio',
     description: 'Browse and play background audio tracks',
-    to: '/reader'
+    to: '/audio'
   },
   {
     icon: '💧',
