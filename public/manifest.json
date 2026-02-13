@@ -1,0 +1,16 @@
+{
+  "name": "Channel Zero: Dreamer",
+  "short_name": "ZeroMind",
+  "description": "Channel Zero story reader",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0a0a14",
+  "theme_color": "#0a0a14",
+  "icons": [
+    {
+      "src": "/src/assets/zero.jpg",
+      "sizes": "512x512",
+      "type": "image/jpeg"
+    }
+  ]
+}

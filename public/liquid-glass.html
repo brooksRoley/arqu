@@ -368,6 +368,27 @@
         mouse.y = e.clientY
       })
 
+      // Touch events
+      canvas.addEventListener('touchstart', (e) => {
+        e.preventDefault()
+        const touch = e.touches[0]
+        mouse.x = touch.clientX
+        mouse.y = touch.clientY
+        mouse.prevX = touch.clientX
+        mouse.prevY = touch.clientY
+      }, { passive: false })
+
+      canvas.addEventListener('touchmove', (e) => {
+        e.preventDefault()
+        const touch = e.touches[0]
+        mouse.x = touch.clientX
+        mouse.y = touch.clientY
+      }, { passive: false })
+
+      canvas.addEventListener('touchend', (e) => {
+        e.preventDefault()
+      }, { passive: false })
+
       window.addEventListener('resize', () => {
         width = canvas.width = window.innerWidth
         height = canvas.height = window.innerHeight
