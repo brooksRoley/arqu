@@ -20,6 +20,11 @@ const router = createRouter({
       component: () => import('@/views/ZeromindView.vue')
     },
     {
+      path: '/glass',
+      name: 'glass',
+      component: () => import('@/views/GlassView.vue')
+    },
+    {
       path: '/resume',
       name: 'resume',
       component: () => import('@/views/ResumeView.vue')

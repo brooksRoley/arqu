@@ -1,5 +1,5 @@
 <template>
-  <iframe src="/liquid-glass.html" class="full-frame" />
+  <iframe src="/liquid-glass-resume.html" class="full-frame" />
 </template>
 
 <style scoped>

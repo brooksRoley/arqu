@@ -7,6 +7,10 @@ const storyText = ref(
 const currentIndex = ref(0)
 const isPlaying = ref(false)
 
+// Background media state
+const backgroundMedia = ref<string | null>(null)
+const isBackgroundVideo = ref(false)
+
 let intervalId: number | null = null
 const wpm = ref(250) // words per minute
 
@@ -62,6 +66,22 @@ function clearStoryText() {
   setStoryText('')
 }
 
+function setBackgroundMedia(url: string, video: boolean) {
+  if (backgroundMedia.value) {
+    URL.revokeObjectURL(backgroundMedia.value)
+  }
+  backgroundMedia.value = url
+  isBackgroundVideo.value = video
+}
+
+function clearBackgroundMedia() {
+  if (backgroundMedia.value) {
+    URL.revokeObjectURL(backgroundMedia.value)
+    backgroundMedia.value = null
+    isBackgroundVideo.value = false
+  }
+}
+
 function setWpm(value: number) {
   wpm.value = value
   if (isPlaying.value) {
@@ -85,6 +105,10 @@ export function useStoryStore() {
     pause,
     reset,
     seekToWord,
-    setWpm
+    setWpm,
+    backgroundMedia,
+    isBackgroundVideo,
+    setBackgroundMedia,
+    clearBackgroundMedia
   }
 }

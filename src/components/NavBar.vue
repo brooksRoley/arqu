@@ -12,7 +12,11 @@ const {
   setStoryText,
   play,
   pause,
-  reset
+  reset,
+  backgroundMedia,
+  isBackgroundVideo,
+  setBackgroundMedia,
+  clearBackgroundMedia
 } = useStoryStore()
 
 // Dock visibility state
@@ -24,6 +28,9 @@ let hideTimeout: number | null = null
 const showTextModal = ref(false)
 const textInputValue = ref('')
 const fileName = ref('')
+
+// Background modal state
+const showBgModal = ref(false)
 
 const navRoutes = computed(() => {
   return router
@@ -38,6 +45,10 @@ const navRoutes = computed(() => {
 })
 
 function formatRouteName(name: string): string {
+  const labels: Record<string, string> = {
+    glass: 'Liquid Glass'
+  }
+  if (labels[name]) return labels[name]
   return name
     .replace(/([A-Z])/g, ' $1')
     .replace(/^./, (str) => str.toUpperCase())
@@ -49,7 +60,8 @@ function getRouteIcon(name: string): string {
     home: '🏠',
     reader: '📖',
     zeromind: '🌀',
-    resume: '💧'
+    glass: '💧',
+    resume: '📄'
   }
   return icons[name] || '📄'
 }
@@ -57,12 +69,7 @@ function getRouteIcon(name: string): string {
 // Background music state
 const audioTracks = [
   { name: 'Floating', file: 'floating.mp3' },
-  { name: 'Coding Night', file: 'coding-night.mp3' },
-  { name: 'Good Doll', file: 'GoodDoll_ServeNow_EmptyForMe copy.mp3' },
-  { name: 'Kitty Queen', file: 'KittyQueen copy.mp3' },
-  { name: 'Rack Em Up', file: 'rackEmUp copy.mp3' },
-  { name: 'Voice of Magic p1', file: 'voiceofmagicp1 copy.mp3' },
-  { name: 'Voice of Magic p2', file: 'voiceofmagicp2 copy.mp3' }
+  { name: 'Coding Night', file: 'coding-night.mp3' }
 ]
 const currentTrackIndex = ref(0)
 const musicPlaying = ref(false)
@@ -73,12 +80,15 @@ function initAudio() {
   audioElement.value = new Audio(`/audio/${audioTracks[currentTrackIndex.value].file}`)
   audioElement.value.loop = true
   audioElement.value.volume = 0.3
-  audioElement.value.play().then(() => {
-    musicPlaying.value = true
-  }).catch(() => {
-    // Autoplay blocked by browser; user must interact first
-    musicPlaying.value = false
-  })
+  audioElement.value
+    .play()
+    .then(() => {
+      musicPlaying.value = true
+    })
+    .catch(() => {
+      // Autoplay blocked by browser; user must interact first
+      musicPlaying.value = false
+    })
 }
 
 function toggleMusic() {
@@ -173,6 +183,15 @@ function handleFileUpload(event: Event) {
   reader.readAsText(file)
 }
 
+function handleBgUpload(event: Event) {
+  const target = event.target as HTMLInputElement
+  const file = target.files?.[0]
+  if (!file) return
+  const url = URL.createObjectURL(file)
+  setBackgroundMedia(url, file.type.startsWith('video/'))
+  showBgModal.value = false
+}
+
 function loadText() {
   if (!textInputValue.value.trim()) return
   setStoryText(textInputValue.value)
@@ -185,8 +204,10 @@ function handleTouchStart(e: TouchEvent) {
   const toggle = document.querySelector('.dock-toggle')
   if (
     isActive.value &&
-    nav && !nav.contains(e.target as Node) &&
-    toggle && !toggle.contains(e.target as Node)
+    nav &&
+    !nav.contains(e.target as Node) &&
+    toggle &&
+    !toggle.contains(e.target as Node)
   ) {
     isActive.value = false
   }
@@ -242,11 +263,7 @@ onUnmounted(() => {
       <span class="dock-label">Music</span>
     </button>
 
-    <button
-      class="dock-item"
-      title="Choose Track"
-      @click="showTrackPicker = !showTrackPicker"
-    >
+    <button class="dock-item" title="Choose Track" @click="showTrackPicker = !showTrackPicker">
       <span class="dock-icon">🎶</span>
       <span class="dock-label">Tracks</span>
     </button>
@@ -269,13 +286,14 @@ onUnmounted(() => {
       <span class="dock-label">Text</span>
     </button>
 
+    <button class="dock-item" title="Background" @click="showBgModal = true">
+      <span class="dock-icon">🖼️</span>
+      <span class="dock-label">Background</span>
+    </button>
+
     <!-- Reader controls — visible when a story is loaded -->
     <template v-if="storyText">
-      <button
-        class="dock-item"
-        :title="isPlaying ? 'Pause' : 'Play'"
-        @click="togglePlayback"
-      >
+      <button class="dock-item" :title="isPlaying ? 'Pause' : 'Play'" @click="togglePlayback">
         <span class="dock-icon">{{ isPlaying ? '⏸' : '▶️' }}</span>
         <span class="dock-label">{{ isPlaying ? 'Pause' : 'Play' }}</span>
       </button>
@@ -320,6 +338,46 @@ onUnmounted(() => {
             Start Reading
           </button>
           <button class="modal-btn" @click="showTextModal = false">Close</button>
+        </div>
+      </div>
+    </div>
+  </Teleport>
+
+  <!-- Background upload modal -->
+  <Teleport to="body">
+    <div v-if="showBgModal" class="text-modal-overlay" @click.self="showBgModal = false">
+      <div class="text-modal">
+        <h2>Set Background</h2>
+
+        <div v-if="backgroundMedia" class="bg-preview">
+          <video
+            v-if="isBackgroundVideo"
+            :src="backgroundMedia"
+            autoplay
+            loop
+            muted
+            playsinline
+            class="bg-preview-media"
+          ></video>
+          <img v-else :src="backgroundMedia" class="bg-preview-media" alt="background preview" />
+        </div>
+
+        <label class="modal-file-upload">
+          <input type="file" accept="image/gif,video/mp4,video/webm" @change="handleBgUpload" />
+          <span class="modal-upload-btn">{{
+            backgroundMedia ? 'Change File' : 'Choose File'
+          }}</span>
+        </label>
+
+        <div class="modal-actions">
+          <button
+            v-if="backgroundMedia"
+            class="modal-btn modal-btn--danger"
+            @click="clearBackgroundMedia(), (showBgModal = false)"
+          >
+            Clear Background
+          </button>
+          <button class="modal-btn" @click="showBgModal = false">Close</button>
         </div>
       </div>
     </div>
@@ -644,5 +702,26 @@ onUnmounted(() => {
 .modal-btn:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+
+.modal-btn--danger {
+  background: #991b1b;
+  color: #fecaca;
+}
+
+.modal-btn--danger:hover {
+  background: #b91c1c;
+}
+
+.bg-preview {
+  border-radius: 0.5rem;
+  overflow: hidden;
+  max-height: 200px;
+}
+
+.bg-preview-media {
+  width: 100%;
+  max-height: 200px;
+  object-fit: contain;
 }
 </style>

@@ -1,0 +1,1141 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Liquid Glass Resumes</title>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=DM+Sans:wght@300;400;500;600&display=swap"
+      rel="stylesheet"
+    />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/vue/3.3.4/vue.global.prod.min.js"></script>
+    <style>
+      *,
+      *::before,
+      *::after {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      [data-theme='brooks'] {
+        --text: #d5dfe5;
+        --text-sec: rgba(213, 223, 229, 0.55);
+        --accent1: #c9b1bd;
+        --accent2: #b49594;
+        --bg-a: #3a5244;
+        --bg-b: #567568;
+        --bg-c: #4a6358;
+        --bg-d: #3d5446;
+        --glass-bg: rgba(86, 117, 104, 0.25);
+        --glass-card: rgba(56, 85, 68, 0.4);
+        --glass-border: rgba(201, 177, 189, 0.18);
+        --glass-hl: rgba(201, 177, 189, 0.12);
+        --a1-rgb: 201, 177, 189;
+        --a2-rgb: 180, 149, 148;
+      }
+      [data-theme='courtney'] {
+        --text: #3c5629;
+        --text-sec: rgba(31, 60, 78, 0.55);
+        --accent1: #7f9172;
+        --accent2: #567568;
+        --bg-a: #8a6e6d;
+        --bg-b: #b49594;
+        --bg-c: #a3807f;
+        --bg-d: #8a6e6d;
+        --glass-bg: rgba(180, 149, 148, 0.22);
+        --glass-card: rgba(138, 110, 109, 0.4);
+        --glass-border: rgba(127, 145, 114, 0.22);
+        --glass-hl: rgba(127, 145, 114, 0.14);
+        --a1-rgb: 127, 145, 114;
+        --a2-rgb: 86, 117, 104;
+      }
+
+      body {
+        font-family: 'DM Sans', sans-serif;
+        color: var(--text);
+        min-height: 100vh;
+        overflow-x: hidden;
+        cursor: none;
+        background: linear-gradient(
+          145deg,
+          var(--bg-a) 0%,
+          var(--bg-b) 40%,
+          var(--bg-c) 70%,
+          var(--bg-d) 100%
+        );
+        transition: background 0.6s ease;
+      }
+      #app {
+        position: relative;
+        min-height: 100vh;
+      }
+
+      /* ── Nav ── */
+      .nav-pill {
+        position: fixed;
+        top: 24px;
+        right: 24px;
+        z-index: 9999;
+        display: flex;
+        gap: 4px;
+        padding: 4px;
+        border-radius: 100px;
+        backdrop-filter: blur(14px);
+        background: var(--glass-bg);
+        border: 1px solid var(--glass-border);
+      }
+      .nav-pill button {
+        color: var(--text-sec);
+        background: none;
+        border: none;
+        font-family: 'DM Sans', sans-serif;
+        font-size: 0.82rem;
+        font-weight: 500;
+        padding: 6px 18px;
+        border-radius: 100px;
+        cursor: none;
+        transition: all 0.3s ease;
+      }
+      .nav-pill button:hover {
+        color: var(--text);
+      }
+      .nav-pill button.active {
+        background: var(--glass-hl);
+        color: var(--accent1);
+        border: 1px solid var(--glass-border);
+      }
+
+      /* ── Cursor ── */
+      .cursor-dot {
+        position: fixed;
+        width: 8px;
+        height: 8px;
+        background: var(--accent1);
+        border-radius: 50%;
+        pointer-events: none;
+        z-index: 10000;
+        transform: translate(-50%, -50%);
+        box-shadow: 0 0 10px rgba(var(--a1-rgb), 0.4);
+        transition:
+          width 0.15s,
+          height 0.15s,
+          box-shadow 0.15s;
+      }
+      .cursor-dot.clicking {
+        width: 6px;
+        height: 6px;
+        box-shadow: 0 0 20px rgba(var(--a1-rgb), 0.7);
+      }
+      .cursor-ring {
+        position: fixed;
+        width: 34px;
+        height: 34px;
+        border: 1.5px solid rgba(var(--a1-rgb), 0.35);
+        border-radius: 50%;
+        pointer-events: none;
+        z-index: 10000;
+        transform: translate(-50%, -50%);
+        transition:
+          width 0.25s ease,
+          height 0.25s ease,
+          border-color 0.25s ease;
+      }
+      .cursor-ring.hovering {
+        width: 48px;
+        height: 48px;
+        border-color: var(--accent1);
+      }
+
+      .svg-filters {
+        position: absolute;
+        width: 0;
+        height: 0;
+      }
+      .liquid-bg {
+        position: fixed;
+        inset: 0;
+        z-index: 0;
+        overflow: hidden;
+      }
+      .glass-orb {
+        position: absolute;
+        border-radius: 50%;
+        filter: url(#goo) blur(40px);
+        opacity: 0.45;
+        mix-blend-mode: screen;
+        will-change: transform;
+        transition:
+          transform 0.6s cubic-bezier(0.23, 1, 0.32, 1),
+          background 0.6s ease;
+      }
+
+      /* ── Canvases ── */
+      .fx-canvas {
+        position: fixed;
+        inset: 0;
+        pointer-events: none;
+      }
+      .fx-canvas.trail {
+        z-index: 1;
+      }
+      .fx-canvas.firework {
+        z-index: 9998;
+      }
+
+      /* ── Stone-skip ripple: single clean ring ── */
+      .skip-ripple {
+        position: fixed;
+        border-radius: 50%;
+        pointer-events: none;
+        z-index: 2;
+        border: 1.5px solid rgba(var(--a1-rgb), 0.6);
+        box-shadow:
+          0 0 8px rgba(var(--a1-rgb), 0.15),
+          inset 0 0 4px rgba(var(--a1-rgb), 0.06);
+        animation: skipExpand 1.4s cubic-bezier(0.2, 0.6, 0.35, 1) forwards;
+      }
+      .skip-ripple.alt {
+        border-color: rgba(var(--a2-rgb), 0.5);
+        box-shadow:
+          0 0 8px rgba(var(--a2-rgb), 0.12),
+          inset 0 0 4px rgba(var(--a2-rgb), 0.05);
+      }
+      /* Stone-skip splash dot */
+      .skip-dot {
+        position: fixed;
+        width: 5px;
+        height: 5px;
+        border-radius: 50%;
+        pointer-events: none;
+        z-index: 3;
+        background: rgba(var(--a1-rgb), 0.7);
+        box-shadow: 0 0 6px rgba(var(--a1-rgb), 0.3);
+        animation: skipDotFade 0.5s ease-out forwards;
+      }
+      @keyframes skipExpand {
+        0% {
+          transform: translate(-50%, -50%) scale(0);
+          opacity: 0.7;
+        }
+        100% {
+          transform: translate(-50%, -50%) scale(1);
+          opacity: 0;
+        }
+      }
+      @keyframes skipDotFade {
+        0% {
+          transform: translate(-50%, -50%) scale(1);
+          opacity: 0.8;
+        }
+        100% {
+          transform: translate(-50%, -50%) scale(0.3);
+          opacity: 0;
+        }
+      }
+
+      /* ── Click ripple — slightly bigger, two rings ── */
+      .click-ripple {
+        position: fixed;
+        border-radius: 50%;
+        pointer-events: none;
+        z-index: 2;
+        border: 2px solid rgba(var(--a1-rgb), 0.8);
+        box-shadow:
+          0 0 16px rgba(var(--a1-rgb), 0.3),
+          inset 0 0 8px rgba(var(--a1-rgb), 0.1);
+        animation: clickExpand 1.8s cubic-bezier(0.15, 0.6, 0.3, 1) forwards;
+      }
+      .click-ripple.inner {
+        border-width: 1.5px;
+        border-color: rgba(var(--a2-rgb), 0.6);
+        box-shadow: 0 0 12px rgba(var(--a2-rgb), 0.2);
+        animation-delay: 0.1s;
+      }
+      @keyframes clickExpand {
+        0% {
+          transform: translate(-50%, -50%) scale(0);
+          opacity: 0.9;
+        }
+        100% {
+          transform: translate(-50%, -50%) scale(1);
+          opacity: 0;
+        }
+      }
+
+      /* ── Content ── */
+      .content {
+        position: relative;
+        z-index: 3;
+        max-width: 780px;
+        margin: 0 auto;
+        padding: 80px 24px 120px;
+      }
+      .resume-header {
+        text-align: center;
+        margin-bottom: 64px;
+        animation: fadeUp 0.8s ease both;
+      }
+      .resume-header h1 {
+        font-family: 'Playfair Display', serif;
+        font-size: 3.4rem;
+        font-weight: 900;
+        letter-spacing: -0.02em;
+        line-height: 1.1;
+        background: linear-gradient(
+          135deg,
+          var(--text) 0%,
+          var(--accent1) 50%,
+          var(--accent2) 100%
+        );
+        background-size: 200% 200%;
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        animation: shimmer 6s ease infinite;
+      }
+      .resume-header .subtitle {
+        font-size: 1rem;
+        color: var(--text-sec);
+        margin-top: 12px;
+        font-weight: 300;
+        letter-spacing: 0.08em;
+        max-width: 520px;
+        margin-left: auto;
+        margin-right: auto;
+        line-height: 1.6;
+      }
+      .contact-row {
+        display: flex;
+        justify-content: center;
+        gap: 12px;
+        margin-top: 28px;
+        flex-wrap: wrap;
+      }
+      .contact-link {
+        color: var(--text-sec);
+        text-decoration: none;
+        font-size: 0.84rem;
+        font-weight: 500;
+        padding: 6px 16px;
+        border: 1px solid var(--glass-border);
+        border-radius: 100px;
+        backdrop-filter: blur(10px);
+        background: var(--glass-bg);
+        transition: all 0.3s ease;
+        cursor: none;
+      }
+      .contact-link:hover {
+        background: var(--glass-hl);
+        border-color: var(--accent1);
+        box-shadow: 0 0 20px rgba(var(--a1-rgb), 0.12);
+      }
+      @keyframes shimmer {
+        0%,
+        100% {
+          background-position: 0% 50%;
+        }
+        50% {
+          background-position: 100% 50%;
+        }
+      }
+      @keyframes fadeUp {
+        from {
+          opacity: 0;
+          transform: translateY(30px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      .drawer {
+        margin-bottom: 12px;
+        border: 1px solid var(--glass-border);
+        border-radius: 16px;
+        backdrop-filter: blur(16px);
+        background: var(--glass-card);
+        overflow: hidden;
+        transition:
+          border-color 0.3s,
+          box-shadow 0.3s,
+          background 0.6s;
+        animation: fadeUp 0.6s ease both;
+      }
+      .drawer:hover {
+        border-color: rgba(var(--a1-rgb), 0.22);
+        box-shadow: 0 4px 30px rgba(var(--a1-rgb), 0.05);
+      }
+      .drawer.open {
+        border-color: rgba(var(--a1-rgb), 0.28);
+        box-shadow:
+          0 8px 40px rgba(0, 0, 0, 0.25),
+          0 0 40px rgba(var(--a1-rgb), 0.05);
+      }
+      .drawer-trigger {
+        width: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 22px 28px;
+        background: none;
+        border: none;
+        color: var(--text);
+        font-family: 'DM Sans', sans-serif;
+        font-size: 1.05rem;
+        font-weight: 600;
+        letter-spacing: 0.04em;
+        cursor: none;
+        text-align: left;
+        transition: background 0.2s;
+      }
+      .drawer-trigger:hover {
+        background: rgba(255, 255, 255, 0.03);
+      }
+      .drawer-trigger .label {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+      }
+      .drawer-trigger .icon {
+        width: 32px;
+        height: 32px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 10px;
+        background: rgba(var(--a1-rgb), 0.1);
+        color: var(--accent1);
+        font-size: 1rem;
+      }
+      .chevron {
+        width: 20px;
+        height: 20px;
+        transition: transform 0.4s cubic-bezier(0.23, 1, 0.32, 1);
+        color: var(--text-sec);
+      }
+      .drawer.open .chevron {
+        transform: rotate(180deg);
+      }
+      .drawer-body {
+        max-height: 0;
+        overflow: hidden;
+        transition:
+          max-height 0.5s cubic-bezier(0.23, 1, 0.32, 1),
+          padding 0.4s ease;
+        padding: 0 28px;
+      }
+      .drawer.open .drawer-body {
+        max-height: 2000px;
+        padding: 0 28px 28px;
+      }
+      .drawer-body p {
+        color: rgba(213, 223, 229, 0.7);
+        font-size: 0.92rem;
+        line-height: 1.7;
+      }
+      .drawer-body h3 {
+        font-family: 'Playfair Display', serif;
+        font-size: 1.1rem;
+        font-weight: 700;
+        margin: 16px 0 4px;
+        color: var(--text);
+      }
+      .drawer-body h3:first-child {
+        margin-top: 0;
+      }
+      .drawer-body .role {
+        color: var(--accent1);
+        font-weight: 500;
+        font-size: 0.88rem;
+      }
+      .drawer-body .dates {
+        font-size: 0.82rem;
+        color: var(--text-sec);
+        opacity: 0.7;
+        margin-bottom: 6px;
+      }
+      .drawer-body .faded {
+        font-family: 'DM Sans', sans-serif;
+        font-weight: 400;
+        font-size: 0.85rem;
+        opacity: 0.4;
+      }
+      .tag-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-top: 14px;
+      }
+      .tag {
+        padding: 4px 14px;
+        border-radius: 100px;
+        font-size: 0.78rem;
+        font-weight: 500;
+        background: rgba(var(--a1-rgb), 0.08);
+        color: var(--accent1);
+        border: 1px solid rgba(var(--a1-rgb), 0.18);
+      }
+      .tag.a2 {
+        background: rgba(var(--a2-rgb), 0.08);
+        color: var(--accent2);
+        border-color: rgba(var(--a2-rgb), 0.18);
+      }
+      .skill-cat {
+        margin-bottom: 16px;
+      }
+      .skill-cat:last-child {
+        margin-bottom: 0;
+      }
+      .skill-cat-label {
+        font-size: 0.78rem;
+        font-weight: 600;
+        color: var(--accent2);
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+        margin-bottom: 8px;
+      }
+      .entry + .entry {
+        margin-top: 22px;
+        padding-top: 22px;
+        border-top: 1px solid rgba(var(--a1-rgb), 0.1);
+      }
+      .resume-footer {
+        text-align: center;
+        margin-top: 60px;
+        color: var(--text-sec);
+        font-size: 0.8rem;
+        opacity: 0.5;
+        animation: fadeUp 0.8s ease 0.6s both;
+      }
+
+      /* ── Page transition ── */
+      .page-fade-enter-active,
+      .page-fade-leave-active {
+        transition: opacity 0.35s ease;
+      }
+      .page-fade-enter-from,
+      .page-fade-leave-to {
+        opacity: 0;
+      }
+    </style>
+  </head>
+  <body data-theme="brooks">
+    <div id="app">
+      <svg class="svg-filters">
+        <defs>
+          <filter id="goo">
+            <feGaussianBlur in="SourceGraphic" stdDeviation="10" result="blur" />
+            <feColorMatrix
+              in="blur"
+              mode="matrix"
+              values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 20 -8"
+              result="goo"
+            />
+            <feComposite in="SourceGraphic" in2="goo" operator="atop" />
+          </filter>
+        </defs>
+      </svg>
+
+      <nav class="nav-pill">
+        <button :class="{ active: page === 'brooks' }" @click="setPage('brooks')">
+          Deep Forrest
+        </button>
+        <button :class="{ active: page === 'courtney' }" @click="setPage('courtney')">
+          Cotton Candy
+        </button>
+      </nav>
+
+      <div class="liquid-bg">
+        <div
+          v-for="orb in orbs"
+          :key="orb.id"
+          class="glass-orb"
+          :style="{ width: orb.size+'px', height: orb.size+'px',
+        background: 'radial-gradient(circle,'+orb.color+', transparent 70%)',
+        left: orb.baseX+'%', top: orb.baseY+'%',
+        transform: 'translate('+orb.offsetX+'px,'+orb.offsetY+'px)' }"
+        ></div>
+      </div>
+
+      <canvas ref="trailCanvas" class="fx-canvas trail"></canvas>
+      <canvas ref="fwCanvas" class="fx-canvas firework"></canvas>
+
+      <!-- Stone-skip ripples -->
+      <div
+        v-for="r in skipRipples"
+        :key="r.id"
+        class="skip-ripple"
+        :class="{ alt: r.alt }"
+        :style="{ left: r.x+'px', top: r.y+'px', width: r.size+'px', height: r.size+'px' }"
+      ></div>
+      <div
+        v-for="d in skipDots"
+        :key="d.id"
+        class="skip-dot"
+        :style="{ left: d.x+'px', top: d.y+'px' }"
+      ></div>
+
+      <!-- Click ripples -->
+      <div
+        v-for="r in clickRipples"
+        :key="r.id"
+        class="click-ripple"
+        :class="{ inner: r.inner }"
+        :style="{ left: r.x+'px', top: r.y+'px', width: r.size+'px', height: r.size+'px', animationDelay: r.delay }"
+      ></div>
+
+      <!-- Cursor -->
+      <div
+        class="cursor-dot"
+        :class="{ clicking: cursorClicking }"
+        :style="{ left: cursor.x+'px', top: cursor.y+'px' }"
+      ></div>
+      <div
+        class="cursor-ring"
+        :class="{ hovering: cursor.hovering }"
+        :style="{ left: cursorLag.x+'px', top: cursorLag.y+'px' }"
+      ></div>
+
+      <!-- Page content -->
+      <transition name="page-fade" mode="out-in">
+        <div class="content" :key="page">
+          <header class="resume-header">
+            <h1>{{ activePerson.name }}</h1>
+            <p class="subtitle">{{ activePerson.subtitle }}</p>
+            <div class="contact-row">
+              <a
+                v-for="lnk in activePerson.links"
+                :key="lnk.label"
+                :href="lnk.href"
+                target="_blank"
+                class="contact-link"
+                @click.prevent="onClickFx"
+                >{{ lnk.label }}</a
+              >
+            </div>
+          </header>
+          <div
+            v-for="(sec, i) in activePerson.sections"
+            :key="sec.id"
+            class="drawer"
+            :class="{ open: sec.open }"
+            :style="{ animationDelay: (0.15 + i * 0.1) + 's' }"
+          >
+            <button class="drawer-trigger" @click="sec.open = !sec.open">
+              <span class="label">
+                <span class="icon" v-html="sec.icon"></span>{{ sec.title }}
+              </span>
+              <svg
+                class="chevron"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <path d="M6 9l6 6 6-6" />
+              </svg>
+            </button>
+            <div class="drawer-body" v-html="sec.content"></div>
+          </div>
+          <footer class="resume-footer">
+            A little better everyday. &middot; {{ new Date().getFullYear() }}
+          </footer>
+        </div>
+      </transition>
+    </div>
+
+    <script>
+      const { createApp, ref, reactive, computed, onMounted, onUnmounted } = Vue
+
+      createApp({
+        setup() {
+          /* ── Page state (no router) ── */
+          const page = ref('brooks')
+
+          const brooksData = reactive({
+            name: 'Brooks Roley',
+            subtitle:
+              'Adaptable and impact-driven Software Engineer with experience across early-stage startups and mission-driven companies.',
+            links: [
+              { label: 'Schedule a Chat', href: 'https://calendly.com/brooksroley/' },
+              { label: 'brooksroley@gmail.com', href: 'mailto:brooksroley@gmail.com' },
+              { label: 'LinkedIn', href: 'https://www.linkedin.com/in/brooksroley' },
+              { label: 'GitHub', href: 'https://github.com/brooksroley' }
+            ],
+            sections: [
+              {
+                id: 'exp',
+                title: 'Experience',
+                open: false,
+                icon: '&#9638;',
+                content: `
+          <div class="entry"><h3>Zoox</h3><div class="role">Software Engineer</div><div class="dates">Sep 2024 &ndash; Mar 2025</div>
+            <p>Managed the OnCall notification system for the SRE team using Vue, Python FastAPI, AWS, OpsGenie, Slack, Terraform, Vault, and Grafana.</p>
+            <p style="margin-top:6px">Integrated Zoox Intelligence AI into the OnCall app and Slack to improve developer experience via Vite, Vuetify, and Continue.</p></div>
+          <div class="entry"><h3>Grove Collaborative</h3><div class="role">Software Engineer II</div><div class="dates">2019 &ndash; 2023</div>
+            <p>Scrum Lead across cross-functional teams focused on discovery, personalization, and user engagement.</p>
+            <p style="margin-top:6px">Built high-performance homepage service with AWS Sagemaker &mdash; 150ms response times via smart caching, async workflows, and a custom admin UI.</p>
+            <p style="margin-top:6px">Led migration from Backbone.js to Vue Composition API and Vue-Router, reducing bundle sizes and improving page loads.</p>
+            <p style="margin-top:6px">Partnered with A360 to lead site-wide WCAG compliance remediation.</p>
+            <p style="margin-top:6px">Unified product tile components to streamline data fetching, performance, accessibility, and styling.</p></div>
+          <div class="entry"><h3>Zipongo <span class="faded">(now Foodsmart)</span></h3><div class="role">Senior Software Engineer</div><div class="dates">2017 &ndash; 2019</div>
+            <p>Full-stack features with product and clinical teams delivering high-impact healthcare tools.</p>
+            <p style="margin-top:6px">Led frontend for secure RBAC interfaces &mdash; React, Redux, Node.js, SAML/SSO for HIPAA compliance.</p>
+            <p style="margin-top:6px">Built admin tools for providers to create personalized nutrition and diet plans.</p></div>
+          <div class="entry"><h3>SigFig</h3><div class="role">Front End Software Engineer</div><div class="dates">2016 &ndash; 2017</div>
+            <p>Dynamic Angular/TypeScript interfaces for banking partners (Wells Fargo), accessibility and i18n focus.</p>
+            <p style="margin-top:6px">Built behavioral analytics layer for product insights and optimization.</p></div>
+          <div class="entry"><h3>Limelight Health <span class="faded">(now FINEOS)</span></h3><div class="role">Software Engineer</div><div class="dates">2015 &ndash; 2016</div>
+            <p>Early hire on Node.js MEAN stack platform for employer insurance quotes.</p>
+            <p style="margin-top:6px">Built PDF generation service with PHP and D3.js across Medical, Dental, Vision, and Life products.</p></div>
+          <div class="entry"><h3>Dev Bootcamp</h3><div class="role">Phase 0 Instructor</div><div class="dates">2014 &ndash; 2015</div>
+            <p>Remote tutor teaching full-stack web development (JavaScript, Ruby on Rails).</p></div>
+          <div class="entry"><h3>Laguna Canyon Foundation</h3><div class="role">Education Leader</div><div class="dates">2013 &ndash; 2014</div></div>`
+              },
+              {
+                id: 'skills',
+                title: 'Technical Skills',
+                open: false,
+                icon: '&#11041;',
+                content: `
+          <div class="skill-cat"><div class="skill-cat-label">Languages &amp; Frameworks</div><div class="tag-row">
+            <span class="tag">JavaScript</span><span class="tag">TypeScript</span><span class="tag">Python</span><span class="tag">Node.js</span>
+            <span class="tag">Vue</span><span class="tag">React</span><span class="tag">Angular</span><span class="tag">Django</span>
+            <span class="tag">FastAPI</span><span class="tag">D3.js</span></div></div>
+          <div class="skill-cat"><div class="skill-cat-label">Infrastructure &amp; Tools</div><div class="tag-row">
+            <span class="tag a2">AWS (S3, Sagemaker)</span><span class="tag a2">Docker</span><span class="tag a2">Kubernetes</span>
+            <span class="tag a2">Git</span><span class="tag a2">Bash</span><span class="tag a2">Webpack</span>
+            <span class="tag a2">Babel</span><span class="tag a2">Terraform</span></div></div>
+          <div class="skill-cat"><div class="skill-cat-label">Data &amp; Databases</div><div class="tag-row">
+            <span class="tag">SQL</span><span class="tag">PostgreSQL</span><span class="tag">MySQL</span><span class="tag">SQLite</span>
+            <span class="tag">Redis</span><span class="tag">Memcached</span><span class="tag">Snowflake</span><span class="tag">Celery</span></div></div>
+          <div class="skill-cat"><div class="skill-cat-label">Standards</div><div class="tag-row">
+            <span class="tag a2">WCAG</span><span class="tag a2">A/B Testing</span><span class="tag a2">HIPAA</span><span class="tag a2">SSO/SAML</span></div></div>
+          <div class="skill-cat"><div class="skill-cat-label">DevOps</div><div class="tag-row">
+            <span class="tag">Datadog</span><span class="tag">Grafana</span><span class="tag">CI/CD</span></div></div>`
+              },
+              {
+                id: 'edu',
+                title: 'Education',
+                open: false,
+                icon: '&#9671;',
+                content: `
+          <div class="entry"><h3>Sonoma State University</h3><div class="role">B.S. Computer Science</div><div class="dates">2013</div></div>`
+              }
+            ]
+          })
+
+          const courtneyData = reactive({
+            name: 'Brooks Roley',
+            subtitle:
+              'Creative and detail-oriented professional bringing clarity, warmth, and strategic thinking to every project.',
+            links: [
+              { label: 'Email', href: 'mailto:brooksroley@gmail.com' },
+              { label: 'LinkedIn', href: 'https://linkedin.com/in/brooksroley' },
+              { label: 'Portfolio', href: '#' }
+            ],
+            sections: [
+              {
+                id: 'exp',
+                title: 'Experience',
+                open: false,
+                icon: '&#9638;',
+                content: `
+          <div class="entry"><h3>Placeholder Co.</h3><div class="role">Lead Role</div><div class="dates">2023 &ndash; Present</div>
+            <p>Replace with Courtney&rsquo;s actual experience. The drawer structure, animations, and color scheme (inverted green accents on mauve background) are all ready to go.</p></div>
+          <div class="entry"><h3>Previous Company</h3><div class="role">Previous Role</div><div class="dates">2020 &ndash; 2023</div>
+            <p>Add real entries here. Supports multiple paragraphs, roles, dates, and any HTML formatting.</p></div>
+          <div class="entry"><h3>Earlier Position</h3><div class="role">Role Title</div><div class="dates">2017 &ndash; 2020</div>
+            <p>The drawer expands to fit any amount of content.</p></div>`
+              },
+              {
+                id: 'skills',
+                title: 'Skills',
+                open: false,
+                icon: '&#11041;',
+                content: `
+          <div class="skill-cat"><div class="skill-cat-label">Category One</div><div class="tag-row">
+            <span class="tag">Skill A</span><span class="tag">Skill B</span><span class="tag">Skill C</span><span class="tag">Skill D</span></div></div>
+          <div class="skill-cat"><div class="skill-cat-label">Category Two</div><div class="tag-row">
+            <span class="tag a2">Skill E</span><span class="tag a2">Skill F</span><span class="tag a2">Skill G</span></div></div>`
+              },
+              {
+                id: 'edu',
+                title: 'Education',
+                open: false,
+                icon: '&#9671;',
+                content: `
+          <div class="entry"><h3>University Name</h3><div class="role">Degree &amp; Major</div><div class="dates">Year</div></div>`
+              }
+            ]
+          })
+
+          const activePerson = computed(() => (page.value === 'brooks' ? brooksData : courtneyData))
+
+          const orbColors = {
+            brooks: [
+              'rgba(201,177,189,0.35)',
+              'rgba(127,145,114,0.45)',
+              'rgba(180,149,148,0.35)',
+              'rgba(201,177,189,0.25)',
+              'rgba(127,145,114,0.3)',
+              'rgba(180,149,148,0.2)'
+            ],
+            courtney: [
+              'rgba(127,145,114,0.35)',
+              'rgba(201,177,189,0.4)',
+              'rgba(86,117,104,0.35)',
+              'rgba(127,145,114,0.25)',
+              'rgba(201,177,189,0.3)',
+              'rgba(86,117,104,0.2)'
+            ]
+          }
+          const trailPalettes = {
+            brooks: { a1: [201, 177, 189], a2: [180, 149, 148] },
+            courtney: { a1: [127, 145, 114], a2: [86, 117, 104] }
+          }
+          const fwPalettes = {
+            brooks: ['#C9B1BD', '#B49594', '#D5DFE5', '#e0c8d6', '#d4aeac', '#a8c4a0', '#fff'],
+            courtney: ['#7F9172', '#567568', '#D5DFE5', '#a8c4a0', '#8aab7c', '#C9B1BD', '#fff']
+          }
+          let trailPal = trailPalettes.brooks
+          let fwPal = fwPalettes.brooks
+
+          const orbs = reactive([
+            {
+              id: 0,
+              size: 360,
+              baseX: 10,
+              baseY: 15,
+              color: orbColors.brooks[0],
+              offsetX: 0,
+              offsetY: 0
+            },
+            {
+              id: 1,
+              size: 280,
+              baseX: 72,
+              baseY: 10,
+              color: orbColors.brooks[1],
+              offsetX: 0,
+              offsetY: 0
+            },
+            {
+              id: 2,
+              size: 320,
+              baseX: 45,
+              baseY: 55,
+              color: orbColors.brooks[2],
+              offsetX: 0,
+              offsetY: 0
+            },
+            {
+              id: 3,
+              size: 240,
+              baseX: 85,
+              baseY: 65,
+              color: orbColors.brooks[3],
+              offsetX: 0,
+              offsetY: 0
+            },
+            {
+              id: 4,
+              size: 200,
+              baseX: 25,
+              baseY: 80,
+              color: orbColors.brooks[4],
+              offsetX: 0,
+              offsetY: 0
+            },
+            {
+              id: 5,
+              size: 180,
+              baseX: 60,
+              baseY: 85,
+              color: orbColors.brooks[5],
+              offsetX: 0,
+              offsetY: 0
+            }
+          ])
+
+          function setPage(p) {
+            if (page.value === p) return
+            page.value = p
+            document.body.setAttribute('data-theme', p)
+            trailPal = trailPalettes[p]
+            fwPal = fwPalettes[p]
+            orbColors[p].forEach((c, i) => {
+              orbs[i].color = c
+            })
+            // Close all drawers on page switch
+            brooksData.sections.forEach((s) => (s.open = false))
+            courtneyData.sections.forEach((s) => (s.open = false))
+          }
+
+          /* ═══ CURSOR ═══ */
+          const cursor = reactive({ x: -100, y: -100, hovering: false })
+          const cursorLag = reactive({ x: -100, y: -100 })
+          const cursorClicking = ref(false)
+          let lagRAF
+          function updateLag() {
+            cursorLag.x += (cursor.x - cursorLag.x) * 0.15
+            cursorLag.y += (cursor.y - cursorLag.y) * 0.15
+            lagRAF = requestAnimationFrame(updateLag)
+          }
+
+          /* ═══ STONE-SKIP RIPPLE SYSTEM ═══
+       Fires once every ~80px of mouse travel.
+       Single clean ring + small splash dot. */
+          const skipRipples = ref([])
+          const skipDots = ref([])
+          let skipId = 0
+          let lastSkipX = 0,
+            lastSkipY = 0
+          const SKIP_DIST = 80 // pixels between skips
+          let altToggle = false
+
+          function spawnSkip(x, y) {
+            const id = skipId++
+            const size = 60 + Math.random() * 40 // modest ring
+            skipRipples.value.push({ id, x, y, size, alt: altToggle })
+            skipDots.value.push({ id: id + 100000, x, y })
+            altToggle = !altToggle
+            setTimeout(() => {
+              skipRipples.value = skipRipples.value.filter((r) => r.id !== id)
+              skipDots.value = skipDots.value.filter((d) => d.id !== id + 100000)
+            }, 1500)
+          }
+
+          /* ═══ CLICK RIPPLE ═══ */
+          const clickRipples = ref([])
+          let clickId = 0
+          function spawnClickRipple(x, y) {
+            const id1 = clickId++,
+              id2 = clickId++
+            const size = 140 + Math.random() * 60
+            clickRipples.value.push(
+              { id: id1, x, y, size, inner: false, delay: '0s' },
+              { id: id2, x, y, size: size * 0.6, inner: true, delay: '0.1s' }
+            )
+            setTimeout(() => {
+              clickRipples.value = clickRipples.value.filter((r) => r.id !== id1 && r.id !== id2)
+            }, 2000)
+          }
+
+          /* ═══ SUBTLE TRAIL (canvas) ═══ */
+          const trailCanvas = ref(null)
+          let tCtx = null
+          const trail = []
+          const TRAIL_MAX = 40
+          const TRAIL_LIFE = 40
+
+          function updateTrail() {
+            if (!tCtx) {
+              requestAnimationFrame(updateTrail)
+              return
+            }
+            tCtx.clearRect(0, 0, trailCanvas.value.width, trailCanvas.value.height)
+            for (let i = trail.length - 1; i >= 0; i--) {
+              trail[i].age++
+              if (trail[i].age > TRAIL_LIFE) trail.splice(i, 1)
+            }
+            if (trail.length < 2) {
+              requestAnimationFrame(updateTrail)
+              return
+            }
+
+            // Single smooth tapered stroke
+            for (let i = 1; i < trail.length; i++) {
+              const p0 = trail[i - 1],
+                p1 = trail[i]
+              const life = 1 - p1.age / TRAIL_LIFE
+              if (life <= 0) continue
+              const w = life * 6 + 1
+              const col = i % 2 === 0 ? trailPal.a1 : trailPal.a2
+              tCtx.beginPath()
+              tCtx.moveTo(p0.x, p0.y)
+              tCtx.lineTo(p1.x, p1.y)
+              tCtx.strokeStyle = `rgba(${col[0]},${col[1]},${col[2]},${life * 0.3})`
+              tCtx.lineWidth = w
+              tCtx.lineCap = 'round'
+              tCtx.stroke()
+            }
+            // Soft glow pass
+            for (let i = 1; i < trail.length; i++) {
+              const p0 = trail[i - 1],
+                p1 = trail[i]
+              const life = 1 - p1.age / TRAIL_LIFE
+              if (life <= 0) continue
+              tCtx.beginPath()
+              tCtx.moveTo(p0.x, p0.y)
+              tCtx.lineTo(p1.x, p1.y)
+              tCtx.strokeStyle = `rgba(${trailPal.a1[0]},${trailPal.a1[1]},${trailPal.a1[2]},${life * 0.08})`
+              tCtx.lineWidth = life * 16 + 4
+              tCtx.lineCap = 'round'
+              tCtx.stroke()
+            }
+            requestAnimationFrame(updateTrail)
+          }
+
+          /* ═══ FIREWORKS ═══ */
+          const fwCanvas = ref(null)
+          let fCtx = null,
+            particles = []
+          class Particle {
+            constructor(x, y, color) {
+              this.x = x
+              this.y = y
+              const a = Math.random() * Math.PI * 2,
+                s = 2 + Math.random() * 5
+              this.vx = Math.cos(a) * s
+              this.vy = Math.sin(a) * s
+              this.life = 1
+              this.decay = 0.015 + Math.random() * 0.02
+              this.size = 1.5 + Math.random() * 2.5
+              this.color = color
+              this.gravity = 0.03
+            }
+            update() {
+              this.x += this.vx
+              this.y += this.vy
+              this.vy += this.gravity
+              this.vx *= 0.98
+              this.vy *= 0.98
+              this.life -= this.decay
+            }
+            draw(ctx) {
+              ctx.globalAlpha = Math.max(0, this.life)
+              ctx.fillStyle = this.color
+              ctx.beginPath()
+              ctx.arc(this.x, this.y, this.size * this.life, 0, Math.PI * 2)
+              ctx.fill()
+            }
+          }
+          function spawnFirework(x, y) {
+            const n = 35 + Math.floor(Math.random() * 20)
+            for (let i = 0; i < n; i++)
+              particles.push(new Particle(x, y, fwPal[Math.floor(Math.random() * fwPal.length)]))
+          }
+          function animateFw() {
+            if (!fCtx) {
+              requestAnimationFrame(animateFw)
+              return
+            }
+            fCtx.clearRect(0, 0, fwCanvas.value.width, fwCanvas.value.height)
+            particles = particles.filter((p) => p.life > 0)
+            for (const p of particles) {
+              p.update()
+              p.draw(fCtx)
+            }
+            fCtx.globalAlpha = 1
+            requestAnimationFrame(animateFw)
+          }
+
+          /* ═══ EVENT HANDLERS ═══ */
+          function onClickFx(e) {
+            const r = e.target.getBoundingClientRect()
+            const cx = r.left + r.width / 2,
+              cy = r.top + r.height / 2
+            spawnFirework(cx, cy)
+            spawnClickRipple(cx, cy)
+          }
+
+          function onMouseMove(e) {
+            cursor.x = e.clientX
+            cursor.y = e.clientY
+            cursor.hovering = !!e.target.closest(
+              'a, button, .contact-link, .drawer-trigger, .nav-pill button'
+            )
+
+            // Orb parallax
+            const cx = e.clientX / window.innerWidth,
+              cy = e.clientY / window.innerHeight
+            orbs.forEach((o, i) => {
+              const s = 25 + i * 10
+              o.offsetX = (cx - 0.5) * -s
+              o.offsetY = (cy - 0.5) * -s
+            })
+
+            // Trail
+            trail.push({ x: e.clientX, y: e.clientY, age: 0 })
+            if (trail.length > TRAIL_MAX) trail.shift()
+
+            // Stone-skip: fire every SKIP_DIST pixels of travel
+            const dx = e.clientX - lastSkipX,
+              dy = e.clientY - lastSkipY
+            const dist = Math.sqrt(dx * dx + dy * dy)
+            if (dist >= SKIP_DIST) {
+              spawnSkip(e.clientX, e.clientY)
+              lastSkipX = e.clientX
+              lastSkipY = e.clientY
+            }
+          }
+
+          function onClick(e) {
+            cursorClicking.value = true
+            setTimeout(() => {
+              cursorClicking.value = false
+            }, 150)
+            if (e.target.closest('a, button, .contact-link, .drawer-trigger, .nav-pill button')) {
+              spawnFirework(e.clientX, e.clientY)
+              spawnClickRipple(e.clientX, e.clientY)
+            }
+          }
+
+          function handleResize() {
+            const w = window.innerWidth,
+              h = window.innerHeight
+            if (fwCanvas.value) {
+              fwCanvas.value.width = w
+              fwCanvas.value.height = h
+            }
+            if (trailCanvas.value) {
+              trailCanvas.value.width = w
+              trailCanvas.value.height = h
+            }
+          }
+
+          onMounted(() => {
+            const fc = fwCanvas.value,
+              tc = trailCanvas.value
+            fc.width = tc.width = window.innerWidth
+            fc.height = tc.height = window.innerHeight
+            fCtx = fc.getContext('2d')
+            tCtx = tc.getContext('2d')
+            lastSkipX = window.innerWidth / 2
+            lastSkipY = window.innerHeight / 2
+            animateFw()
+            updateTrail()
+            updateLag()
+            window.addEventListener('mousemove', onMouseMove)
+            window.addEventListener('click', onClick)
+            window.addEventListener('resize', handleResize)
+          })
+          onUnmounted(() => {
+            window.removeEventListener('mousemove', onMouseMove)
+            window.removeEventListener('click', onClick)
+            window.removeEventListener('resize', handleResize)
+            cancelAnimationFrame(lagRAF)
+          })
+
+          return {
+            page,
+            setPage,
+            activePerson,
+            orbs,
+            cursor,
+            cursorLag,
+            cursorClicking,
+            skipRipples,
+            skipDots,
+            clickRipples,
+            trailCanvas,
+            fwCanvas,
+            onClickFx
+          }
+        }
+      }).mount('#app')
+    </script>
+  </body>
+</html>

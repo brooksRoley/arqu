@@ -1,14 +1,12 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, watch, nextTick } from 'vue'
+import { ref, onMounted, watch, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 import { useStoryStore } from '@/composables/useStoryStore'
 
 const router = useRouter()
-const { storyText, words, currentWord, currentIndex, progress, seekToWord } = useStoryStore()
+const { storyText, words, currentWord, currentIndex, progress, seekToWord, backgroundMedia, isBackgroundVideo } = useStoryStore()
 
 const storyContainer = ref<HTMLElement | null>(null)
-const backgroundMedia = ref<string | null>(null)
-const isVideo = ref(false)
 
 const scrollToCurrentWord = () => {
   nextTick(() => {
@@ -31,33 +29,12 @@ watch(currentIndex, () => {
   scrollToCurrentWord()
 })
 
-const handleMediaUpload = (event: Event) => {
-  const target = event.target as HTMLInputElement
-  const file = target.files?.[0]
-  if (file) {
-    const url = URL.createObjectURL(file)
-    backgroundMedia.value = url
-    isVideo.value = file.type.startsWith('video/')
-  }
-}
-
-const clearBackground = () => {
-  if (backgroundMedia.value) {
-    URL.revokeObjectURL(backgroundMedia.value)
-    backgroundMedia.value = null
-    isVideo.value = false
-  }
-}
-
 onMounted(() => {
   if (!storyText.value) {
     router.push('/')
   }
 })
 
-onUnmounted(() => {
-  clearBackground()
-})
 </script>
 
 <template>
@@ -65,7 +42,7 @@ onUnmounted(() => {
     <!-- Background media layer -->
     <div v-if="backgroundMedia" class="background-media">
       <video
-        v-if="isVideo"
+        v-if="isBackgroundVideo"
         :src="backgroundMedia"
         autoplay
         loop
@@ -77,19 +54,6 @@ onUnmounted(() => {
     </div>
 
     <div v-if="words.length > 0" class="reader-content">
-      <div class="media-upload">
-        <label class="upload-btn">
-          {{ backgroundMedia ? 'Change Background' : 'Add Background' }}
-          <input
-            type="file"
-            accept="image/gif,video/mp4,video/webm"
-            @change="handleMediaUpload"
-            hidden
-          />
-        </label>
-        <button v-if="backgroundMedia" @click="clearBackground" class="clear-btn">Clear</button>
-      </div>
-
       <!-- Word banner at top -->
       <div class="word-banner">
         <span class="banner-word">{{ currentWord }}</span>
@@ -165,7 +129,7 @@ onUnmounted(() => {
 
 .word-banner {
   position: sticky;
-  top: 0;
+  top: 3rem;
   background-color: rgba(31, 41, 55, 0.95);
   border-radius: 0.5rem;
   padding: 2rem;
@@ -173,7 +137,7 @@ onUnmounted(() => {
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
   z-index: 10;
   backdrop-filter: blur(8px);
-  margin: 10vh 1rem;
+  margin: 5vh 1rem;
 }
 
 .banner-word {
@@ -244,44 +208,6 @@ onUnmounted(() => {
   color: #1a1a1a;
   font-weight: 700;
   box-shadow: 0 0 12px rgba(226, 232, 240, 0.6);
-}
-
-.media-upload {
-  display: flex;
-  gap: 0.5rem;
-  align-items: center;
-  align-self: flex-end;
-}
-
-.upload-btn {
-  background-color: rgba(55, 65, 81, 0.9);
-  color: #94a3b8;
-  padding: 0.5rem 1rem;
-  border-radius: 0.5rem;
-  cursor: pointer;
-  font-size: 0.875rem;
-  transition: all 0.2s;
-}
-
-.upload-btn:hover {
-  background-color: rgba(75, 85, 99, 0.9);
-  color: #e2e8f0;
-}
-
-.clear-btn {
-  background-color: transparent;
-  color: #f87171;
-  padding: 0.5rem 0.75rem;
-  border: 1px solid #f87171;
-  border-radius: 0.5rem;
-  cursor: pointer;
-  font-size: 0.875rem;
-  transition: all 0.2s;
-}
-
-.clear-btn:hover {
-  background-color: #f87171;
-  color: #1a1a1a;
 }
 
 .back-btn {

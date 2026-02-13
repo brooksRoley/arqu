@@ -1,57 +1,48 @@
 <script setup lang="ts">
-import { ref } from 'vue'
-import { useRouter } from 'vue-router'
-import { useStoryStore } from '@/composables/useStoryStore'
-
-const router = useRouter()
-const { setStoryText } = useStoryStore()
-const textContent = ref('')
-const fileName = ref('')
-
-const handleFileUpload = (event: Event) => {
-  const target = event.target as HTMLInputElement
-  const file = target.files?.[0]
-  if (!file) return
-
-  fileName.value = file.name
-  const reader = new FileReader()
-  reader.onload = (e) => {
-    textContent.value = e.target?.result as string
+const navCards = [
+  {
+    icon: '📖',
+    title: 'Text Stories',
+    description: 'Speed-read through uploaded stories and text',
+    to: '/reader'
+  },
+  {
+    icon: '🌀',
+    title: 'Zeromind',
+    description: 'Generative visuals with streaming text',
+    to: '/zeromind'
+  },
+  {
+    icon: '🎵',
+    title: 'Audio',
+    description: 'Browse and play background audio tracks',
+    to: '/reader'
+  },
+  {
+    icon: '💧',
+    title: 'Resume',
+    description: 'Interactive liquid glass resume',
+    to: '/resume'
   }
-  reader.readAsText(file)
-}
-
-const startReading = () => {
-  if (!textContent.value.trim()) return
-  setStoryText(textContent.value)
-  router.push('/reader')
-}
+]
 </script>
 
 <template>
   <div class="home">
-    <h1 class="title">Speed Reader</h1>
-    <p class="subtitle">Upload a text file or paste content to start reading</p>
+    <h1 class="title">Channel Zero</h1>
+    <p class="subtitle">Choose your experience</p>
 
-    <div class="input-section">
-      <label class="file-upload">
-        <input type="file" accept=".txt,.md" @change="handleFileUpload" />
-        <span class="upload-btn">Choose File</span>
-        <span v-if="fileName" class="file-name">{{ fileName }}</span>
-      </label>
-
-      <div class="divider">or</div>
-
-      <textarea
-        v-model="textContent"
-        placeholder="Paste your text here..."
-        class="text-input"
-        rows="10"
-      ></textarea>
-
-      <button @click="startReading" :disabled="!textContent.trim()" class="start-btn">
-        Start Reading
-      </button>
+    <div class="nav-grid">
+      <router-link
+        v-for="card in navCards"
+        :key="card.title"
+        :to="card.to"
+        class="nav-card"
+      >
+        <span class="card-icon">{{ card.icon }}</span>
+        <span class="card-title">{{ card.title }}</span>
+        <span class="card-desc">{{ card.description }}</span>
+      </router-link>
     </div>
   </div>
 </template>
@@ -75,86 +66,53 @@ const startReading = () => {
   margin-bottom: 2rem;
 }
 
-.input-section {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
+.nav-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1.25rem;
   max-width: 600px;
   margin: 0 auto;
 }
 
-.file-upload {
+.nav-card {
   display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 1rem;
-  cursor: pointer;
-}
-
-.file-upload input {
-  display: none;
-}
-
-.upload-btn {
-  background-color: #374151;
+  gap: 0.5rem;
+  padding: 2rem 1.5rem;
+  background: rgba(30, 30, 50, 0.8);
+  border: 1px solid rgba(100, 100, 255, 0.15);
+  border-radius: 1rem;
+  text-decoration: none;
   color: #e2e8f0;
-  padding: 0.75rem 1.5rem;
-  border-radius: 0.5rem;
-  transition: background-color 0.2s;
+  transition: all 0.25s ease;
 }
 
-.upload-btn:hover {
-  background-color: #4b5563;
+.nav-card:hover {
+  background: rgba(40, 40, 70, 0.9);
+  border-color: rgba(99, 102, 241, 0.5);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
 }
 
-.file-name {
+.card-icon {
+  font-size: 2.5rem;
+}
+
+.card-title {
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+.card-desc {
+  font-size: 0.8rem;
   color: #94a3b8;
-  font-size: 0.875rem;
+  line-height: 1.4;
 }
 
-.divider {
-  color: #64748b;
-  font-size: 0.875rem;
-}
-
-.text-input {
-  width: 100%;
-  padding: 1rem;
-  background-color: #1f2937;
-  border: 1px solid #374151;
-  border-radius: 0.5rem;
-  color: #e2e8f0;
-  font-size: 1rem;
-  resize: vertical;
-  font-family: inherit;
-}
-
-.text-input::placeholder {
-  color: #64748b;
-}
-
-.text-input:focus {
-  outline: none;
-  border-color: #6366f1;
-}
-
-.start-btn {
-  background-color: #6366f1;
-  color: white;
-  padding: 1rem 2rem;
-  border: none;
-  border-radius: 0.5rem;
-  font-size: 1rem;
-  cursor: pointer;
-  transition: background-color 0.2s;
-}
-
-.start-btn:hover:not(:disabled) {
-  background-color: #4f46e5;
-}
-
-.start-btn:disabled {
-  background-color: #374151;
-  color: #64748b;
-  cursor: not-allowed;
+@media (max-width: 480px) {
+  .nav-grid {
+    grid-template-columns: 1fr;
+  }
 }
 </style>

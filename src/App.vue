@@ -6,7 +6,7 @@ import NavBar from '@/components/NavBar.vue'
 const route = useRoute()
 
 const isFullBleed = computed(() => {
-  return ['zeromind', 'resume'].includes(route.name as string)
+  return ['zeromind', 'glass', 'resume'].includes(route.name as string)
 })
 </script>
 
@@ -18,9 +18,6 @@ const isFullBleed = computed(() => {
       <RouterView />
     </main>
 
-    <footer v-if="!isFullBleed" class="app-footer">
-      <p>Channel Zero</p>
-    </footer>
   </div>
 </template>
 
@@ -35,28 +32,21 @@ const isFullBleed = computed(() => {
 
 .app-main {
   flex: 1;
-  padding: 2rem;
+  padding: 3.5rem 2rem 4rem;
   max-width: 900px;
   width: 100%;
   margin: 0 auto;
 }
 
 .app-main--fullbleed {
-  padding: 0;
+  padding: 3rem 0 3.5rem;
   max-width: none;
   position: relative;
 }
 
-.app-footer {
-  padding: 0.75rem;
-  text-align: center;
-  font-size: 0.7rem;
-  color: #475569;
-}
-
 @media (max-width: 768px) {
   .app-main {
-    padding: 1rem;
+    padding: 3.5rem 1rem 4rem;
   }
 }
 </style>
