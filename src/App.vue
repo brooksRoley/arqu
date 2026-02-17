@@ -6,7 +6,7 @@ import NavBar from '@/components/NavBar.vue'
 const route = useRoute()
 
 const isFullBleed = computed(() => {
-  return ['reader', 'zeromind', 'glass', 'resume'].includes(route.name as string)
+  return ['reader', 'zeromind', 'glass', 'resume', 'spiral'].includes(route.name as string)
 })
 </script>
 

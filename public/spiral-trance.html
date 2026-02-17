@@ -1,0 +1,314 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Spiral Trance</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        overflow: hidden;
+        font-family: 'Georgia', serif;
+        background: #000;
+      }
+
+      #canvas {
+        position: fixed;
+        top: 0;
+        left: 0;
+        z-index: 1;
+      }
+
+      .word-overlay {
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        z-index: 10;
+        text-align: center;
+        pointer-events: none;
+      }
+
+      .word-display {
+        font-size: clamp(2.5rem, 6vw, 5rem);
+        font-weight: 300;
+        color: white;
+        text-shadow:
+          0 0 30px rgba(255, 255, 255, 0.6),
+          0 0 60px rgba(180, 140, 255, 0.4),
+          0 0 100px rgba(140, 100, 255, 0.2);
+        min-height: 6rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        letter-spacing: 0.15em;
+        text-transform: lowercase;
+        opacity: 0;
+        transition: opacity 1.2s ease-in-out;
+        font-style: italic;
+      }
+
+      .word-display.visible {
+        opacity: 1;
+      }
+
+      .word-display.fading {
+        opacity: 0;
+      }
+
+      .category-label {
+        font-size: clamp(0.6rem, 1.2vw, 0.8rem);
+        color: rgba(180, 160, 220, 0.4);
+        letter-spacing: 0.3em;
+        text-transform: uppercase;
+        margin-bottom: 1rem;
+        font-style: normal;
+        font-weight: 400;
+      }
+    </style>
+  </head>
+  <body>
+    <canvas id="canvas"></canvas>
+
+    <div class="word-overlay">
+      <div class="category-label" id="categoryLabel"></div>
+      <div class="word-display" id="wordDisplay"></div>
+    </div>
+
+    <script>
+      const canvas = document.getElementById('canvas')
+      const ctx = canvas.getContext('2d')
+      const wordDisplay = document.getElementById('wordDisplay')
+      const categoryLabel = document.getElementById('categoryLabel')
+
+      let width, height
+      let t = 0
+
+      // Word categories
+      const categories = [
+        {
+          name: 'Focus',
+          words: ['Spiral', 'Spinning', 'Focus', 'Stare deeper', 'Center', 'Fixate', 'Gaze', 'Swirling']
+        },
+        {
+          name: 'Relaxation',
+          words: ['Relax', 'Soothe', 'Heavy', 'Close', 'Drift', 'Float', 'Let go', 'Release']
+        },
+        {
+          name: 'Deepening',
+          words: ['Deeper', 'Deeper and deeper', 'Descend', 'Sink', 'Trance', 'Hypnotic trance', 'Deep trance', 'Unconscious']
+        },
+        {
+          name: 'Sensory',
+          words: ['Imagine', 'Pretend', 'Visualize', 'Breathe deeply', 'Gentle breeze', 'Flowing', 'Washes away', 'Refreshing']
+        },
+        {
+          name: 'Suggestion',
+          words: ['Allow', 'Effortless', 'Calm', 'Tranquil', 'Peaceful', 'Serene', 'Because', 'And']
+        }
+      ]
+
+      let currentCategoryIndex = 0
+      let currentWordIndex = 0
+      let wordTimer = 0
+      const wordInterval = 3500 // ms between words
+      const fadeTime = 1200 // ms for fade transition
+      let lastTimestamp = 0
+
+      // Spiral state
+      let spiralRotation = 0
+      let spiralPulse = 0
+      let colorPhase = 0
+
+      function resize() {
+        width = canvas.width = window.innerWidth
+        height = canvas.height = window.innerHeight
+      }
+
+      // Smooth easing
+      function ease(p, g = 2.5) {
+        if (p < 0.5) return 0.5 * Math.pow(2 * p, g)
+        return 1 - 0.5 * Math.pow(2 * (1 - p), g)
+      }
+
+      // Draw the main hypnotic spiral
+      function drawSpiral() {
+        const centerX = width / 2
+        const centerY = height / 2
+        const maxRadius = Math.max(width, height) * 0.7
+
+        // Slowly rotating background wash
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.06)'
+        ctx.fillRect(0, 0, width, height)
+
+        // Multiple spiral layers for depth
+        for (let layer = 0; layer < 3; layer++) {
+          const layerOffset = layer * 0.33
+          const arms = 2 + layer
+          const rotations = 6 + layer * 2
+          const lineWidth = 3 - layer * 0.8
+
+          for (let arm = 0; arm < arms; arm++) {
+            ctx.beginPath()
+            const armOffset = (arm / arms) * Math.PI * 2
+            const points = 500
+
+            for (let i = 0; i <= points; i++) {
+              const p = i / points
+              const angle = p * Math.PI * 2 * rotations + armOffset - spiralRotation * (1 + layer * 0.3)
+              const r = p * maxRadius
+
+              // Breathing pulse
+              const breathe = 1 + 0.08 * Math.sin(p * 15 - t * 4 + layer)
+              const x = centerX + Math.cos(angle) * r * breathe
+              const y = centerY + Math.sin(angle) * r * breathe
+
+              if (i === 0) ctx.moveTo(x, y)
+              else ctx.lineTo(x, y)
+            }
+
+            // Color shifts based on category
+            const catColors = [
+              [140, 160, 255],  // Focus - blue
+              [160, 120, 255],  // Relaxation - purple
+              [120, 80, 200],   // Deepening - deep purple
+              [100, 200, 180],  // Sensory - teal
+              [180, 160, 220]   // Suggestion - lavender
+            ]
+
+            const col = catColors[currentCategoryIndex]
+            const alpha = (0.15 + 0.1 * Math.sin(t * 2 + layerOffset * Math.PI * 2)) * (1 - layer * 0.25)
+            ctx.strokeStyle = `rgba(${col[0]}, ${col[1]}, ${col[2]}, ${alpha})`
+            ctx.lineWidth = lineWidth
+            ctx.stroke()
+          }
+        }
+
+        // Central glow
+        const glowSize = 80 + 30 * Math.sin(t * 1.5)
+        const gradient = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, glowSize)
+        const col = [140, 120, 255]
+        gradient.addColorStop(0, `rgba(${col[0]}, ${col[1]}, ${col[2]}, 0.15)`)
+        gradient.addColorStop(0.5, `rgba(${col[0]}, ${col[1]}, ${col[2]}, 0.05)`)
+        gradient.addColorStop(1, 'rgba(0, 0, 0, 0)')
+        ctx.fillStyle = gradient
+        ctx.beginPath()
+        ctx.arc(centerX, centerY, glowSize, 0, Math.PI * 2)
+        ctx.fill()
+
+        // Concentric rings pulsing outward
+        const ringCount = 12
+        for (let i = 0; i < ringCount; i++) {
+          const phase = (t * 0.8 + i / ringCount) % 1
+          const radius = phase * maxRadius
+          const alpha = (1 - phase) * 0.08
+
+          ctx.strokeStyle = `rgba(180, 160, 240, ${alpha})`
+          ctx.lineWidth = 1.5
+          ctx.beginPath()
+          ctx.arc(centerX, centerY, radius, 0, Math.PI * 2)
+          ctx.stroke()
+        }
+
+        // Floating particles drifting toward center
+        const particleCount = 60
+        for (let i = 0; i < particleCount; i++) {
+          const seed = i * 137.508 // golden angle
+          const phase = (t * 0.3 + (seed % 1)) % 1
+          const angle = seed + t * 0.5
+          const dist = (1 - phase) * maxRadius * 0.8
+          const px = centerX + Math.cos(angle) * dist
+          const py = centerY + Math.sin(angle) * dist
+          const size = (1 - phase) * 2
+          const alpha = Math.sin(phase * Math.PI) * 0.4
+
+          ctx.fillStyle = `rgba(200, 190, 255, ${alpha})`
+          ctx.beginPath()
+          ctx.arc(px, py, size, 0, Math.PI * 2)
+          ctx.fill()
+        }
+      }
+
+      // Word cycling logic
+      function updateWords(timestamp) {
+        if (!lastTimestamp) lastTimestamp = timestamp
+        const delta = timestamp - lastTimestamp
+
+        wordTimer += delta
+
+        if (wordTimer >= wordInterval) {
+          wordTimer = 0
+
+          // Fade out current word
+          wordDisplay.classList.remove('visible')
+          wordDisplay.classList.add('fading')
+
+          setTimeout(() => {
+            // Advance to next word
+            currentWordIndex++
+            if (currentWordIndex >= categories[currentCategoryIndex].words.length) {
+              currentWordIndex = 0
+              currentCategoryIndex = (currentCategoryIndex + 1) % categories.length
+              categoryLabel.textContent = categories[currentCategoryIndex].name
+            }
+
+            wordDisplay.textContent = categories[currentCategoryIndex].words[currentWordIndex]
+            wordDisplay.classList.remove('fading')
+            wordDisplay.classList.add('visible')
+          }, fadeTime)
+        }
+
+        lastTimestamp = timestamp
+      }
+
+      function animate(timestamp) {
+        drawSpiral()
+
+        spiralRotation += 0.008
+        t += 0.005
+
+        updateWords(timestamp)
+        requestAnimationFrame(animate)
+      }
+
+      // Initialize
+      window.addEventListener('resize', resize)
+      resize()
+
+      // Start with first word
+      categoryLabel.textContent = categories[0].name
+      wordDisplay.textContent = categories[0].words[0]
+      requestAnimationFrame(() => {
+        wordDisplay.classList.add('visible')
+      })
+
+      // Clear canvas to black
+      ctx.fillStyle = '#000'
+      ctx.fillRect(0, 0, width, height)
+
+      requestAnimationFrame(animate)
+
+      // Click to skip to next category
+      canvas.addEventListener('click', () => {
+        currentWordIndex = 0
+        currentCategoryIndex = (currentCategoryIndex + 1) % categories.length
+        categoryLabel.textContent = categories[currentCategoryIndex].name
+
+        wordDisplay.classList.remove('visible')
+        wordDisplay.classList.add('fading')
+        setTimeout(() => {
+          wordDisplay.textContent = categories[currentCategoryIndex].words[0]
+          wordDisplay.classList.remove('fading')
+          wordDisplay.classList.add('visible')
+        }, fadeTime)
+
+        wordTimer = 0
+      })
+    </script>
+  </body>
+</html>

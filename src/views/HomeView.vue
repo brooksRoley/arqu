@@ -23,6 +23,12 @@ const navCards = [
     title: 'Resume',
     description: 'Interactive liquid glass resume',
     to: '/resume'
+  },
+  {
+    icon: '🌀',
+    title: 'Spiral',
+    description: 'Hypnotic spiral with trance words',
+    to: '/spiral'
   }
 ]
 </script>
