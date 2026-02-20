@@ -43,6 +43,11 @@ const router = createRouter({
       path: '/trance',
       name: 'trance',
       component: () => import('@/views/TranceView.vue')
+    },
+    {
+      path: '/poll',
+      name: 'poll',
+      component: () => import('@/views/PollView.vue')
     }
   ]
 })

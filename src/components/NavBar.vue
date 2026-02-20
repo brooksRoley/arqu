@@ -124,7 +124,8 @@ function getRouteIcon(name: string): string {
     glass: '💧',
     resume: '📄',
     spiral: '🌀',
-    trance: '🎧'
+    trance: '🎧',
+    poll: '🧠'
   }
   return icons[name] || '📄'
 }
