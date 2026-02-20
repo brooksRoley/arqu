@@ -23,6 +23,11 @@ const {
 // Panel toggle
 const menuOpen = ref(false)
 
+// Fullbleed detection — auto-minimize on immersive routes
+const isFullBleed = computed(() => {
+  return ['reader', 'zeromind', 'glass', 'resume', 'spiral', 'trance'].includes(route.name as string)
+})
+
 // Close panel on route change
 watch(() => route.path, () => {
   menuOpen.value = false
@@ -66,7 +71,9 @@ function getRouteIcon(name: string): string {
     zeromind: '🌀',
     audio: '🎵',
     glass: '💧',
-    resume: '📄'
+    resume: '📄',
+    spiral: '🌀',
+    trance: '🎧'
   }
   return icons[name] || '📄'
 }
@@ -196,9 +203,10 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <nav class="navbar">
+  <nav :class="['navbar', { 'navbar--floating': isFullBleed, 'navbar--open': menuOpen }]">
+    <!-- Collapsed: just the hamburger button -->
     <div class="navbar-top">
-      <div class="nav-links">
+      <div v-if="!isFullBleed || menuOpen" class="nav-links">
         <RouterLink
           v-for="r in navRoutes"
           :key="r.name"
@@ -211,8 +219,16 @@ onUnmounted(() => {
         </RouterLink>
       </div>
 
-      <button class="menu-btn" @click="menuOpen = !menuOpen" aria-label="Toggle controls">
-        {{ menuOpen ? '✕' : '☰' }}
+      <button
+        :class="['menu-btn', { 'menu-btn--floating': isFullBleed && !menuOpen }]"
+        @click="menuOpen = !menuOpen"
+        aria-label="Toggle controls"
+      >
+        <span class="hamburger-lines" :class="{ 'hamburger-lines--open': menuOpen }">
+          <span class="hamburger-line"></span>
+          <span class="hamburger-line"></span>
+          <span class="hamburger-line"></span>
+        </span>
       </button>
     </div>
 
@@ -342,7 +358,7 @@ onUnmounted(() => {
 </template>
 
 <style scoped>
-/* ── Sticky top bar ── */
+/* ── Default sticky bar ── */
 .navbar {
   position: sticky;
   top: 0;
@@ -350,6 +366,41 @@ onUnmounted(() => {
   background: rgba(10, 10, 20, 0.9);
   backdrop-filter: blur(12px);
   border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+/* ── Floating mode (fullbleed pages) ── */
+.navbar--floating {
+  position: fixed;
+  top: 0;
+  right: 0;
+  left: auto;
+  background: transparent;
+  backdrop-filter: none;
+  border-bottom: none;
+  pointer-events: none;
+}
+
+.navbar--floating .navbar-top {
+  justify-content: flex-end;
+  padding: 0.75rem;
+}
+
+.navbar--floating .menu-btn,
+.navbar--floating .nav-links,
+.navbar--floating .navbar-panel {
+  pointer-events: auto;
+}
+
+/* When opened on fullbleed, give the menu a backdrop */
+.navbar--floating.navbar--open {
+  left: 0;
+  background: rgba(10, 10, 20, 0.85);
+  backdrop-filter: blur(16px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.navbar--floating.navbar--open .navbar-top {
+  justify-content: flex-start;
 }
 
 .navbar-top {
@@ -405,26 +456,85 @@ onUnmounted(() => {
   font-size: 0.8rem;
 }
 
-/* ── Hamburger / menu button ── */
+/* ── Hamburger button ── */
 .menu-btn {
   flex-shrink: 0;
   background: transparent;
   border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: 0.4rem;
   color: #94a3b8;
-  width: 2rem;
-  height: 2rem;
-  font-size: 1rem;
+  width: 2.25rem;
+  height: 2.25rem;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: color 0.15s, border-color 0.15s;
+  transition: color 0.15s, border-color 0.15s, background 0.15s;
+  padding: 0;
 }
 
 .menu-btn:hover {
   color: #e2e8f0;
   border-color: rgba(255, 255, 255, 0.25);
+}
+
+/* Floating hamburger — fully transparent, just the lines */
+.menu-btn--floating {
+  width: 2.75rem;
+  height: 2.75rem;
+  border: none;
+  background: transparent;
+  border-radius: 0.5rem;
+}
+
+.menu-btn--floating:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+/* ── Hamburger lines (CSS, not emoji) ── */
+.hamburger-lines {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 4px;
+  width: 20px;
+  height: 20px;
+}
+
+.menu-btn--floating .hamburger-lines {
+  gap: 5px;
+  width: 24px;
+  height: 24px;
+}
+
+.hamburger-line {
+  display: block;
+  width: 100%;
+  height: 2px;
+  background: currentColor;
+  border-radius: 1px;
+  transition: transform 0.25s ease, opacity 0.25s ease;
+  transform-origin: center;
+}
+
+/* X transform when open */
+.hamburger-lines--open .hamburger-line:nth-child(1) {
+  transform: translateY(6px) rotate(45deg);
+}
+
+.hamburger-lines--open .hamburger-line:nth-child(2) {
+  opacity: 0;
+}
+
+.hamburger-lines--open .hamburger-line:nth-child(3) {
+  transform: translateY(-6px) rotate(-45deg);
+}
+
+.menu-btn--floating .hamburger-line {
+  height: 2px;
+  background: rgba(255, 255, 255, 0.6);
+  box-shadow: 0 0 6px rgba(255, 255, 255, 0.15);
 }
 
 /* ── Expandable panel ── */

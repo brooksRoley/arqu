@@ -1,20 +1,43 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref, onMounted, onUnmounted } from 'vue'
 import { RouterView, useRoute } from 'vue-router'
 import NavBar from '@/components/NavBar.vue'
 
 const route = useRoute()
+const mainRef = ref<HTMLElement | null>(null)
 
 const isFullBleed = computed(() => {
-  return ['reader', 'zeromind', 'glass', 'resume', 'spiral'].includes(route.name as string)
+  return ['reader', 'zeromind', 'glass', 'resume', 'spiral', 'trance'].includes(route.name as string)
 })
+
+function toggleFullscreen() {
+  if (document.fullscreenElement) {
+    document.exitFullscreen()
+  } else if (mainRef.value) {
+    mainRef.value.requestFullscreen()
+  }
+}
+
+function onKeydown(e: KeyboardEvent) {
+  if (e.key === 'f' || e.key === 'F') {
+    const tag = (e.target as HTMLElement)?.tagName
+    if (tag === 'INPUT' || tag === 'TEXTAREA') return
+    if (isFullBleed.value) {
+      e.preventDefault()
+      toggleFullscreen()
+    }
+  }
+}
+
+onMounted(() => document.addEventListener('keydown', onKeydown))
+onUnmounted(() => document.removeEventListener('keydown', onKeydown))
 </script>
 
 <template>
   <div class="app-container">
     <NavBar />
 
-    <main :class="['app-main', { 'app-main--fullbleed': isFullBleed }]">
+    <main ref="mainRef" :class="['app-main', { 'app-main--fullbleed': isFullBleed }]">
       <RouterView />
     </main>
 

@@ -29,6 +29,12 @@ const navCards = [
     title: 'Spiral',
     description: 'Hypnotic spiral with trance words',
     to: '/spiral'
+  },
+  {
+    icon: '🎧',
+    title: 'Trance Tones',
+    description: 'Trance tone engine experience',
+    to: '/trance'
   }
 ]
 </script>

@@ -38,6 +38,11 @@ const router = createRouter({
       path: '/spiral',
       name: 'spiral',
       component: () => import('@/views/SpiralView.vue')
+    },
+    {
+      path: '/trance',
+      name: 'trance',
+      component: () => import('@/views/TranceView.vue')
     }
   ]
 })
