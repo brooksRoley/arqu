@@ -68,6 +68,86 @@
       let particles = []
       let animationId
 
+      // ── Novel drag / swipe effect ──────────────────────────────
+      // Drag repels particles and spawns ripple rings.
+      // Fast swipe triggers a pattern change with a burst flash.
+      const drag = { active: false, x: 0, y: 0, vx: 0, vy: 0, startX: 0, startY: 0, moved: false }
+      const ripples = []
+      let burstAlpha = 0
+
+      function spawnRipple(x, y, speed) {
+        ripples.push({ x, y, r: 0, maxR: 60 + speed * 40, alpha: 0.55, hue: (t * 200) % 360 })
+      }
+
+      function updateRipples() {
+        for (let i = ripples.length - 1; i >= 0; i--) {
+          const rip = ripples[i]
+          rip.r += 2.5
+          rip.alpha -= 0.014
+          if (rip.alpha <= 0) ripples.splice(i, 1)
+        }
+      }
+
+      function drawRipples() {
+        ripples.forEach(rip => {
+          ctx.beginPath()
+          ctx.arc(rip.x, rip.y, rip.r, 0, Math.PI * 2)
+          ctx.strokeStyle = `hsla(${rip.hue}, 80%, 72%, ${rip.alpha})`
+          ctx.lineWidth = 1.5
+          ctx.stroke()
+        })
+      }
+
+      function drawDragVortex() {
+        if (!drag.active && Math.abs(drag.vx) < 0.1) return
+        const speed = Math.sqrt(drag.vx * drag.vx + drag.vy * drag.vy)
+        const intensity = Math.min(speed * 0.4, 1)
+        if (intensity < 0.02) return
+        // Orbiting particles around the drag point
+        for (let i = 0; i < 8; i++) {
+          const angle = (i / 8) * Math.PI * 2 + t * 6
+          const r = 18 + 28 * intensity
+          const px = drag.x + Math.cos(angle) * r
+          const py = drag.y + Math.sin(angle) * r
+          ctx.beginPath()
+          ctx.arc(px, py, 1.5 + intensity * 2.5, 0, Math.PI * 2)
+          ctx.fillStyle = `hsla(${(t * 180 + i * 45) % 360}, 85%, 72%, ${0.35 + intensity * 0.45})`
+          ctx.fill()
+        }
+        // Core glow
+        const grad = ctx.createRadialGradient(drag.x, drag.y, 0, drag.x, drag.y, 35 + speed * 8)
+        grad.addColorStop(0, `hsla(${(t * 180) % 360}, 80%, 75%, ${0.25 * intensity})`)
+        grad.addColorStop(1, 'rgba(0,0,0,0)')
+        ctx.fillStyle = grad
+        ctx.beginPath()
+        ctx.arc(drag.x, drag.y, 35 + speed * 8, 0, Math.PI * 2)
+        ctx.fill()
+        // Decay velocity
+        drag.vx *= 0.88
+        drag.vy *= 0.88
+      }
+
+      function applyDragForce() {
+        const speed = Math.sqrt(drag.vx * drag.vx + drag.vy * drag.vy)
+        if (!drag.active && speed < 0.3) return
+        particles.forEach(p => {
+          const dx = p.x - drag.x, dy = p.y - drag.y
+          const dist = Math.sqrt(dx * dx + dy * dy)
+          if (dist > 0 && dist < 110) {
+            const force = (110 - dist) / 110 * Math.min(speed * 0.55, 5)
+            p.x += (dx / dist) * force
+            p.y += (dy / dist) * force
+          }
+        })
+      }
+
+      function drawBurst() {
+        if (burstAlpha <= 0) return
+        ctx.fillStyle = `rgba(200, 180, 255, ${burstAlpha * 0.18})`
+        ctx.fillRect(0, 0, width, height)
+        burstAlpha -= 0.04
+      }
+
       // Resize canvas
       function resize() {
         width = canvas.width = window.innerWidth
@@ -642,6 +722,11 @@
 
       function animate() {
         patterns[currentPattern]()
+        applyDragForce()
+        updateRipples()
+        drawRipples()
+        drawDragVortex()
+        drawBurst()
         t += 0.005
         animationId = requestAnimationFrame(animate)
       }
@@ -669,9 +754,78 @@
         }
       })
 
-      // Click canvas to change pattern
+      // ── Drag / swipe event handling ────────────────────────────
+      let prevDragTime = 0
+
+      function onDragStart(clientX, clientY) {
+        drag.active = true
+        drag.startX = clientX
+        drag.startY = clientY
+        drag.x = clientX
+        drag.y = clientY
+        drag.vx = 0
+        drag.vy = 0
+        drag.moved = false
+        prevDragTime = performance.now()
+      }
+
+      function onDragMove(clientX, clientY) {
+        if (!drag.active) return
+        const now = performance.now()
+        const dt = Math.max(now - prevDragTime, 1)
+        drag.vx = (clientX - drag.x) / dt * 16
+        drag.vy = (clientY - drag.y) / dt * 16
+        drag.x = clientX
+        drag.y = clientY
+        prevDragTime = now
+        const totalDist = Math.hypot(clientX - drag.startX, clientY - drag.startY)
+        if (totalDist > 6) drag.moved = true
+        // Spawn ripples while dragging fast
+        const speed = Math.sqrt(drag.vx * drag.vx + drag.vy * drag.vy)
+        if (speed > 2 && Math.random() < 0.25) spawnRipple(clientX, clientY, speed)
+      }
+
+      function onDragEnd(clientX, clientY) {
+        drag.active = false
+        const totalDX = clientX - drag.startX
+        const totalDY = clientY - drag.startY
+        const dist = Math.hypot(totalDX, totalDY)
+        const speed = Math.sqrt(drag.vx * drag.vx + drag.vy * drag.vy)
+        // Fast swipe → burst flash + pattern change
+        if (dist > 55 && speed > 1.5) {
+          burstAlpha = 1
+          randomizePattern()
+          spawnRipple(clientX, clientY, speed * 2)
+        } else if (!drag.moved) {
+          // Short tap → change pattern
+          randomizePattern()
+        }
+      }
+
+      canvas.addEventListener('mousedown', e => onDragStart(e.clientX, e.clientY))
+      window.addEventListener('mousemove', e => { if (drag.active) onDragMove(e.clientX, e.clientY) })
+      window.addEventListener('mouseup', e => { if (drag.active) onDragEnd(e.clientX, e.clientY) })
+
+      canvas.addEventListener('touchstart', e => {
+        e.preventDefault()
+        const touch0 = e.touches[0]
+        onDragStart(touch0.clientX, touch0.clientY)
+      }, { passive: false })
+
+      window.addEventListener('touchmove', e => {
+        if (!drag.active) return
+        e.preventDefault()
+        const touch = e.touches[0]
+        onDragMove(touch.clientX, touch.clientY)
+      }, { passive: false })
+
+      window.addEventListener('touchend', e => {
+        if (!drag.active) return
+        const touch = e.changedTouches[0]
+        onDragEnd(touch.clientX, touch.clientY)
+      })
+
       window.addEventListener('resize', resize)
-      canvas.addEventListener('click', randomizePattern)
 
       // Initialize
       resize()

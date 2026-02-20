@@ -28,9 +28,60 @@ const isFullBleed = computed(() => {
   return ['reader', 'zeromind', 'glass', 'resume', 'spiral', 'trance'].includes(route.name as string)
 })
 
+// Auto-hide navbar on fullbleed routes; show on mouse/touch activity
+const navVisible = ref(true)
+const isFullscreen = ref(false)
+let hideNavTimer: ReturnType<typeof setTimeout> | null = null
+
+function showNav() {
+  if (!navVisible.value) navVisible.value = true
+  if (!isFullBleed.value) return
+  if (hideNavTimer) clearTimeout(hideNavTimer)
+  if (menuOpen.value) return
+  hideNavTimer = setTimeout(() => {
+    navVisible.value = false
+  }, 3000)
+}
+
+function toggleFullscreen() {
+  const el = document.documentElement
+  if (!document.fullscreenElement && !(document as any).webkitFullscreenElement) {
+    if (el.requestFullscreen) el.requestFullscreen()
+    else if ((el as any).webkitRequestFullscreen) (el as any).webkitRequestFullscreen()
+  } else {
+    if (document.exitFullscreen) document.exitFullscreen()
+    else if ((document as any).webkitExitFullscreen) (document as any).webkitExitFullscreen()
+  }
+}
+
+function handleFullscreenChange() {
+  isFullscreen.value = !!(document.fullscreenElement || (document as any).webkitFullscreenElement)
+}
+
 // Close panel on route change
 watch(() => route.path, () => {
   menuOpen.value = false
+})
+
+// Start/stop auto-hide when entering/leaving fullbleed routes
+watch(isFullBleed, (val) => {
+  if (val) {
+    showNav()
+  } else {
+    navVisible.value = true
+    if (hideNavTimer) { clearTimeout(hideNavTimer); hideNavTimer = null }
+  }
+}, { immediate: true })
+
+// While menu is open, keep nav visible; restart timer when closed
+watch(menuOpen, (val) => {
+  if (!isFullBleed.value) return
+  if (val) {
+    if (hideNavTimer) { clearTimeout(hideNavTimer); hideNavTimer = null }
+    navVisible.value = true
+  } else {
+    showNav()
+  }
 })
 
 // Text edit modal state
@@ -191,11 +242,20 @@ function handleOutsideClick(e: MouseEvent) {
 
 onMounted(() => {
   document.addEventListener('click', handleOutsideClick)
+  window.addEventListener('mousemove', showNav)
+  window.addEventListener('touchstart', showNav, { passive: true })
+  document.addEventListener('fullscreenchange', handleFullscreenChange)
+  document.addEventListener('webkitfullscreenchange', handleFullscreenChange)
   initAudio()
 })
 
 onUnmounted(() => {
   document.removeEventListener('click', handleOutsideClick)
+  window.removeEventListener('mousemove', showNav)
+  window.removeEventListener('touchstart', showNav)
+  document.removeEventListener('fullscreenchange', handleFullscreenChange)
+  document.removeEventListener('webkitfullscreenchange', handleFullscreenChange)
+  if (hideNavTimer) clearTimeout(hideNavTimer)
   if (audioElement.value) {
     audioElement.value.pause()
   }
@@ -203,7 +263,7 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <nav :class="['navbar', { 'navbar--floating': isFullBleed, 'navbar--open': menuOpen }]">
+  <nav :class="['navbar', { 'navbar--floating': isFullBleed, 'navbar--open': menuOpen, 'navbar--hidden': isFullBleed && !navVisible }]">
     <!-- Collapsed: just the hamburger button -->
     <div class="navbar-top">
       <div v-if="!isFullBleed || menuOpen" class="nav-links">
@@ -218,6 +278,26 @@ onUnmounted(() => {
           <span class="nav-link-label">{{ r.label }}</span>
         </RouterLink>
       </div>
+
+      <button
+        v-if="isFullBleed"
+        :class="['fullscreen-btn', { 'fullscreen-btn--floating': !menuOpen }]"
+        @click="toggleFullscreen"
+        :aria-label="isFullscreen ? 'Exit fullscreen' : 'Enter fullscreen'"
+      >
+        <svg v-if="!isFullscreen" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="15 3 21 3 21 9"></polyline>
+          <polyline points="9 21 3 21 3 15"></polyline>
+          <line x1="21" y1="3" x2="14" y2="10"></line>
+          <line x1="3" y1="21" x2="10" y2="14"></line>
+        </svg>
+        <svg v-else xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="4 14 10 14 10 20"></polyline>
+          <polyline points="20 10 14 10 14 4"></polyline>
+          <line x1="10" y1="14" x2="3" y2="21"></line>
+          <line x1="21" y1="3" x2="14" y2="10"></line>
+        </svg>
+      </button>
 
       <button
         :class="['menu-btn', { 'menu-btn--floating': isFullBleed && !menuOpen }]"
@@ -280,6 +360,16 @@ onUnmounted(() => {
       </div>
     </transition>
   </nav>
+
+  <!-- Touch/click overlay: catches taps on iframe content when navbar is hidden -->
+  <Teleport to="body">
+    <div
+      v-if="isFullBleed && !navVisible"
+      class="nav-activity-overlay"
+      @touchstart.passive="showNav"
+      @click="showNav"
+    ></div>
+  </Teleport>
 
   <!-- Text edit modal -->
   <Teleport to="body">
@@ -366,6 +456,13 @@ onUnmounted(() => {
   background: rgba(10, 10, 20, 0.9);
   backdrop-filter: blur(12px);
   border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  transition: opacity 0.4s ease, transform 0.4s ease;
+}
+
+.navbar--hidden {
+  opacity: 0;
+  transform: translateY(-100%);
+  pointer-events: none;
 }
 
 /* ── Floating mode (fullbleed pages) ── */
@@ -476,6 +573,41 @@ onUnmounted(() => {
 .menu-btn:hover {
   color: #e2e8f0;
   border-color: rgba(255, 255, 255, 0.25);
+}
+
+/* ── Fullscreen button ── */
+.fullscreen-btn {
+  flex-shrink: 0;
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 0.4rem;
+  color: #94a3b8;
+  width: 2.25rem;
+  height: 2.25rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.15s, border-color 0.15s, background 0.15s;
+  padding: 0;
+}
+
+.fullscreen-btn:hover {
+  color: #e2e8f0;
+  border-color: rgba(255, 255, 255, 0.25);
+}
+
+.fullscreen-btn--floating {
+  width: 2.75rem;
+  height: 2.75rem;
+  border: none;
+  background: transparent;
+  border-radius: 0.5rem;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.fullscreen-btn--floating:hover {
+  background: rgba(255, 255, 255, 0.08);
 }
 
 /* Floating hamburger — fully transparent, just the lines */
@@ -780,5 +912,15 @@ onUnmounted(() => {
   width: 100%;
   max-height: 200px;
   object-fit: contain;
+}
+</style>
+
+<style>
+/* Non-scoped: this element is teleported to <body> */
+.nav-activity-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 999;
+  background: transparent;
 }
 </style>

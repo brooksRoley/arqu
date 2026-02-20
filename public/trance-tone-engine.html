@@ -355,6 +355,37 @@ const TranceEngine = {
     let timelapseTimer = null;
     const binaural = new BinauralEngine();
 
+    // ── Calming drag / swipe effect ──────────────────────────────
+    // Drag slowly shifts the visual center of all patterns.
+    // The response is heavily damped — like gently pushing water.
+    const viewOffset = { x: 0, y: 0 };
+    const dragTarget = { x: 0, y: 0 };
+    let dragActive = false;
+    let dragStartX = 0, dragStartY = 0;
+    let dragMoved = false;
+    const DRAG_THRESHOLD = 5;
+
+    function dragStart(clientX, clientY) {
+      dragActive = true;
+      dragStartX = clientX;
+      dragStartY = clientY;
+      dragMoved = false;
+    }
+
+    function dragMove(clientX, clientY) {
+      if (!dragActive) return;
+      const dx = clientX - dragStartX, dy = clientY - dragStartY;
+      if (Math.abs(dx) > DRAG_THRESHOLD || Math.abs(dy) > DRAG_THRESHOLD) dragMoved = true;
+      const maxShift = Math.min(window.innerWidth, window.innerHeight) * 0.14;
+      dragTarget.x = Math.max(-maxShift, Math.min(maxShift, (clientX - window.innerWidth / 2) * 0.11));
+      dragTarget.y = Math.max(-maxShift, Math.min(maxShift, (clientY - window.innerHeight / 2) * 0.11));
+    }
+
+    function dragEnd() {
+      dragActive = false;
+      return !dragMoved; // true = was a tap, not a drag
+    }
+
     /*
      * GAMMA BINAURAL BEAT MAPPING PER CATEGORY
      * ─────────────────────────────────────────
@@ -381,7 +412,7 @@ const TranceEngine = {
         colorBright: '#7b5ea7',
         beatHz: 40, carrier: 220,
         draw(ctx, w, h, t, mx, my, wf) {
-          const cx = w/2, cy = h/2, ae = getAudioEnergy(wf);
+          const cx = w/2 + viewOffset.x, cy = h/2 + viewOffset.y, ae = getAudioEnergy(wf);
           for (let layer = 0; layer < 3; layer++) {
             ctx.beginPath();
             const off = layer * 0.7 + t * 0.3;
@@ -417,7 +448,7 @@ const TranceEngine = {
         colorBright: '#3a6b8a',
         beatHz: 32, carrier: 180,
         draw(ctx, w, h, t, mx, my, wf) {
-          const cy = h/2, ae = getAudioEnergy(wf);
+          const cy = h/2 + viewOffset.y * 0.4, ae = getAudioEnergy(wf);
           for (let wave = 0; wave < 6; wave++) {
             ctx.beginPath();
             const phi = wave*0.8 + t*0.2;
@@ -450,7 +481,7 @@ const TranceEngine = {
         colorBright: '#2a2a5e',
         beatHz: 36, carrier: 160,
         draw(ctx, w, h, t, mx, my, wf) {
-          const cx = w/2, cy = h/2, ae = getAudioEnergy(wf);
+          const cx = w/2 + viewOffset.x, cy = h/2 + viewOffset.y, ae = getAudioEnergy(wf);
           for (let i = 12; i >= 0; i--) {
             const sig = 1/(1+Math.exp(5*((t*0.4)%(12*0.8+4)-i*0.8)));
             const r = sig*Math.min(w,h)*0.45+5+ae*20;
@@ -504,7 +535,7 @@ const TranceEngine = {
           }
           const bc = Math.sin(t*0.8)*0.5+0.5;
           ctx.beginPath();
-          ctx.arc(w/2, h/2, 40+bc*80+ae*30, 0, Math.PI*2);
+          ctx.arc(w/2 + viewOffset.x, h/2 + viewOffset.y, 40+bc*80+ae*30, 0, Math.PI*2);
           ctx.strokeStyle = `rgba(120,200,150,${0.08+bc*0.1+ae*0.08})`;
           ctx.lineWidth = 1.5;
           ctx.stroke();
@@ -518,7 +549,7 @@ const TranceEngine = {
         colorBright: '#8a7a5a',
         beatHz: 38, carrier: 200,
         draw(ctx, w, h, t, mx, my, wf) {
-          const cx = w/2, cy = h/2, ae = getAudioEnergy(wf);
+          const cx = w/2 + viewOffset.x, cy = h/2 + viewOffset.y, ae = getAudioEnergy(wf);
           for (let n = 1; n <= 5; n++) {
             const An = 1/n;
             ctx.beginPath();
@@ -596,13 +627,52 @@ const TranceEngine = {
       triggerNext();
     }
 
-    function handleClick(e) {
+    function handleMouseDown(e) {
       if (e.target.closest && e.target.closest('.volume-control')) return;
-      if (!audioInitialized.value) { initAudio(); return; }
-      triggerNext();
+      dragStart(e.clientX, e.clientY);
     }
 
-    function handleMouseMove(e) { mouseX.value = e.clientX; mouseY.value = e.clientY; }
+    function handleMouseUp(e) {
+      if (e.target.closest && e.target.closest('.volume-control')) return;
+      const wasTap = dragEnd();
+      if (wasTap) {
+        if (!audioInitialized.value) { initAudio(); return; }
+        triggerNext();
+      }
+    }
+
+    function handleMouseMove(e) {
+      mouseX.value = e.clientX;
+      mouseY.value = e.clientY;
+      dragMove(e.clientX, e.clientY);
+    }
+
+    function handleTouchStart(e) {
+      if (e.target.closest && e.target.closest('.volume-control')) return;
+      e.preventDefault();
+      const touch = e.touches[0];
+      if (touch) { mouseX.value = touch.clientX; mouseY.value = touch.clientY; }
+      dragStart(touch.clientX, touch.clientY);
+    }
+
+    function handleTouchMove(e) {
+      if (e.target.closest && e.target.closest('.volume-control')) return;
+      e.preventDefault();
+      const touch = e.touches[0];
+      if (!touch) return;
+      mouseX.value = touch.clientX;
+      mouseY.value = touch.clientY;
+      dragMove(touch.clientX, touch.clientY);
+    }
+
+    function handleTouchEnd(e) {
+      if (e.target.closest && e.target.closest('.volume-control')) return;
+      const wasTap = dragEnd();
+      if (wasTap) {
+        if (!audioInitialized.value) { initAudio(); return; }
+        triggerNext();
+      }
+    }
 
     function handleVolumeChange(e) {
       volume.value = parseInt(e.target.value);
@@ -621,13 +691,19 @@ const TranceEngine = {
       ctx.clearRect(0,0,w,h);
       globalTime += 0.016;
 
+      // Calming drift: slowly lerp visual center toward drag target, then decay
+      viewOffset.x += (dragTarget.x - viewOffset.x) * 0.028;
+      viewOffset.y += (dragTarget.y - viewOffset.y) * 0.028;
+      dragTarget.x *= 0.989;
+      dragTarget.y *= 0.989;
+
       const wf = binaural.started ? binaural.getWaveformData() : null;
       const cat = categories[currentCatKey.value];
       if (cat) cat.draw(ctx, w, h, globalTime, mouseX.value, mouseY.value, wf);
 
       // Audio waveform ring
       if (wf) {
-        const cx = w/2, cy = h/2, bR = Math.min(w,h)*0.18;
+        const cx = w/2 + viewOffset.x, cy = h/2 + viewOffset.y, bR = Math.min(w,h)*0.18;
         ctx.beginPath();
         for (let i = 0; i < wf.length; i++) {
           const a = (i/wf.length)*Math.PI*2;
@@ -653,16 +729,24 @@ const TranceEngine = {
 
     onMounted(() => {
       animate();
-      window.addEventListener('click', handleClick);
+      window.addEventListener('mousedown', handleMouseDown);
       window.addEventListener('mousemove', handleMouseMove);
+      window.addEventListener('mouseup', handleMouseUp);
+      window.addEventListener('touchstart', handleTouchStart, { passive: false });
+      window.addEventListener('touchmove', handleTouchMove, { passive: false });
+      window.addEventListener('touchend', handleTouchEnd);
     });
 
     onUnmounted(() => {
       cancelAnimationFrame(animFrame);
       clearInterval(timelapseTimer);
       binaural.destroy();
-      window.removeEventListener('click', handleClick);
+      window.removeEventListener('mousedown', handleMouseDown);
       window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleMouseUp);
+      window.removeEventListener('touchstart', handleTouchStart);
+      window.removeEventListener('touchmove', handleTouchMove);
+      window.removeEventListener('touchend', handleTouchEnd);
     });
 
     const barColor = computed(() => categories[currentCatKey.value]?.colorBright || '#7b5ea7');
