@@ -37,6 +37,12 @@ const navCards = [
     title: 'Trance Tones',
     description: 'Trance tone engine experience',
     to: '/trance'
+  },
+  {
+    icon: '🧠',
+    title: 'Binaural',
+    description: 'Binaural induction terminal with spiral entrainment',
+    to: '/webaudio'
   }
 ]
 
