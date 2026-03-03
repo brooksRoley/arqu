@@ -50,6 +50,11 @@ const router = createRouter({
       component: () => import('@/views/PollView.vue')
     },
     {
+      path: '/fitting',
+      name: 'fitting',
+      component: () => import('@/views/Fitting.vue')
+    },
+    {
       path: '/webaudio',
       name: 'webaudio',
       component: () => import('@/views/WebAudioView.vue')
