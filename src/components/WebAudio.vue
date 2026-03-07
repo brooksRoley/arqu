@@ -1,24 +1,30 @@
 <template>
-  <div class="trance-container" :style="{ '--blur': voiceActive ? '10px' : '0px' }">
+  <div class="trance-container" :style="{ opacity: avFlash ? 0.8 : 1 }">
     <canvas ref="canvasBus" class="spiral-canvas"></canvas>
 
-    <div v-if="currentPhase === 'Coherence'" class="pacer-ring" :class="{ expanding: isExpanding }"></div>
+    <div
+      v-if="phase === 'coherence'"
+      class="pacer-ring"
+      :class="{ expanding: isExpanding }"
+    ></div>
 
     <div class="ui-layer">
-      <nav v-if="currentPhase === 'Coherence'" class="hud-top">
+      <nav v-if="phase === 'coherence'" class="hud-top">
         <div class="stat">
           <label>COHERENCE</label>
           <span :class="{ linked: coherenceScore > 70 }">{{ coherenceScore }}%</span>
         </div>
         <div class="stat">
           <label>PHASE</label>
-          <span>{{ currentPhase.toUpperCase() }}</span>
+          <span>{{ phase.toUpperCase() }}</span>
         </div>
       </nav>
 
-      <div v-if="currentPhase !== 'Coherence'" class="status-bar">
-        <span class="phase-label">Phase: {{ currentPhase }}</span>
-        <div class="progress-track"><div class="fill" :style="{ width: progress + '%' }"></div></div>
+      <div v-if="phase !== 'idle' && phase !== 'coherence'" class="status-bar">
+        <span class="phase-label">Phase: {{ phase }}</span>
+        <div class="progress-track">
+          <div class="fill" :style="{ width: progress + '%' }"></div>
+        </div>
       </div>
 
       <div class="controls" v-if="!sessionActive">
@@ -28,13 +34,17 @@
 
       <div class="interaction-zone" v-else>
         <transition name="fade" mode="out-in">
-          <h2 v-if="currentPhase === 'Coherence'" :key="currentInstruction" class="instruction-text">
+          <h2
+            v-if="phase === 'coherence'"
+            :key="currentInstruction"
+            class="instruction-text"
+          >
             {{ currentInstruction }}
           </h2>
-          <p v-else class="instruction">{{ instructionText }}</p>
+          <p v-else class="instruction">{{ currentInstruction }}</p>
         </transition>
 
-        <p v-if="currentPhase === 'Coherence'" class="sync-hint">Hold to match the pulse</p>
+        <p v-if="phase === 'coherence'" class="sync-hint">Hold to match the pulse</p>
 
         <button
           @pointerdown="startSync"
@@ -42,230 +52,153 @@
           class="sync-pad"
           :class="{ syncing: isSyncing }"
         >
-          {{ currentPhase === 'Coherence' ? 'HOLD TO SYNC' : 'SYNC BREATH' }}
+          {{ phase === 'coherence' ? 'HOLD TO SYNC' : 'SYNC BREATH' }}
         </button>
+
+        <button @click="stopSession" class="stop-btn">STOP SESSION</button>
       </div>
+    </div>
+
+    <!-- Tutorial overlay -->
+    <div v-if="tutorialInfo" class="tutorial-card">
+      <div class="tutorial-title">{{ tutorialInfo.title }}</div>
+      <div class="tutorial-text">{{ tutorialInfo.text }}</div>
+      <button class="tutorial-dismiss" @click="dismissTutorial">Dismiss Tutorial</button>
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted } from 'vue';
-import * as Tone from 'tone';
+import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { useTranceEngine } from '@/composables/useTranceEngine'
 
-// --- Star Field ---
-const STAR_COUNT = 400;
-const stars = [];
+const {
+  phase,
+  sessionActive,
+  coherenceScore,
+  progress,
+  isExpanding,
+  currentInstruction,
+  isSyncing,
+  tunnelPulseStrength,
+  avSyncActive,
+  startSession,
+  stopSession,
+  startSync,
+  stopSync,
+  toggleAVSync,
+} = useTranceEngine()
+
+// --- Star Field (visual only) ---
+const STAR_COUNT = 400
+const stars = []
 
 class Star {
   constructor(canvas) {
-    this.reset(canvas);
+    this.reset(canvas)
   }
   reset(canvas) {
-    this.x = (Math.random() - 0.5) * canvas.width * 2;
-    this.y = (Math.random() - 0.5) * canvas.height * 2;
-    this.z = canvas.width;
-    this.px = 0;
-    this.py = 0;
+    this.x = (Math.random() - 0.5) * canvas.width * 2
+    this.y = (Math.random() - 0.5) * canvas.height * 2
+    this.z = canvas.width
+    this.px = 0
+    this.py = 0
   }
   update(speed, canvas) {
-    this.px = this.x / (this.z / canvas.width);
-    this.py = this.y / (this.z / canvas.width);
-    this.z -= speed;
-    if (this.z < 1) this.reset(canvas);
+    this.px = this.x / (this.z / canvas.width)
+    this.py = this.y / (this.z / canvas.width)
+    this.z -= speed
+    if (this.z < 1) this.reset(canvas)
   }
 }
 
-// --- State ---
-const canvasBus = ref(null);
-const sessionActive = ref(false);
-const currentPhase = ref('Idle');
-const progress = ref(0);
-const voiceActive = ref(false);
-const syncCount = ref(0);
-const tunnelPulseStrength = ref(0);
-const instructionText = ref('Follow the rhythm...');
+const canvasBus = ref(null)
+const avFlash = ref(false)
+let animFrameId
 
-// Coherence state
-const coherenceScore = ref(0);
-const isExpanding = ref(false);
-const currentInstruction = ref('BREATHE IN');
-const isSyncing = ref(false);
+// --- AV Sync flash handler ---
+function onAVFlash(flash) {
+  avFlash.value = flash
+}
 
-// --- Audio Engine ---
-let osc, lfo, gainNode, meter, subBass, deepenLoop;
-let swellOsc, swellGain, coherenceLoop;
-let animFrameId;
+// --- Tutorial ---
+const tutorialActive = ref(!localStorage.getItem('trance-tutorial-done'))
 
-const BREATH_CYCLE = 10;
-const INHALE_TIME = 5;
+const tutorialInfo = computed(() => {
+  if (!tutorialActive.value) return null
+  switch (phase.value) {
+    case 'idle':
+      return {
+        title: 'Welcome',
+        text: 'Use stereo headphones for the full binaural effect. Click BEGIN ENTRAINMENT to start your session.',
+      }
+    case 'induction':
+      return {
+        title: 'Induction Phase',
+        text: 'Binaural tones are synchronizing. Breathe slowly and follow the rhythm. This phase lasts ~30 seconds.',
+      }
+    case 'coherence':
+      return {
+        title: 'Coherence Phase',
+        text: 'The ring expands on inhale, contracts on exhale. Hold SYNC to match your breath. Aim for 70% coherence.',
+      }
+    case 'deepen':
+      return {
+        title: 'Deep Entrainment',
+        text: 'You\'ve achieved coherence. Bass pulses drive deeper. Try additional modules from the navbar menu.',
+      }
+    default:
+      return null
+  }
+})
 
-const initAudio = () => {
-  osc = new Tone.Oscillator(200, 'sine').start();
-  gainNode = new Tone.Gain(0).toDestination();
-  lfo = new Tone.LFO(12, 190, 210).connect(osc.frequency).start();
-  osc.connect(gainNode);
-
-  meter = new Tone.Meter();
-  osc.connect(meter);
-
-  subBass = new Tone.Synth({
-    oscillator: { type: 'sine' },
-    envelope: { attack: 0.01, decay: 0.3, sustain: 0, release: 0.5 },
-  }).toDestination();
-  subBass.volume.value = -6;
-};
+function dismissTutorial() {
+  tutorialActive.value = false
+  localStorage.setItem('trance-tutorial-done', '1')
+}
 
 // --- Tunnel Rendering ---
 const renderTunnel = () => {
-  if (!canvasBus.value) return;
-  const ctx = canvasBus.value.getContext('2d');
-  const { width, height } = canvasBus.value;
+  if (!canvasBus.value) return
+  const ctx = canvasBus.value.getContext('2d')
+  const { width, height } = canvasBus.value
 
-  ctx.fillStyle = 'rgba(0, 0, 0, 0.15)';
-  ctx.fillRect(0, 0, width, height);
+  ctx.fillStyle = 'rgba(0, 0, 0, 0.15)'
+  ctx.fillRect(0, 0, width, height)
 
-  const currentSpeed = 5 + tunnelPulseStrength.value * 20;
-  tunnelPulseStrength.value *= 0.9;
+  const currentSpeed = 5 + tunnelPulseStrength.value * 20
+  tunnelPulseStrength.value *= 0.9
 
-  ctx.strokeStyle = 'white';
-  ctx.beginPath();
-  stars.forEach(star => {
-    star.update(currentSpeed, canvasBus.value);
-    const x2d = star.x / (star.z / width) + width / 2;
-    const y2d = star.y / (star.z / height) + height / 2;
+  ctx.strokeStyle = 'white'
+  ctx.beginPath()
+  stars.forEach((star) => {
+    star.update(currentSpeed, canvasBus.value)
+    const x2d = star.x / (star.z / width) + width / 2
+    const y2d = star.y / (star.z / height) + height / 2
     if (star.px !== 0) {
-      ctx.moveTo(star.px + width / 2, star.py + height / 2);
-      ctx.lineTo(x2d, y2d);
+      ctx.moveTo(star.px + width / 2, star.py + height / 2)
+      ctx.lineTo(x2d, y2d)
     }
-  });
-  ctx.stroke();
+  })
+  ctx.stroke()
 
-  animFrameId = requestAnimationFrame(renderTunnel);
-};
-
-// --- Deepen Beat Sync ---
-const scheduleDeepenSequence = () => {
-  Tone.getTransport().start();
-  deepenLoop = new Tone.Loop((time) => {
-    subBass.triggerAttackRelease('E1', '8n', time);
-    Tone.getDraw().schedule(() => {
-      tunnelPulseStrength.value = 1.0;
-    }, time);
-  }, '2n').start(0);
-};
-
-// --- Coherence Loop ---
-const setupCoherenceLoop = () => {
-  swellGain = new Tone.Gain(0).toDestination();
-  swellOsc = new Tone.Oscillator(40, 'sine').connect(swellGain).start();
-
-  coherenceLoop = Tone.getTransport().scheduleRepeat((time) => {
-    swellGain.gain.rampTo(0.4, INHALE_TIME, time);
-
-    Tone.getDraw().schedule(() => {
-      currentInstruction.value = 'BREATHE IN';
-      isExpanding.value = true;
-    }, time);
-
-    Tone.getDraw().schedule(() => {
-      currentInstruction.value = 'BREATHE OUT';
-      isExpanding.value = false;
-    }, time + INHALE_TIME);
-
-    swellGain.gain.rampTo(0, INHALE_TIME, time + INHALE_TIME);
-  }, BREATH_CYCLE);
-
-  Tone.getTransport().start();
-};
-
-// --- Phase Controller ---
-const startSession = async () => {
-  await Tone.start();
-  initAudio();
-  sessionActive.value = true;
-  runInduction();
-};
-
-const runInduction = () => {
-  currentPhase.value = 'Induction';
-  instructionText.value = 'Breathe slowly. Let the rhythm guide you.';
-  gainNode.gain.rampTo(0.5, 5);
-  lfo.frequency.rampTo(6, 30);
-  setTimeout(() => runCoherence(), 30000);
-};
-
-const runCoherence = () => {
-  currentPhase.value = 'Coherence';
-  setupCoherenceLoop();
-};
-
-const runDeepen = () => {
-  if (currentPhase.value === 'Deepen') return;
-  currentPhase.value = 'Deepen';
-  lfo.frequency.rampTo(4.5, 60);
-  if (swellOsc) swellOsc.stop();
-  scheduleDeepenSequence();
-};
-
-// --- Sync Handlers ---
-let syncStartTime = 0;
-
-const startSync = () => {
-  if (currentPhase.value === 'Coherence') {
-    isSyncing.value = true;
-    syncStartTime = Tone.getTransport().seconds;
-    tunnelPulseStrength.value = 0.2;
-  } else {
-    // Pre-coherence: simple tap feedback
-    syncCount.value++;
-    progress.value = Math.min(progress.value + 5, 100);
-    tunnelPulseStrength.value = 0.3;
-    if (syncCount.value > 10) runDeepen();
-  }
-};
-
-const stopSync = () => {
-  if (currentPhase.value !== 'Coherence') return;
-
-  const holdDuration = Tone.getTransport().seconds - syncStartTime;
-  isSyncing.value = false;
-
-  // Score accuracy: ideal hold is INHALE_TIME seconds
-  const accuracy = 1 - Math.min(Math.abs(holdDuration - INHALE_TIME) / INHALE_TIME, 1);
-  coherenceScore.value = Math.min(
-    100,
-    Math.round(coherenceScore.value * 0.7 + accuracy * 100 * 0.3)
-  );
-
-  tunnelPulseStrength.value = 0.3;
-  syncCount.value++;
-  progress.value = Math.min(progress.value + 5, 100);
-
-  if (coherenceScore.value > 70 && syncCount.value > 5) {
-    runDeepen();
-  }
-};
+  animFrameId = requestAnimationFrame(renderTunnel)
+}
 
 onMounted(() => {
-  canvasBus.value.width = window.innerWidth;
-  canvasBus.value.height = window.innerHeight;
+  canvasBus.value.width = window.innerWidth
+  canvasBus.value.height = window.innerHeight
 
   for (let i = 0; i < STAR_COUNT; i++) {
-    stars.push(new Star(canvasBus.value));
+    stars.push(new Star(canvasBus.value))
   }
 
-  renderTunnel();
-});
+  renderTunnel()
+})
 
 onUnmounted(() => {
-  if (animFrameId) cancelAnimationFrame(animFrameId);
-  if (deepenLoop) deepenLoop.stop().dispose();
-  if (coherenceLoop !== undefined) Tone.getTransport().clear(coherenceLoop);
-  if (swellOsc) { swellOsc.stop(); swellOsc.dispose(); }
-  if (swellGain) swellGain.dispose();
-  Tone.getTransport().stop();
-});
+  if (animFrameId) cancelAnimationFrame(animFrameId)
+})
 </script>
 
 <style scoped>
@@ -277,8 +210,8 @@ onUnmounted(() => {
   align-items: center;
   justify-content: center;
   color: white;
-  transition: filter 1s ease;
-  filter: blur(var(--blur));
+  transition: opacity 0.05s ease;
+  position: relative;
 }
 
 .spiral-canvas {
@@ -295,7 +228,9 @@ onUnmounted(() => {
   border: 2px solid rgba(74, 144, 226, 0.5);
   box-shadow: 0 0 20px rgba(74, 144, 226, 0.2);
   transform: scale(0.75);
-  transition: transform 5s linear, box-shadow 5s linear;
+  transition:
+    transform 5s linear,
+    box-shadow 5s linear;
   z-index: 2;
   pointer-events: none;
 }
@@ -341,7 +276,9 @@ onUnmounted(() => {
   font-size: 1.2rem;
   font-weight: 600;
   color: #4a90e2;
-  transition: color 0.5s, text-shadow 0.5s;
+  transition:
+    color 0.5s,
+    text-shadow 0.5s;
 }
 
 .stat span.linked {
@@ -420,5 +357,72 @@ onUnmounted(() => {
 .instruction {
   color: #aaa;
   margin-bottom: 1rem;
+}
+
+.stop-btn {
+  display: block;
+  margin: 1rem auto 0;
+  padding: 0.4rem 1rem;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 80, 80, 0.4);
+  background: transparent;
+  color: #ff6b6b;
+  font-size: 0.7rem;
+  letter-spacing: 0.1em;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.stop-btn:hover {
+  background: rgba(255, 80, 80, 0.15);
+  border-color: #ff6b6b;
+}
+
+/* Tutorial card */
+.tutorial-card {
+  position: absolute;
+  bottom: 2rem;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 10;
+  background: rgba(10, 10, 30, 0.85);
+  border: 1px solid rgba(74, 144, 226, 0.3);
+  border-radius: 12px;
+  padding: 1rem 1.5rem;
+  max-width: 420px;
+  width: 90%;
+  backdrop-filter: blur(8px);
+}
+
+.tutorial-title {
+  font-size: 0.75rem;
+  letter-spacing: 0.15em;
+  color: #4a90e2;
+  text-transform: uppercase;
+  margin-bottom: 0.5rem;
+}
+
+.tutorial-text {
+  font-size: 0.85rem;
+  color: #ccc;
+  line-height: 1.5;
+}
+
+.tutorial-dismiss {
+  margin-top: 0.75rem;
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: #888;
+  padding: 0.25rem 0.75rem;
+  border-radius: 4px;
+  font-size: 0.7rem;
+  cursor: pointer;
+  letter-spacing: 0.05em;
+  transition: all 0.2s;
+}
+
+.tutorial-dismiss:hover {
+  color: #ccc;
+  border-color: rgba(255, 255, 255, 0.3);
 }
 </style>

@@ -2,6 +2,7 @@
 import { computed, ref, watch, onMounted, onUnmounted } from 'vue'
 import { RouterLink, useRouter, useRoute } from 'vue-router'
 import { useStoryStore } from '@/composables/useStoryStore'
+import { useTranceEngine } from '@/composables/useTranceEngine'
 
 const router = useRouter()
 const route = useRoute()
@@ -19,6 +20,20 @@ const {
   setBackgroundMedia,
   clearBackgroundMedia
 } = useStoryStore()
+
+const {
+  sessionActive: tranceSessionActive,
+  phase: trancePhase,
+  coherenceScore: tranceCoherence,
+  baselineModulatorActive: tranceBaselineActive,
+  ptosisInducerActive: trancePtosisActive,
+  avSyncActive: tranceAVActive,
+  startSession: tranceStart,
+  stopSession: tranceStop,
+  toggleBaselineModulator: tranceToggleBaseline,
+  togglePtosisInducer: tranceTogglePtosis,
+  toggleAVSync: tranceToggleAV,
+} = useTranceEngine()
 
 // Panel toggle
 const menuOpen = ref(false)
@@ -344,6 +359,45 @@ onUnmounted(() => {
           <div class="section-row">
             <button class="panel-btn" @click="openTextModal">📝 Edit Text</button>
             <button class="panel-btn" @click="openBgModal">🖼️ Background</button>
+          </div>
+        </div>
+
+        <!-- Trance Engine -->
+        <div class="panel-section">
+          <span class="section-label">Trance</span>
+          <div class="section-row">
+            <button
+              class="panel-btn"
+              :class="{ 'panel-btn--active': tranceSessionActive }"
+              @click="tranceSessionActive ? tranceStop() : tranceStart()"
+            >
+              {{ tranceSessionActive ? '&#9632; Stop' : '&#9654; Session' }}
+            </button>
+            <span v-if="tranceSessionActive" class="panel-stat">
+              {{ trancePhase.toUpperCase() }}
+              <template v-if="trancePhase === 'coherence'"> &middot; {{ tranceCoherence }}%</template>
+            </span>
+            <button
+              class="panel-btn"
+              :class="{ 'panel-btn--active': tranceBaselineActive }"
+              @click="tranceToggleBaseline()"
+            >
+              2.4Hz Pulse
+            </button>
+            <button
+              class="panel-btn"
+              :class="{ 'panel-btn--active': trancePtosisActive }"
+              @click="tranceTogglePtosis()"
+            >
+              Ptosis
+            </button>
+            <button
+              class="panel-btn"
+              :class="{ 'panel-btn--active': tranceAVActive }"
+              @click="tranceToggleAV()"
+            >
+              AV Sync
+            </button>
           </div>
         </div>
 

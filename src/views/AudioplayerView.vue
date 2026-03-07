@@ -1,7 +1,22 @@
 <script setup lang="ts">
+import { RouterLink } from 'vue-router'
 import { useAudioMixer } from '@/composables/useAudioMixer'
+import { useTranceEngine } from '@/composables/useTranceEngine'
 
 const { tracks, anyPlaying, toggleTrack, setVolume, seek, stopAll } = useAudioMixer()
+const {
+  sessionActive: tranceActive,
+  phase: trancePhase,
+  coherenceScore,
+  baselineModulatorActive,
+  ptosisInducerActive,
+  avSyncActive,
+  startSession: tranceStart,
+  stopSession: tranceStop,
+  toggleBaselineModulator,
+  togglePtosisInducer,
+  toggleAVSync,
+} = useTranceEngine()
 
 function formatTime(seconds: number): string {
   if (!seconds || !isFinite(seconds)) return '0:00'
@@ -73,6 +88,86 @@ function onVolume(id: string, event: Event) {
           />
           <span class="volume-pct">{{ Math.round(track.volume * 100) }}%</span>
         </div>
+      </div>
+    </div>
+
+    <hr class="divider" />
+
+    <h2 class="section-title">Entrainment Modules</h2>
+    <p class="mixer-subtitle">Binaural entrainment and neural resonance tools</p>
+
+    <div class="track-list">
+      <!-- Session control -->
+      <div class="track-card">
+        <div class="track-top">
+          <button
+            class="play-btn"
+            :class="{ 'play-btn--active': tranceActive }"
+            @click="tranceActive ? tranceStop() : tranceStart()"
+          >
+            {{ tranceActive ? '&#9632;' : '&#9654;' }}
+          </button>
+          <span class="track-name">Trance Session</span>
+          <span class="track-time" v-if="tranceActive">
+            {{ trancePhase.toUpperCase() }}
+            <template v-if="trancePhase === 'coherence'"> &middot; {{ coherenceScore }}%</template>
+          </span>
+        </div>
+        <p class="module-desc">
+          Full entrainment sequence: induction, coherence breathing, and deep phase.
+          Visit <RouterLink to="/webaudio" class="module-link">/webaudio</RouterLink> for the visual experience.
+        </p>
+      </div>
+
+      <!-- 2.4 Hz Baseline Modulator -->
+      <div class="track-card">
+        <div class="track-top">
+          <button
+            class="play-btn"
+            :class="{ 'play-btn--active': baselineModulatorActive }"
+            @click="toggleBaselineModulator()"
+          >
+            {{ baselineModulatorActive ? '&#9632;' : '&#9654;' }}
+          </button>
+          <span class="track-name">2.4 Hz Baseline Modulator</span>
+        </div>
+        <p class="module-desc">
+          432 Hz carrier with amplitude pulsed at 2.4 Hz (square wave) to excite nervous system resonance.
+        </p>
+      </div>
+
+      <!-- 0.5 Hz Ptosis Inducer -->
+      <div class="track-card">
+        <div class="track-top">
+          <button
+            class="play-btn"
+            :class="{ 'play-btn--active': ptosisInducerActive }"
+            @click="togglePtosisInducer()"
+          >
+            {{ ptosisInducerActive ? '&#9632;' : '&#9654;' }}
+          </button>
+          <span class="track-name">0.5 Hz Ptosis Inducer</span>
+        </div>
+        <p class="module-desc">
+          Pink noise through a drifting lowpass filter (0.5 Hz &rarr; 0.42 Hz over 5 min) for deep relaxation.
+        </p>
+      </div>
+
+      <!-- AV Sync -->
+      <div class="track-card">
+        <div class="track-top">
+          <button
+            class="play-btn"
+            :class="{ 'play-btn--active': avSyncActive }"
+            @click="toggleAVSync()"
+          >
+            {{ avSyncActive ? '&#9632;' : '&#9654;' }}
+          </button>
+          <span class="track-name">Audiovisual Entrainment</span>
+        </div>
+        <p class="module-desc">
+          Synchronized audio pulse at 144 BPM (2.4 Hz). Pair with /webaudio for visual sync.
+        </p>
       </div>
     </div>
   </div>
@@ -279,6 +374,35 @@ function onVolume(id: string, event: Event) {
   min-width: 2.5rem;
   text-align: right;
   font-variant-numeric: tabular-nums;
+}
+
+.divider {
+  border: none;
+  border-top: 1px solid rgba(100, 100, 255, 0.15);
+  margin: 2rem 0;
+}
+
+.section-title {
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: #e2e8f0;
+  margin: 0 0 0.25rem;
+}
+
+.module-desc {
+  font-size: 0.82rem;
+  color: #94a3b8;
+  line-height: 1.4;
+  margin: 0;
+}
+
+.module-link {
+  color: #6366f1;
+  text-decoration: none;
+}
+
+.module-link:hover {
+  text-decoration: underline;
 }
 
 @media (max-width: 480px) {
