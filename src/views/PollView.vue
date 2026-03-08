@@ -1,7 +1,10 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
+import { useRouter } from 'vue-router'
 import { usePollStore } from '@/composables/usePollStore'
 import type { PollAnswers } from '@/composables/usePollStore'
+
+const router = useRouter()
 
 const { answers, token, setAnswer, submitPoll, resetPoll } = usePollStore()
 
@@ -137,6 +140,7 @@ const themeDescriptions: Record<string, string> = {
             <pre class="adlib-pre">{{ token.adlibPrompt }}</pre>
           </details>
 
+          <button class="btn-begin" @click="router.push('/webaudio')">Begin Session</button>
           <button class="btn-ghost" @click="restart">Retake</button>
         </div>
 
@@ -267,6 +271,30 @@ const themeDescriptions: Record<string, string> = {
 .option-sublabel {
   font-size: 0.78rem;
   color: #94a3b8;
+}
+
+/* ── Begin session button ── */
+.btn-begin {
+  width: 100%;
+  padding: 0.9rem 1.5rem;
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.25), rgba(167, 139, 250, 0.2));
+  border: 1px solid rgba(99, 102, 241, 0.45);
+  border-radius: 0.6rem;
+  color: #c4b5fd;
+  font-family: inherit;
+  font-size: 0.95rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: background 0.2s, border-color 0.2s, color 0.2s, box-shadow 0.2s;
+}
+
+.btn-begin:hover {
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.4), rgba(167, 139, 250, 0.35));
+  border-color: rgba(167, 139, 250, 0.7);
+  color: #ede9fe;
+  box-shadow: 0 0 24px rgba(99, 102, 241, 0.25);
 }
 
 /* ── Ghost button ── */

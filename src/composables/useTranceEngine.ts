@@ -1,7 +1,7 @@
-import { ref, readonly } from 'vue'
+import { ref, computed, readonly } from 'vue'
 import * as Tone from 'tone'
 
-export type TrancePhase = 'idle' | 'induction' | 'coherence' | 'deepen'
+export type TrancePhase = 'idle' | 'induction' | 'coherence' | 'deepen' | 'joy' | 'wake'
 
 // ── Singleton reactive state ──
 const phase = ref<TrancePhase>('idle')
@@ -34,6 +34,65 @@ let swellGain: Tone.Gain | null = null
 let coherenceLoopId: number | undefined
 let syncStartTime = 0
 let phaseTimer: ReturnType<typeof setTimeout> | null = null
+let phraseTimers: ReturnType<typeof setTimeout>[] = []
+
+// ── Guided phrase sequences ──────────────────────────────────────
+const INDUCTION_PHRASES = [
+  'Find a comfortable position...',
+  'Close your eyes...',
+  'Take a deep breath in...',
+  'And slowly release...',
+  'Feel the weight of your body...',
+  'Sinking... with each breath...',
+  'The sound carries you...',
+  'You are safe here...',
+  'Nothing to do...',
+  'Just this moment...',
+]
+
+const DEEPEN_PHRASES = [
+  'Deeper now...',
+  'Further in...',
+  'Let it take you...',
+  'Surrender to the rhythm...',
+  'Falling... softly...',
+  'The pulse is yours...',
+  'Nothing left to hold...',
+  'Just the frequency...',
+]
+
+const JOY_PHRASES = [
+  'A warmth begins...',
+  'Spreading outward...',
+  'A quiet joy...',
+  'Let it fill you...',
+  'You carry this with you...',
+  'It is always here...',
+]
+
+const WAKE_PHRASES = [
+  'Ten... feel this stillness...',
+  'Eight... awareness returning...',
+  'Six... breath deepening...',
+  'Four... body beginning to stir...',
+  'Two... gently returning...',
+  'One... open your eyes...',
+]
+
+function clearPhraseTimers() {
+  phraseTimers.forEach(clearTimeout)
+  phraseTimers = []
+}
+
+function schedulePhrases(phrases: string[], intervalMs: number, onComplete?: () => void) {
+  clearPhraseTimers()
+  phraseTimers = phrases.map((text, i) =>
+    setTimeout(() => {
+      currentInstruction.value = text
+      if (i === phrases.length - 1) onComplete?.()
+    }, i * intervalMs)
+  )
+}
 
 // Module 1: 2.4 Hz Baseline Modulator
 let bmCarrier: Tone.Oscillator | null = null
@@ -188,21 +247,22 @@ function scheduleDeepenSequence() {
 
 function runInduction() {
   phase.value = 'induction'
-  currentInstruction.value = 'Breathe slowly. Let the rhythm guide you.'
   gainNode!.gain.rampTo(0.5, 5)
   lfo!.frequency.rampTo(6, 30)
+  // Cycle through induction phrases every ~3s over the 30s window
+  schedulePhrases(INDUCTION_PHRASES, 3000)
   phaseTimer = setTimeout(() => runCoherence(), 30000)
 }
 
 function runCoherence() {
   phase.value = 'coherence'
+  clearPhraseTimers()
   setupCoherenceLoop()
 }
 
 function runDeepen() {
   if (phase.value === 'deepen') return
   phase.value = 'deepen'
-  currentInstruction.value = 'Deepening...'
   lfo!.frequency.rampTo(4.5, 60)
   if (swellOsc) { swellOsc.stop(); swellOsc.dispose(); swellOsc = null }
   if (swellGain) { swellGain.dispose(); swellGain = null }
@@ -211,6 +271,30 @@ function runDeepen() {
     coherenceLoopId = undefined
   }
   scheduleDeepenSequence()
+  // Cycle deepen phrases every ~8s
+  schedulePhrases(DEEPEN_PHRASES, 8000)
+}
+
+function runJoy() {
+  if (phase.value === 'joy') return
+  phase.value = 'joy'
+  // Audio: stop sub-bass pulses, soften gain
+  if (deepenLoop) { deepenLoop.stop().dispose(); deepenLoop = null }
+  gainNode?.gain.rampTo(0.2, 8)
+  lfo?.frequency.rampTo(3, 12)
+  // Joy phrases every ~4s, then auto-wake
+  schedulePhrases(JOY_PHRASES, 4000, () => runWake())
+}
+
+function runWake() {
+  phase.value = 'wake'
+  // Audio: fade everything out over ~18s
+  gainNode?.gain.rampTo(0, 18)
+  lfo?.frequency.rampTo(1, 18)
+  // Wake countdown phrases every ~3s, then end session
+  schedulePhrases(WAKE_PHRASES, 3000, () => {
+    setTimeout(() => stopSession(), 2000)
+  })
 }
 
 // ── Public API ──
@@ -224,7 +308,13 @@ async function startSession() {
   runInduction()
 }
 
+function windDown() {
+  if (phase.value === 'deepen') runJoy()
+  else if (phase.value === 'joy') runWake()
+}
+
 function stopSession() {
+  clearPhraseTimers()
   if (phaseTimer) { clearTimeout(phaseTimer); phaseTimer = null }
   if (deepenLoop) { deepenLoop.stop().dispose(); deepenLoop = null }
   if (coherenceLoopId !== undefined) { Tone.getTransport().clear(coherenceLoopId); coherenceLoopId = undefined }
@@ -299,6 +389,24 @@ async function toggleAVSync(onFlash?: (flash: boolean) => void) {
   else await startAVSync(onFlash)
 }
 
+// ── Phase-aware visual accent ────────────────────────────────────
+// Used by WebAudio canvas to tint star trails and glow
+const phaseAccent = computed(() => {
+  switch (phase.value) {
+    case 'induction': return '#4a90e2'   // cool blue
+    case 'coherence': return '#4a90e2'   // blue (pulse-driven)
+    case 'deepen':    return '#7b5ea7'   // deep violet
+    case 'joy':       return '#e09040'   // warm amber
+    case 'wake':      return '#e8d090'   // soft gold
+    default:          return '#4a90e2'
+  }
+})
+
+// Whether the current phase shows floating text (not the pacer UI)
+const isNarrativePhase = computed(() =>
+  ['induction', 'deepen', 'joy', 'wake'].includes(phase.value)
+)
+
 export function useTranceEngine() {
   return {
     // Reactive state (readonly where appropriate)
@@ -313,10 +421,13 @@ export function useTranceEngine() {
     baselineModulatorActive: readonly(baselineModulatorActive),
     ptosisInducerActive: readonly(ptosisInducerActive),
     avSyncActive: readonly(avSyncActive),
+    phaseAccent,
+    isNarrativePhase,
 
     // Session control
     startSession,
     stopSession,
+    windDown,
     startSync,
     stopSync,
 

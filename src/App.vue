@@ -7,7 +7,9 @@ const route = useRoute()
 const mainRef = ref<HTMLElement | null>(null)
 
 const isFullBleed = computed(() => {
-  return ['reader', 'zeromind', 'glass', 'resume', 'spiral', 'trance'].includes(route.name as string)
+  return ['reader', 'zeromind', 'glass', 'spiral', 'trance', 'webaudio'].includes(
+    route.name as string
+  )
 })
 
 function toggleFullscreen() {
@@ -38,9 +40,12 @@ onUnmounted(() => document.removeEventListener('keydown', onKeydown))
     <NavBar />
 
     <main ref="mainRef" :class="['app-main', { 'app-main--fullbleed': isFullBleed }]">
-      <RouterView />
+      <RouterView v-slot="{ Component }">
+        <Transition :name="isFullBleed ? 'dissolve' : 'page'" mode="out-in">
+          <component :is="Component" :key="route.name" />
+        </Transition>
+      </RouterView>
     </main>
-
   </div>
 </template>
 
@@ -71,5 +76,33 @@ onUnmounted(() => document.removeEventListener('keydown', onKeydown))
   .app-main {
     padding: 1rem 1rem 4rem;
   }
+}
+
+/* ── Route transitions ── */
+
+/* Standard pages: short fade + slight upward drift */
+.page-enter-active,
+.page-leave-active {
+  transition:
+    opacity 0.22s ease,
+    transform 0.22s ease;
+}
+.page-enter-from {
+  opacity: 0;
+  transform: translateY(8px);
+}
+.page-leave-to {
+  opacity: 0;
+  transform: translateY(-6px);
+}
+
+/* Fullbleed / immersive: slower pure dissolve */
+.dissolve-enter-active,
+.dissolve-leave-active {
+  transition: opacity 0.55s ease;
+}
+.dissolve-enter-from,
+.dissolve-leave-to {
+  opacity: 0;
 }
 </style>

@@ -28,11 +28,13 @@ const {
   baselineModulatorActive: tranceBaselineActive,
   ptosisInducerActive: trancePtosisActive,
   avSyncActive: tranceAVActive,
+  phaseAccent: tranceAccent,
   startSession: tranceStart,
   stopSession: tranceStop,
+  windDown: tranceWindDown,
   toggleBaselineModulator: tranceToggleBaseline,
   togglePtosisInducer: tranceTogglePtosis,
-  toggleAVSync: tranceToggleAV,
+  toggleAVSync: tranceToggleAV
 } = useTranceEngine()
 
 // Panel toggle
@@ -40,7 +42,9 @@ const menuOpen = ref(false)
 
 // Fullbleed detection — auto-minimize on immersive routes
 const isFullBleed = computed(() => {
-  return ['reader', 'zeromind', 'glass', 'resume', 'spiral', 'trance'].includes(route.name as string)
+  return ['reader', 'zeromind', 'glass', 'spiral', 'trance', 'webaudio'].includes(
+    route.name as string
+  )
 })
 
 // Auto-hide navbar on fullbleed routes; show on mouse/touch activity
@@ -74,25 +78,38 @@ function handleFullscreenChange() {
 }
 
 // Close panel on route change
-watch(() => route.path, () => {
-  menuOpen.value = false
-})
+watch(
+  () => route.path,
+  () => {
+    menuOpen.value = false
+  }
+)
 
 // Start/stop auto-hide when entering/leaving fullbleed routes
-watch(isFullBleed, (val) => {
-  if (val) {
-    showNav()
-  } else {
-    navVisible.value = true
-    if (hideNavTimer) { clearTimeout(hideNavTimer); hideNavTimer = null }
-  }
-}, { immediate: true })
+watch(
+  isFullBleed,
+  (val) => {
+    if (val) {
+      showNav()
+    } else {
+      navVisible.value = true
+      if (hideNavTimer) {
+        clearTimeout(hideNavTimer)
+        hideNavTimer = null
+      }
+    }
+  },
+  { immediate: true }
+)
 
 // While menu is open, keep nav visible; restart timer when closed
 watch(menuOpen, (val) => {
   if (!isFullBleed.value) return
   if (val) {
-    if (hideNavTimer) { clearTimeout(hideNavTimer); hideNavTimer = null }
+    if (hideNavTimer) {
+      clearTimeout(hideNavTimer)
+      hideNavTimer = null
+    }
     navVisible.value = true
   } else {
     showNav()
@@ -137,65 +154,11 @@ function getRouteIcon(name: string): string {
     zeromind: '🌀',
     audio: '🎵',
     glass: '💧',
-    resume: '📄',
     spiral: '🌀',
     trance: '🎧',
     poll: '🧠'
   }
   return icons[name] || '📄'
-}
-
-// Background music state
-const audioTracks = [
-  { name: 'Floating', file: 'floating.mp3' },
-  { name: 'Coding Night', file: 'coding-night.mp3' }
-]
-const currentTrackIndex = ref(0)
-const musicPlaying = ref(false)
-const audioElement = ref<HTMLAudioElement | null>(null)
-
-function initAudio() {
-  audioElement.value = new Audio(`/audio/${audioTracks[currentTrackIndex.value].file}`)
-  audioElement.value.loop = true
-  audioElement.value.volume = 0.3
-  audioElement.value
-    .play()
-    .then(() => {
-      musicPlaying.value = true
-    })
-    .catch(() => {
-      musicPlaying.value = false
-    })
-}
-
-function toggleMusic() {
-  if (!audioElement.value) {
-    initAudio()
-    return
-  }
-
-  if (musicPlaying.value) {
-    audioElement.value.pause()
-    musicPlaying.value = false
-  } else {
-    audioElement.value.play()
-    musicPlaying.value = true
-  }
-}
-
-function selectTrack(index: number) {
-  if (index === currentTrackIndex.value && musicPlaying.value) {
-    return
-  }
-  currentTrackIndex.value = index
-  if (audioElement.value) {
-    audioElement.value.pause()
-  }
-  audioElement.value = new Audio(`/audio/${audioTracks[index].file}`)
-  audioElement.value.loop = true
-  audioElement.value.volume = 0.3
-  audioElement.value.play()
-  musicPlaying.value = true
 }
 
 function togglePlayback() {
@@ -262,7 +225,6 @@ onMounted(() => {
   window.addEventListener('touchstart', showNav, { passive: true })
   document.addEventListener('fullscreenchange', handleFullscreenChange)
   document.addEventListener('webkitfullscreenchange', handleFullscreenChange)
-  initAudio()
 })
 
 onUnmounted(() => {
@@ -272,14 +234,20 @@ onUnmounted(() => {
   document.removeEventListener('fullscreenchange', handleFullscreenChange)
   document.removeEventListener('webkitfullscreenchange', handleFullscreenChange)
   if (hideNavTimer) clearTimeout(hideNavTimer)
-  if (audioElement.value) {
-    audioElement.value.pause()
-  }
 })
 </script>
 
 <template>
-  <nav :class="['navbar', { 'navbar--floating': isFullBleed, 'navbar--open': menuOpen, 'navbar--hidden': isFullBleed && !navVisible }]">
+  <nav
+    :class="[
+      'navbar',
+      {
+        'navbar--floating': isFullBleed,
+        'navbar--open': menuOpen,
+        'navbar--hidden': isFullBleed && !navVisible
+      }
+    ]"
+  >
     <!-- Collapsed: just the hamburger button -->
     <div class="navbar-top">
       <div v-if="!isFullBleed || menuOpen" class="nav-links">
@@ -301,13 +269,35 @@ onUnmounted(() => {
         @click="toggleFullscreen"
         :aria-label="isFullscreen ? 'Exit fullscreen' : 'Enter fullscreen'"
       >
-        <svg v-if="!isFullscreen" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <svg
+          v-if="!isFullscreen"
+          xmlns="http://www.w3.org/2000/svg"
+          width="16"
+          height="16"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
           <polyline points="15 3 21 3 21 9"></polyline>
           <polyline points="9 21 3 21 3 15"></polyline>
           <line x1="21" y1="3" x2="14" y2="10"></line>
           <line x1="3" y1="21" x2="10" y2="14"></line>
         </svg>
-        <svg v-else xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <svg
+          v-else
+          xmlns="http://www.w3.org/2000/svg"
+          width="16"
+          height="16"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
           <polyline points="4 14 10 14 10 20"></polyline>
           <polyline points="20 10 14 10 14 4"></polyline>
           <line x1="10" y1="14" x2="3" y2="21"></line>
@@ -330,29 +320,6 @@ onUnmounted(() => {
 
     <transition name="panel">
       <div v-if="menuOpen" class="navbar-panel">
-        <!-- Music controls -->
-        <div class="panel-section">
-          <span class="section-label">Music</span>
-          <div class="section-row">
-            <button
-              class="panel-btn"
-              :class="{ 'panel-btn--active': musicPlaying }"
-              @click="toggleMusic"
-            >
-              {{ musicPlaying ? '⏸ Pause' : '▶ Play' }}
-            </button>
-            <button
-              v-for="(track, index) in audioTracks"
-              :key="track.file"
-              class="panel-btn"
-              :class="{ 'panel-btn--active': index === currentTrackIndex && musicPlaying }"
-              @click="selectTrack(index)"
-            >
-              {{ track.name }}
-            </button>
-          </div>
-        </div>
-
         <!-- Tools -->
         <div class="panel-section">
           <span class="section-label">Tools</span>
@@ -364,7 +331,7 @@ onUnmounted(() => {
 
         <!-- Trance Engine -->
         <div class="panel-section">
-          <span class="section-label">Trance</span>
+          <span class="section-label" :style="tranceSessionActive ? { color: tranceAccent } : {}">Trance</span>
           <div class="section-row">
             <button
               class="panel-btn"
@@ -373,10 +340,17 @@ onUnmounted(() => {
             >
               {{ tranceSessionActive ? '&#9632; Stop' : '&#9654; Session' }}
             </button>
-            <span v-if="tranceSessionActive" class="panel-stat">
+            <span v-if="tranceSessionActive" class="panel-stat" :style="{ color: tranceAccent }">
               {{ trancePhase.toUpperCase() }}
-              <template v-if="trancePhase === 'coherence'"> &middot; {{ tranceCoherence }}%</template>
+              <template v-if="trancePhase === 'coherence'">&middot; {{ tranceCoherence }}%</template>
             </span>
+            <button
+              v-if="tranceSessionActive && (trancePhase === 'deepen' || trancePhase === 'joy')"
+              class="panel-btn"
+              @click="tranceWindDown()"
+            >
+              Wind Down
+            </button>
             <button
               class="panel-btn"
               :class="{ 'panel-btn--active': tranceBaselineActive }"
@@ -511,7 +485,9 @@ onUnmounted(() => {
   background: rgba(10, 10, 20, 0.9);
   backdrop-filter: blur(12px);
   border-bottom: 1px solid rgba(255, 255, 255, 0.06);
-  transition: opacity 0.4s ease, transform 0.4s ease;
+  transition:
+    opacity 0.4s ease,
+    transform 0.4s ease;
 }
 
 .navbar--hidden {
@@ -587,7 +563,9 @@ onUnmounted(() => {
   text-decoration: none;
   font-size: 0.8rem;
   white-space: nowrap;
-  transition: color 0.15s, background-color 0.15s;
+  transition:
+    color 0.15s,
+    background-color 0.15s;
 }
 
 .nav-link:hover {
@@ -621,7 +599,10 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: color 0.15s, border-color 0.15s, background 0.15s;
+  transition:
+    color 0.15s,
+    border-color 0.15s,
+    background 0.15s;
   padding: 0;
 }
 
@@ -643,7 +624,10 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: color 0.15s, border-color 0.15s, background 0.15s;
+  transition:
+    color 0.15s,
+    border-color 0.15s,
+    background 0.15s;
   padding: 0;
 }
 
@@ -701,7 +685,9 @@ onUnmounted(() => {
   height: 2px;
   background: currentColor;
   border-radius: 1px;
-  transition: transform 0.25s ease, opacity 0.25s ease;
+  transition:
+    transform 0.25s ease,
+    opacity 0.25s ease;
   transform-origin: center;
 }
 
@@ -783,7 +769,10 @@ onUnmounted(() => {
   font-family: inherit;
   cursor: pointer;
   white-space: nowrap;
-  transition: background 0.15s, color 0.15s, border-color 0.15s;
+  transition:
+    background 0.15s,
+    color 0.15s,
+    border-color 0.15s;
 }
 
 .panel-btn:hover {

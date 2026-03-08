@@ -1,6 +1,49 @@
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted, onUnmounted } from 'vue'
 
+// ── Ambient background drift ──────────────────────────────────────
+const bgCanvas = ref<HTMLCanvasElement | null>(null)
+let bgFrameId: number | null = null
+
+function initBg() {
+  const canvas = bgCanvas.value
+  if (!canvas) return
+  canvas.width = canvas.offsetWidth
+  canvas.height = canvas.offsetHeight
+
+  const ctx = canvas.getContext('2d')!
+  const W = canvas.width
+  const H = canvas.height
+
+  const PARTICLES = 55
+  const pts = Array.from({ length: PARTICLES }, () => ({
+    x: Math.random() * W,
+    y: Math.random() * H,
+    r: 0.6 + Math.random() * 1.6,
+    vx: (Math.random() - 0.5) * 0.18,
+    vy: (Math.random() - 0.5) * 0.18,
+    o: 0.08 + Math.random() * 0.22
+  }))
+
+  function draw() {
+    ctx.clearRect(0, 0, W, H)
+    for (const p of pts) {
+      ctx.beginPath()
+      ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2)
+      ctx.fillStyle = `rgba(99,102,241,${p.o})`
+      ctx.fill()
+      p.x += p.vx
+      p.y += p.vy
+      if (p.x < 0) p.x = W
+      if (p.x > W) p.x = 0
+      if (p.y < 0) p.y = H
+      if (p.y > H) p.y = 0
+    }
+    bgFrameId = requestAnimationFrame(draw)
+  }
+  draw()
+}
+
 const navCards = [
   {
     icon: '📖',
@@ -19,12 +62,6 @@ const navCards = [
     title: 'Audio',
     description: 'Browse and play background audio tracks',
     to: '/audio'
-  },
-  {
-    icon: '💧',
-    title: 'Resume',
-    description: 'Interactive liquid glass resume',
-    to: '/resume'
   },
   {
     icon: '🌀',
@@ -78,7 +115,10 @@ function onMouseDown(e: MouseEvent) {
   isDragging = true
   lastDragX = e.clientX
   lastDragY = e.clientY
-  if (springId) { cancelAnimationFrame(springId); springId = null }
+  if (springId) {
+    cancelAnimationFrame(springId)
+    springId = null
+  }
 }
 
 function onMouseMove(e: MouseEvent) {
@@ -103,7 +143,10 @@ function onTouchStart(e: TouchEvent) {
   const t = e.touches[0]
   lastDragX = t.clientX
   lastDragY = t.clientY
-  if (springId) { cancelAnimationFrame(springId); springId = null }
+  if (springId) {
+    cancelAnimationFrame(springId)
+    springId = null
+  }
 }
 
 function onTouchMove(e: TouchEvent) {
@@ -139,22 +182,20 @@ const subtitleStyle = computed(() => ({
 // Each card tilts independently toward the pointer and shows a
 // directional highlight — precise, professional, tactile
 interface CardState {
-  tx: number  // rotateX degrees
-  ty: number  // rotateY degrees
-  gx: number  // glare center x %
-  gy: number  // glare center y %
+  tx: number // rotateX degrees
+  ty: number // rotateY degrees
+  gx: number // glare center x %
+  gy: number // glare center y %
   hover: boolean
 }
 
-const cards = ref<CardState[]>(
-  navCards.map(() => ({ tx: 0, ty: 0, gx: 50, gy: 50, hover: false }))
-)
+const cards = ref<CardState[]>(navCards.map(() => ({ tx: 0, ty: 0, gx: 50, gy: 50, hover: false })))
 
 function onCardMove(e: PointerEvent, i: number) {
   const el = e.currentTarget as HTMLElement
   const r = el.getBoundingClientRect()
-  const nx = (e.clientX - r.left) / r.width * 2 - 1   // -1 → 1
-  const ny = (e.clientY - r.top) / r.height * 2 - 1   // -1 → 1
+  const nx = ((e.clientX - r.left) / r.width) * 2 - 1 // -1 → 1
+  const ny = ((e.clientY - r.top) / r.height) * 2 - 1 // -1 → 1
   const c = cards.value[i]
   c.tx = ny * -5
   c.ty = nx * 5
@@ -162,11 +203,17 @@ function onCardMove(e: PointerEvent, i: number) {
   c.gy = (ny + 1) * 50
 }
 
-function onCardEnter(i: number) { cards.value[i].hover = true }
+function onCardEnter(i: number) {
+  cards.value[i].hover = true
+}
 
 function onCardLeave(i: number) {
   const c = cards.value[i]
-  c.tx = 0; c.ty = 0; c.gx = 50; c.gy = 50; c.hover = false
+  c.tx = 0
+  c.ty = 0
+  c.gx = 50
+  c.gy = 50
+  c.hover = false
 }
 
 function cardStyle(i: number) {
@@ -188,10 +235,12 @@ onMounted(() => {
   window.addEventListener('touchstart', onTouchStart, { passive: true })
   window.addEventListener('touchmove', onTouchMove, { passive: true })
   window.addEventListener('touchend', onTouchEnd, { passive: true })
+  initBg()
 })
 
 onUnmounted(() => {
   if (springId) cancelAnimationFrame(springId)
+  if (bgFrameId) cancelAnimationFrame(bgFrameId)
   window.removeEventListener('mousedown', onMouseDown)
   window.removeEventListener('mousemove', onMouseMove)
   window.removeEventListener('mouseup', onMouseUp)
@@ -203,6 +252,7 @@ onUnmounted(() => {
 
 <template>
   <div class="home" @dragstart.prevent>
+    <canvas ref="bgCanvas" class="home-bg" aria-hidden="true"></canvas>
     <div class="content-scene" :style="sceneStyle">
       <h1 class="title" :style="titleStyle">Channel Zero</h1>
       <p class="subtitle" :style="subtitleStyle">Choose your experience</p>
@@ -234,6 +284,16 @@ onUnmounted(() => {
   text-align: center;
   user-select: none;
   -webkit-user-select: none;
+  position: relative;
+}
+
+.home-bg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  opacity: 0.6;
 }
 
 .content-scene {
