@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from typing import Optional
 from uuid import UUID
 
 from fastapi import Depends, HTTPException, status
@@ -14,7 +15,7 @@ _bearer = HTTPBearer(auto_error=False)
 
 
 async def get_current_user_id(
-    creds: HTTPAuthorizationCredentials | None = Depends(_bearer),
+    creds: Optional[HTTPAuthorizationCredentials] = Depends(_bearer),
 ) -> UUID:
     """Extract and validate user_id from the Authorization: Bearer <token> header."""
     if creds is None:
@@ -36,8 +37,8 @@ async def get_current_user_id(
 
 
 async def get_optional_user_id(
-    creds: HTTPAuthorizationCredentials | None = Depends(_bearer),
-) -> UUID | None:
+    creds: Optional[HTTPAuthorizationCredentials] = Depends(_bearer),
+) -> Optional[UUID]:
     """Like get_current_user_id but returns None for unauthenticated requests.
     Use this for endpoints that work for both guests and logged-in users."""
     if creds is None:

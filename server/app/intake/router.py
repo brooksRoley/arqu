@@ -11,7 +11,7 @@ from .models import ConfessRequest, ConfessResponse
 from ..auth.deps import get_current_user_id
 from ..db import get_conn
 from ..llm.encryption import encrypt_api_key
-from ..vector.service import query_relevant
+from ..vector.service import query_relevant_journal, upsert_user_vector, find_nearest_users
 
 router = APIRouter()
 
@@ -95,7 +95,7 @@ async def confess(
         )
 
     # 2. Query Pinecone for resonant journal memories
-    memory_hits = await query_relevant(str(user_id), raw_text, top_k=5)
+    memory_hits = await query_relevant_journal(str(user_id), raw_text, top_k=5)
     memory_previews = [m["text_preview"] for m in memory_hits if m.get("text_preview")]
 
     # 3. NLP extraction (local fallback — phase 2 adds LLM call)
@@ -119,7 +119,17 @@ async def confess(
             user_id, attachment, defense, readiness, body.poll_theme,
         )
 
-    # 5. Build insight
+    # 5. Plot user's psychological coordinate in Pinecone (fire-and-forget)
+    import asyncio
+    asyncio.create_task(upsert_user_vector(
+        user_id=str(user_id),
+        confession_text=raw_text,
+        attachment_style=attachment,
+        defense_mechanism=defense,
+        readiness_score=readiness,
+    ))
+
+    # 6. Build insight
     a_insight = _ATTACHMENT_INSIGHTS.get(attachment, "")
     d_insight = _DEFENSE_INSIGHTS.get(defense, "")
     readiness_note = "You're ready to play." if readiness >= 70 else "Almost there. Keep journaling."
@@ -132,6 +142,40 @@ async def confess(
         insight=insight,
         memories=memory_previews,
     )
+
+
+@router.get("/match")
+async def find_matches(user_id: UUID = Depends(get_current_user_id)):
+    """
+    Return the 3 users psychologically closest to the current user in
+    Pinecone's 1,536-dimensional space. Requires intake to have been completed.
+    """
+    matches = await find_nearest_users(str(user_id), top_k=3)
+    if not matches:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="No matches found — complete intake first or embedding key not configured",
+        )
+
+    # Hydrate display names from Postgres
+    match_ids = [UUID(m["user_id"]) for m in matches if m.get("user_id")]
+    async with get_conn() as conn:
+        rows = await conn.fetch(
+            "SELECT id, display_name FROM users WHERE id = ANY($1::uuid[])",
+            match_ids,
+        )
+    name_map = {str(r["id"]): r["display_name"] for r in rows}
+
+    return [
+        {
+            "user_id": m["user_id"],
+            "display_name": name_map.get(m["user_id"], "Unknown"),
+            "attachment_style": m.get("attachment_style"),
+            "defense_mechanism": m.get("defense_mechanism"),
+            "similarity": m["score"],
+        }
+        for m in matches
+    ]
 
 
 @router.get("/vector")

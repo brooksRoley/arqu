@@ -74,6 +74,14 @@ const router = createRouter({
       meta: { requiresAuth: true },
     },
 
+    // ── Vibe calibration (OAuth connections) ────────────────────
+    {
+      path: '/calibrate',
+      name: 'calibrate',
+      component: () => import('@/views/OauthView.vue'),
+      meta: { requiresAuth: true },
+    },
+
     // ── Intake → Game pipeline (auth required) ──────────────────
     {
       path: '/intake',

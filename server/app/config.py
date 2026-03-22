@@ -33,6 +33,16 @@ class Settings(BaseSettings):
     pinecone_api_key: str = ""
     pinecone_index: str = "channelzero"
 
+    # ── Spotify OAuth ────────────────────────────────────────────
+    spotify_client_id: str = ""
+    spotify_client_secret: str = ""
+    spotify_redirect_uri: str = "http://localhost:8000/api/spotify/callback"
+
+    # ── Embeddings (server-level OpenAI key — NOT stored per-user) ──
+    # Used exclusively for generating vibe vectors and journal embeddings.
+    # Required for user matching and karma mechanics to function.
+    openai_embed_key: str = ""
+
     # ── CORS ────────────────────────────────────────────────────
     cors_origins: str = "http://localhost:5173"
 

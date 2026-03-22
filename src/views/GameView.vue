@@ -1,12 +1,15 @@
 <script setup lang="ts">
 import { ref, computed, nextTick, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '@/composables/useAuthStore'
 import { usePollStore } from '@/composables/usePollStore'
+import { useVibeStore } from '@/composables/useVibeStore'
 
 const router = useRouter()
+const route = useRoute()
 const { isAuthenticated, user } = useAuthStore()
 const { token: pollToken } = usePollStore()
+const { markConnected } = useVibeStore()
 
 if (!isAuthenticated.value) {
   router.replace('/login')
@@ -167,6 +170,12 @@ function delay(ms: number) {
 }
 
 onMounted(() => {
+  // Spotify OAuth callback lands here with ?spotify=connected
+  if (route.query.spotify === 'connected') {
+    markConnected('spotify')
+    router.replace({ path: '/game' })
+  }
+
   if (pollToken.value) {
     setTimeout(() => startScan(), 600)
   }

@@ -16,6 +16,7 @@ from .journal.router import router as journal_router
 from .poll.router import router as poll_router
 from .llm.router import router as llm_router
 from .intake.router import router as intake_router
+from .spotify.router import router as spotify_router
 
 
 @asynccontextmanager
@@ -64,6 +65,7 @@ def create_app() -> FastAPI:
     app.include_router(poll_router, prefix=f"{prefix}/poll", tags=["poll"])
     app.include_router(llm_router, prefix=f"{prefix}/llm", tags=["llm"])
     app.include_router(intake_router, prefix=f"{prefix}/intake", tags=["intake"])
+    app.include_router(spotify_router, prefix=f"{prefix}/spotify", tags=["spotify"])
 
     # ── Health ──────────────────────────────────────────────────
     @app.get("/health")

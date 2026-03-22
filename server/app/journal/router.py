@@ -18,7 +18,7 @@ from .models import (
 )
 from ..auth.deps import get_current_user_id
 from ..db import get_conn, get_tx
-from ..vector.service import embed_and_upsert
+from ..vector.service import embed_and_upsert_journal
 
 router = APIRouter()
 
@@ -43,7 +43,7 @@ async def create_entry(
             body.created_at,
         )
     entry = _row_to_response(row)
-    asyncio.create_task(embed_and_upsert(
+    asyncio.create_task(embed_and_upsert_journal(
         entry_id=str(entry.id),
         user_id=str(user_id),
         text=entry.text,
@@ -199,7 +199,7 @@ async def sync_entries(
 
     for entry in entries:
         if entry.text.strip():
-            asyncio.create_task(embed_and_upsert(
+            asyncio.create_task(embed_and_upsert_journal(
                 entry_id=str(entry.id),
                 user_id=str(user_id),
                 text=entry.text,
