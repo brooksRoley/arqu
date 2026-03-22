@@ -99,6 +99,52 @@ const themeDescriptions: Record<string, string> = {
   organic: 'Rooted and pragmatic — you engage with the world through texture, craft, and tangible experience.',
   liminal: 'In-between states feel natural — you exist in the threshold, ambient and unhurried.',
 }
+
+// Map each theme to a recommended experience + alternatives
+interface SessionOption {
+  route: string
+  label: string
+  description: string
+  recommended?: boolean
+}
+
+const themeSessions: Record<string, SessionOption[]> = {
+  dreamlike: [
+    { route: '/webaudio', label: 'Star Tunnel', description: 'Immersive star field with binaural entrainment', recommended: true },
+    { route: '/zeromind', label: 'Zeromind', description: 'Generative visuals with streaming text' },
+    { route: '/spiral', label: 'Spiral', description: 'Hypnotic spiral with trance words' },
+    { route: '/trance', label: 'Tone Engine', description: 'Raw binaural tone laboratory' },
+  ],
+  electric: [
+    { route: '/zeromind', label: 'Zeromind', description: 'Generative visuals with streaming text', recommended: true },
+    { route: '/webaudio', label: 'Star Tunnel', description: 'Immersive star field with binaural entrainment' },
+    { route: '/spiral', label: 'Spiral', description: 'Hypnotic spiral with trance words' },
+    { route: '/trance', label: 'Tone Engine', description: 'Raw binaural tone laboratory' },
+  ],
+  void: [
+    { route: '/spiral', label: 'Spiral', description: 'Hypnotic spiral — minimalist and absorbing', recommended: true },
+    { route: '/trance', label: 'Tone Engine', description: 'Raw binaural tone laboratory' },
+    { route: '/webaudio', label: 'Star Tunnel', description: 'Immersive star field with binaural entrainment' },
+    { route: '/zeromind', label: 'Zeromind', description: 'Generative visuals with streaming text' },
+  ],
+  organic: [
+    { route: '/trance', label: 'Tone Engine', description: 'Binaural tone engine — grounded and tactile', recommended: true },
+    { route: '/webaudio', label: 'Star Tunnel', description: 'Immersive star field with binaural entrainment' },
+    { route: '/spiral', label: 'Spiral', description: 'Hypnotic spiral with trance words' },
+    { route: '/zeromind', label: 'Zeromind', description: 'Generative visuals with streaming text' },
+  ],
+  liminal: [
+    { route: '/webaudio', label: 'Star Tunnel', description: 'Ambient star drift with entrainment layers', recommended: true },
+    { route: '/zeromind', label: 'Zeromind', description: 'Generative visuals with streaming text' },
+    { route: '/spiral', label: 'Spiral', description: 'Hypnotic spiral with trance words' },
+    { route: '/trance', label: 'Tone Engine', description: 'Raw binaural tone laboratory' },
+  ],
+}
+
+const currentSessions = computed(() => {
+  if (!token.value) return []
+  return themeSessions[token.value.theme] || themeSessions.liminal
+})
 </script>
 
 <template>
@@ -112,35 +158,45 @@ const themeDescriptions: Record<string, string> = {
             <p class="theme-desc">{{ themeDescriptions[token.theme] }}</p>
           </div>
 
-          <div class="results-palette">
-            <div class="swatch" :style="{ background: token.palette.background }" title="Background" />
-            <div class="swatch" :style="{ background: token.palette.primary }" title="Primary" />
-            <div class="swatch" :style="{ background: token.palette.accent }" title="Accent" />
+          <div class="results-meta">
+            <div class="meta-item">
+              <span class="meta-label">Archetype</span>
+              <span class="meta-value">{{ token.archetype }}</span>
+            </div>
+            <div class="meta-item">
+              <span class="meta-label">Tone</span>
+              <span class="meta-value">{{ token.tone }}</span>
+            </div>
+            <div class="results-palette">
+              <div class="swatch" :style="{ background: token.palette.background }" title="Background" />
+              <div class="swatch" :style="{ background: token.palette.primary }" title="Primary" />
+              <div class="swatch" :style="{ background: token.palette.accent }" title="Accent" />
+            </div>
           </div>
 
-          <div class="results-block">
-            <span class="block-label">Archetype</span>
-            <span class="block-value">{{ token.archetype }}</span>
-          </div>
-
-          <div class="results-block">
-            <span class="block-label">Tone</span>
-            <span class="block-value">{{ token.tone }}</span>
-          </div>
-
-          <div class="results-block">
-            <span class="block-label">Keywords</span>
-            <div class="keyword-chips">
-              <span v-for="kw in token.keywords" :key="kw" class="chip">{{ kw }}</span>
+          <div class="sessions-section">
+            <span class="section-heading">Your Sessions</span>
+            <div class="session-list">
+              <button
+                v-for="session in currentSessions"
+                :key="session.route"
+                :class="['session-card', { 'session-card--recommended': session.recommended }]"
+                @click="router.push(session.route)"
+              >
+                <span v-if="session.recommended" class="rec-tag">Recommended</span>
+                <span class="session-label">{{ session.label }}</span>
+                <span class="session-desc">{{ session.description }}</span>
+              </button>
             </div>
           </div>
 
           <details class="adlib-details">
-            <summary>API adlib prompt</summary>
-            <pre class="adlib-pre">{{ token.adlibPrompt }}</pre>
+            <summary>Your profile keywords</summary>
+            <div class="keyword-chips" style="padding: 0.75rem 1rem;">
+              <span v-for="kw in token.keywords" :key="kw" class="chip">{{ kw }}</span>
+            </div>
           </details>
 
-          <button class="btn-begin" @click="router.push('/webaudio')">Begin Session</button>
           <button class="btn-ghost" @click="restart">Retake</button>
         </div>
 
@@ -273,28 +329,103 @@ const themeDescriptions: Record<string, string> = {
   color: #94a3b8;
 }
 
-/* ── Begin session button ── */
-.btn-begin {
-  width: 100%;
-  padding: 0.9rem 1.5rem;
-  background: linear-gradient(135deg, rgba(99, 102, 241, 0.25), rgba(167, 139, 250, 0.2));
-  border: 1px solid rgba(99, 102, 241, 0.45);
-  border-radius: 0.6rem;
-  color: #c4b5fd;
-  font-family: inherit;
-  font-size: 0.95rem;
-  font-weight: 600;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  cursor: pointer;
-  transition: background 0.2s, border-color 0.2s, color 0.2s, box-shadow 0.2s;
+/* ── Results meta row ── */
+.results-meta {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  flex-wrap: wrap;
 }
 
-.btn-begin:hover {
-  background: linear-gradient(135deg, rgba(99, 102, 241, 0.4), rgba(167, 139, 250, 0.35));
-  border-color: rgba(167, 139, 250, 0.7);
-  color: #ede9fe;
-  box-shadow: 0 0 24px rgba(99, 102, 241, 0.25);
+.meta-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.meta-label {
+  font-size: 0.6rem;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: #475569;
+}
+
+.meta-value {
+  font-size: 0.88rem;
+  color: #cbd5e1;
+}
+
+/* ── Sessions section ── */
+.sessions-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.section-heading {
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #64748b;
+}
+
+.session-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.session-card {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.2rem;
+  padding: 0.85rem 1.1rem;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 0.6rem;
+  color: #e2e8f0;
+  cursor: pointer;
+  font-family: inherit;
+  text-align: left;
+  width: 100%;
+  transition: background 0.15s, border-color 0.15s, transform 0.1s, box-shadow 0.2s;
+}
+
+.session-card:hover {
+  background: rgba(99, 102, 241, 0.12);
+  border-color: rgba(99, 102, 241, 0.35);
+  transform: translateX(2px);
+}
+
+.session-card--recommended {
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.15), rgba(167, 139, 250, 0.1));
+  border-color: rgba(99, 102, 241, 0.35);
+  padding: 1rem 1.1rem;
+}
+
+.session-card--recommended:hover {
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.25), rgba(167, 139, 250, 0.2));
+  border-color: rgba(167, 139, 250, 0.6);
+  box-shadow: 0 0 20px rgba(99, 102, 241, 0.15);
+}
+
+.rec-tag {
+  font-size: 0.6rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #a78bfa;
+  font-weight: 600;
+}
+
+.session-label {
+  font-size: 0.95rem;
+  font-weight: 500;
+}
+
+.session-desc {
+  font-size: 0.78rem;
+  color: #94a3b8;
 }
 
 /* ── Ghost button ── */
@@ -346,33 +477,16 @@ const themeDescriptions: Record<string, string> = {
 
 .results-palette {
   display: flex;
-  gap: 0.5rem;
-  justify-content: center;
+  gap: 0.35rem;
+  align-items: center;
+  margin-left: auto;
 }
 
 .swatch {
-  width: 2.5rem;
-  height: 2.5rem;
+  width: 1.5rem;
+  height: 1.5rem;
   border-radius: 50%;
   border: 1px solid rgba(255, 255, 255, 0.12);
-}
-
-.results-block {
-  display: flex;
-  flex-direction: column;
-  gap: 0.35rem;
-}
-
-.block-label {
-  font-size: 0.65rem;
-  text-transform: uppercase;
-  letter-spacing: 0.07em;
-  color: #475569;
-}
-
-.block-value {
-  font-size: 0.92rem;
-  color: #cbd5e1;
 }
 
 .keyword-chips {

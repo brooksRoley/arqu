@@ -124,10 +124,13 @@ const fileName = ref('')
 // Background modal state
 const showBgModal = ref(false)
 
+// Session routes are accessed through the poll/Discover flow, not the main nav
+const hiddenRoutes = new Set(['zeromind', 'spiral', 'trance', 'webaudio', 'fitting', 'poll'])
+
 const navRoutes = computed(() => {
   return router
     .getRoutes()
-    .filter((route) => route.name && route.path !== '/:pathMatch(.*)*')
+    .filter((route) => route.name && route.path !== '/:pathMatch(.*)*' && !hiddenRoutes.has(route.name as string))
     .map((route) => ({
       name: route.name as string,
       path: route.path,
@@ -138,7 +141,8 @@ const navRoutes = computed(() => {
 
 function formatRouteName(name: string): string {
   const labels: Record<string, string> = {
-    glass: 'Liquid Glass'
+    glass: 'Liquid Glass',
+    poll: 'Discover'
   }
   if (labels[name]) return labels[name]
   return name
@@ -156,7 +160,7 @@ function getRouteIcon(name: string): string {
     glass: '💧',
     spiral: '🌀',
     trance: '🎧',
-    poll: '🧠'
+    poll: '✦'
   }
   return icons[name] || '📄'
 }

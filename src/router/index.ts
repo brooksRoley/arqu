@@ -41,13 +41,7 @@ const router = createRouter({
     },
     {
       path: '/poll',
-      name: 'poll',
-      component: () => import('@/views/PollView.vue')
-    },
-    {
-      path: '/fitting',
-      name: 'fitting',
-      component: () => import('@/views/Fitting.vue')
+      redirect: '/'
     },
     {
       path: '/webaudio',
