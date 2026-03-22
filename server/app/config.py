@@ -29,6 +29,10 @@ class Settings(BaseSettings):
     # ── Encryption (for user API keys) ──────────────────────────
     server_encryption_key: str = "changeme-generate-a-32-byte-key"
 
+    # ── Pinecone ────────────────────────────────────────────────
+    pinecone_api_key: str = ""
+    pinecone_index: str = "channelzero"
+
     # ── CORS ────────────────────────────────────────────────────
     cors_origins: str = "http://localhost:5173"
 

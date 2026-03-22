@@ -11,6 +11,7 @@ from .models import ConfessRequest, ConfessResponse
 from ..auth.deps import get_current_user_id
 from ..db import get_conn
 from ..llm.encryption import encrypt_api_key
+from ..vector.service import query_relevant
 
 router = APIRouter()
 
@@ -93,10 +94,16 @@ async def confess(
             user_id, encrypted_text, nonce,
         )
 
-    # 2. NLP extraction (local fallback — phase 2 adds LLM call)
-    attachment, defense, readiness = _analyze_local(body.confessions)
+    # 2. Query Pinecone for resonant journal memories
+    memory_hits = await query_relevant(str(user_id), raw_text, top_k=5)
+    memory_previews = [m["text_preview"] for m in memory_hits if m.get("text_preview")]
 
-    # 3. Upsert vibe vector
+    # 3. NLP extraction (local fallback — phase 2 adds LLM call)
+    attachment, defense, readiness = _analyze_local(body.confessions)
+    # Memories signal deeper engagement — nudge readiness up slightly
+    readiness = min(100, readiness + len(memory_previews) * 3)
+
+    # 4. Upsert vibe vector
     async with get_conn() as conn:
         await conn.execute(
             """
@@ -112,7 +119,7 @@ async def confess(
             user_id, attachment, defense, readiness, body.poll_theme,
         )
 
-    # 4. Build insight
+    # 5. Build insight
     a_insight = _ATTACHMENT_INSIGHTS.get(attachment, "")
     d_insight = _DEFENSE_INSIGHTS.get(defense, "")
     readiness_note = "You're ready to play." if readiness >= 70 else "Almost there. Keep journaling."
@@ -123,6 +130,7 @@ async def confess(
         defense_mechanism=defense,
         readiness_score=readiness,
         insight=insight,
+        memories=memory_previews,
     )
 
 

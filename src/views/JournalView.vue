@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
+const URL = window.URL
 import { useJournalStore } from '@/composables/useJournalStore'
 import { useTTS } from '@/composables/useTTS'
 import { useStoryStore } from '@/composables/useStoryStore'

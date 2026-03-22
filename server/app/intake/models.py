@@ -19,6 +19,7 @@ class ConfessResponse(BaseModel):
     defense_mechanism: str
     readiness_score: int
     insight: str
+    memories: list[str] = []  # resonant journal snippets surfaced by Pinecone
 
 
 class VibeVectorResponse(BaseModel):

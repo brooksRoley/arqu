@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import json
 from datetime import datetime, timezone
 from uuid import UUID
@@ -17,6 +18,7 @@ from .models import (
 )
 from ..auth.deps import get_current_user_id
 from ..db import get_conn, get_tx
+from ..vector.service import embed_and_upsert
 
 router = APIRouter()
 
@@ -40,7 +42,16 @@ async def create_entry(
             body.poll_token_id,
             body.created_at,
         )
-    return _row_to_response(row)
+    entry = _row_to_response(row)
+    asyncio.create_task(embed_and_upsert(
+        entry_id=str(entry.id),
+        user_id=str(user_id),
+        text=entry.text,
+        text_preview=entry.text[:200],
+        mood=entry.mood,
+        created_at=entry.created_at.isoformat(),
+    ))
+    return entry
 
 
 @router.get("/entries", response_model=list[JournalEntryResponse])
@@ -184,10 +195,20 @@ async def sync_entries(
                 user_id,
             )
 
-    return JournalSyncResponse(
-        entries=[_row_to_response(r) for r in rows],
-        server_time=now,
-    )
+    entries = [_row_to_response(r) for r in rows]
+
+    for entry in entries:
+        if entry.text.strip():
+            asyncio.create_task(embed_and_upsert(
+                entry_id=str(entry.id),
+                user_id=str(user_id),
+                text=entry.text,
+                text_preview=entry.text[:200],
+                mood=entry.mood,
+                created_at=entry.created_at.isoformat(),
+            ))
+
+    return JournalSyncResponse(entries=entries, server_time=now)
 
 
 def _row_to_response(row) -> JournalEntryResponse:
