@@ -1,0 +1,232 @@
+"""LLM proxy routes — encrypted API key management + provider forwarding."""
+
+from __future__ import annotations
+
+from uuid import UUID
+
+from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi.responses import StreamingResponse
+from pydantic import BaseModel
+
+from .encryption import encrypt_api_key, decrypt_api_key, key_hint
+from ..auth.deps import get_current_user_id
+from ..db import get_conn
+
+router = APIRouter()
+
+
+# ── Models ──────────────────────────────────────────────────────
+
+class StoreKeyRequest(BaseModel):
+    provider: str  # 'anthropic', 'openai', 'together'
+    api_key: str
+
+
+class KeyInfo(BaseModel):
+    id: UUID
+    provider: str
+    key_hint: str
+
+
+class LLMRequest(BaseModel):
+    provider: str
+    messages: list[dict]
+    model: str | None = None
+    max_tokens: int = 1024
+    stream: bool = False
+
+
+# ── Key Management ──────────────────────────────────────────────
+
+@router.post("/keys", response_model=KeyInfo, status_code=status.HTTP_201_CREATED)
+async def store_key(
+    body: StoreKeyRequest,
+    user_id: UUID = Depends(get_current_user_id),
+):
+    encrypted, nonce = encrypt_api_key(body.api_key)
+    hint = key_hint(body.api_key)
+
+    async with get_conn() as conn:
+        # Upsert: one key per provider per user
+        row = await conn.fetchrow(
+            """
+            INSERT INTO user_api_keys (user_id, provider, encrypted_key, key_nonce, key_hint)
+            VALUES ($1, $2, $3, $4, $5)
+            ON CONFLICT (user_id, provider)
+                WHERE user_id = $1 AND provider = $2
+            DO UPDATE SET encrypted_key = $3, key_nonce = $4, key_hint = $5
+            RETURNING id, provider, key_hint
+            """,
+            user_id, body.provider, encrypted, nonce, hint,
+        )
+
+    # If the upsert didn't return (no unique constraint on user_id+provider yet),
+    # fall back to delete + insert
+    if row is None:
+        async with get_conn() as conn:
+            await conn.execute(
+                "DELETE FROM user_api_keys WHERE user_id = $1 AND provider = $2",
+                user_id, body.provider,
+            )
+            row = await conn.fetchrow(
+                """
+                INSERT INTO user_api_keys (user_id, provider, encrypted_key, key_nonce, key_hint)
+                VALUES ($1, $2, $3, $4, $5)
+                RETURNING id, provider, key_hint
+                """,
+                user_id, body.provider, encrypted, nonce, hint,
+            )
+
+    return KeyInfo(**dict(row))
+
+
+@router.get("/keys", response_model=list[KeyInfo])
+async def list_keys(user_id: UUID = Depends(get_current_user_id)):
+    async with get_conn() as conn:
+        rows = await conn.fetch(
+            "SELECT id, provider, key_hint FROM user_api_keys WHERE user_id = $1 ORDER BY provider",
+            user_id,
+        )
+    return [KeyInfo(**dict(r)) for r in rows]
+
+
+@router.delete("/keys/{key_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_key(
+    key_id: UUID,
+    user_id: UUID = Depends(get_current_user_id),
+):
+    async with get_conn() as conn:
+        result = await conn.execute(
+            "DELETE FROM user_api_keys WHERE id = $1 AND user_id = $2",
+            key_id, user_id,
+        )
+    if result == "DELETE 0":
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Key not found")
+
+
+# ── LLM Proxy ──────────────────────────────────────────────────
+
+@router.post("/proxy")
+async def proxy_llm(
+    body: LLMRequest,
+    user_id: UUID = Depends(get_current_user_id),
+):
+    """Forward a prompt to the user's LLM provider using their encrypted key."""
+    import httpx
+
+    # Fetch + decrypt the user's key for this provider
+    async with get_conn() as conn:
+        row = await conn.fetchrow(
+            "SELECT encrypted_key, key_nonce FROM user_api_keys WHERE user_id = $1 AND provider = $2",
+            user_id, body.provider,
+        )
+
+    if row is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"No API key stored for provider '{body.provider}'",
+        )
+
+    api_key = decrypt_api_key(row["encrypted_key"], row["key_nonce"])
+
+    # Route to the correct provider
+    if body.provider == "anthropic":
+        return await _proxy_anthropic(api_key, body)
+    elif body.provider == "openai":
+        return await _proxy_openai(api_key, body)
+    elif body.provider == "together":
+        return await _proxy_together(api_key, body)
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Unsupported provider: {body.provider}",
+        )
+
+
+async def _proxy_anthropic(api_key: str, body: LLMRequest):
+    import httpx
+
+    model = body.model or "claude-sonnet-4-20250514"
+    payload = {
+        "model": model,
+        "max_tokens": body.max_tokens,
+        "messages": body.messages,
+    }
+    if body.stream:
+        payload["stream"] = True
+
+    headers = {
+        "x-api-key": api_key,
+        "anthropic-version": "2023-06-01",
+        "content-type": "application/json",
+    }
+
+    if body.stream:
+        return await _stream_proxy("https://api.anthropic.com/v1/messages", headers, payload)
+
+    async with httpx.AsyncClient(timeout=120) as client:
+        resp = await client.post("https://api.anthropic.com/v1/messages", json=payload, headers=headers)
+    return resp.json()
+
+
+async def _proxy_openai(api_key: str, body: LLMRequest):
+    import httpx
+
+    model = body.model or "gpt-4o"
+    payload = {
+        "model": model,
+        "max_tokens": body.max_tokens,
+        "messages": body.messages,
+    }
+    if body.stream:
+        payload["stream"] = True
+
+    headers = {
+        "Authorization": f"Bearer {api_key}",
+        "Content-Type": "application/json",
+    }
+
+    if body.stream:
+        return await _stream_proxy("https://api.openai.com/v1/chat/completions", headers, payload)
+
+    async with httpx.AsyncClient(timeout=120) as client:
+        resp = await client.post("https://api.openai.com/v1/chat/completions", json=payload, headers=headers)
+    return resp.json()
+
+
+async def _proxy_together(api_key: str, body: LLMRequest):
+    import httpx
+
+    model = body.model or "meta-llama/Llama-3-70b-chat-hf"
+    payload = {
+        "model": model,
+        "max_tokens": body.max_tokens,
+        "messages": body.messages,
+    }
+    if body.stream:
+        payload["stream"] = True
+
+    headers = {
+        "Authorization": f"Bearer {api_key}",
+        "Content-Type": "application/json",
+    }
+
+    if body.stream:
+        return await _stream_proxy("https://api.together.xyz/v1/chat/completions", headers, payload)
+
+    async with httpx.AsyncClient(timeout=120) as client:
+        resp = await client.post("https://api.together.xyz/v1/chat/completions", json=payload, headers=headers)
+    return resp.json()
+
+
+async def _stream_proxy(url: str, headers: dict, payload: dict) -> StreamingResponse:
+    """Stream SSE responses from the upstream LLM provider."""
+    import httpx
+
+    async def generate():
+        async with httpx.AsyncClient(timeout=120) as client:
+            async with client.stream("POST", url, json=payload, headers=headers) as resp:
+                async for chunk in resp.aiter_bytes():
+                    yield chunk
+
+    return StreamingResponse(generate(), media_type="text/event-stream")

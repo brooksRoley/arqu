@@ -432,6 +432,34 @@ onUnmounted(() => {
 
           <!-- Utility cards grid -->
           <div class="nav-grid">
+            <router-link
+              to="/checkin"
+              class="nav-card nav-card--pipeline"
+              :style="cardStyle('checkin')"
+              @pointermove="onCardMove($event, 'checkin')"
+              @pointerenter="onCardEnter('checkin')"
+              @pointerleave="onCardLeave('checkin')"
+            >
+              <span class="card-icon">&#x2726;</span>
+              <span class="card-title">Check-In</span>
+              <span class="card-desc">Journal, intake, and the game — your daily pipeline</span>
+              <div class="card-glare"></div>
+            </router-link>
+
+            <router-link
+              to="/journal"
+              class="nav-card"
+              :style="cardStyle('journal')"
+              @pointermove="onCardMove($event, 'journal')"
+              @pointerenter="onCardEnter('journal')"
+              @pointerleave="onCardLeave('journal')"
+            >
+              <span class="card-icon">&#x270D;</span>
+              <span class="card-title">Journal</span>
+              <span class="card-desc">Write, draw, record — reflective journaling with TTS</span>
+              <div class="card-glare"></div>
+            </router-link>
+
             <div
               class="nav-card nav-card--meditation"
               :style="cardStyle('meditation')"
@@ -827,6 +855,16 @@ onUnmounted(() => {
   background: rgba(40, 40, 70, 0.9);
   border-color: rgba(99, 102, 241, 0.5);
   box-shadow: 0 12px 36px rgba(0, 0, 0, 0.45);
+}
+
+.nav-card--pipeline {
+  border-color: rgba(99, 102, 241, 0.3);
+  background: linear-gradient(135deg, rgba(30, 20, 60, 0.85), rgba(20, 20, 50, 0.8));
+}
+
+.nav-card--pipeline:hover {
+  border-color: rgba(167, 139, 250, 0.6);
+  box-shadow: 0 12px 36px rgba(99, 102, 241, 0.15);
 }
 
 .nav-card--meditation {

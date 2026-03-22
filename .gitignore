@@ -33,3 +33,14 @@ coverage
 *.sw?
 
 *.tsbuildinfo
+
+# Vite temp files
+vite.config.ts.timestamp-*
+
+# Python / FastAPI server
+server/__pycache__/
+server/**/__pycache__/
+server/**/*.pyc
+server/.venv/
+server/venv/
+*.egg-info/

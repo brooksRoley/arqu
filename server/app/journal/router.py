@@ -1,0 +1,198 @@
+"""Journal CRUD routes."""
+
+from __future__ import annotations
+
+import json
+from datetime import datetime, timezone
+from uuid import UUID
+
+from fastapi import APIRouter, Depends, HTTPException, Query, status
+
+from .models import (
+    JournalEntryCreate,
+    JournalEntryUpdate,
+    JournalEntryResponse,
+    JournalSyncRequest,
+    JournalSyncResponse,
+)
+from ..auth.deps import get_current_user_id
+from ..db import get_conn, get_tx
+
+router = APIRouter()
+
+
+@router.post("/entries", response_model=JournalEntryResponse, status_code=status.HTTP_201_CREATED)
+async def create_entry(
+    body: JournalEntryCreate,
+    user_id: UUID = Depends(get_current_user_id),
+):
+    async with get_conn() as conn:
+        row = await conn.fetchrow(
+            """
+            INSERT INTO journal_entries (user_id, text, drawings, mood, poll_token_id, created_at)
+            VALUES ($1, $2, $3::jsonb, $4, $5, COALESCE($6, now()))
+            RETURNING id, user_id, text, drawings, mood, poll_token_id, created_at, updated_at
+            """,
+            user_id,
+            body.text,
+            json.dumps(body.drawings),
+            body.mood,
+            body.poll_token_id,
+            body.created_at,
+        )
+    return _row_to_response(row)
+
+
+@router.get("/entries", response_model=list[JournalEntryResponse])
+async def list_entries(
+    user_id: UUID = Depends(get_current_user_id),
+    limit: int = Query(default=50, le=200),
+    offset: int = Query(default=0, ge=0),
+    date: str | None = Query(default=None, description="Filter by date YYYY-MM-DD"),
+):
+    async with get_conn() as conn:
+        if date:
+            rows = await conn.fetch(
+                """
+                SELECT id, user_id, text, drawings, mood, poll_token_id, created_at, updated_at
+                FROM journal_entries
+                WHERE user_id = $1 AND created_at::date = $2::date
+                ORDER BY created_at DESC
+                LIMIT $3 OFFSET $4
+                """,
+                user_id, date, limit, offset,
+            )
+        else:
+            rows = await conn.fetch(
+                """
+                SELECT id, user_id, text, drawings, mood, poll_token_id, created_at, updated_at
+                FROM journal_entries
+                WHERE user_id = $1
+                ORDER BY created_at DESC
+                LIMIT $2 OFFSET $3
+                """,
+                user_id, limit, offset,
+            )
+    return [_row_to_response(r) for r in rows]
+
+
+@router.patch("/entries/{entry_id}", response_model=JournalEntryResponse)
+async def update_entry(
+    entry_id: UUID,
+    body: JournalEntryUpdate,
+    user_id: UUID = Depends(get_current_user_id),
+):
+    # Build dynamic SET clause
+    sets: list[str] = ["updated_at = now()"]
+    params: list = []
+    idx = 1
+
+    if body.text is not None:
+        sets.append(f"text = ${idx}")
+        params.append(body.text)
+        idx += 1
+    if body.drawings is not None:
+        sets.append(f"drawings = ${idx}::jsonb")
+        params.append(json.dumps(body.drawings))
+        idx += 1
+    if body.mood is not None:
+        sets.append(f"mood = ${idx}")
+        params.append(body.mood)
+        idx += 1
+
+    params.extend([entry_id, user_id])
+
+    async with get_conn() as conn:
+        row = await conn.fetchrow(
+            f"""
+            UPDATE journal_entries
+            SET {', '.join(sets)}
+            WHERE id = ${idx} AND user_id = ${idx + 1}
+            RETURNING id, user_id, text, drawings, mood, poll_token_id, created_at, updated_at
+            """,
+            *params,
+        )
+
+    if row is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Entry not found")
+    return _row_to_response(row)
+
+
+@router.delete("/entries/{entry_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_entry(
+    entry_id: UUID,
+    user_id: UUID = Depends(get_current_user_id),
+):
+    async with get_conn() as conn:
+        result = await conn.execute(
+            "DELETE FROM journal_entries WHERE id = $1 AND user_id = $2",
+            entry_id, user_id,
+        )
+    if result == "DELETE 0":
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Entry not found")
+
+
+@router.post("/sync", response_model=JournalSyncResponse)
+async def sync_entries(
+    body: JournalSyncRequest,
+    user_id: UUID = Depends(get_current_user_id),
+):
+    """Bulk sync: accept client entries, return merged server state."""
+    now = datetime.now(timezone.utc)
+
+    async with get_tx() as conn:
+        # Upsert client entries
+        for entry in body.entries:
+            await conn.execute(
+                """
+                INSERT INTO journal_entries (user_id, text, drawings, mood, poll_token_id, created_at, updated_at)
+                VALUES ($1, $2, $3::jsonb, $4, $5, COALESCE($6, now()), now())
+                ON CONFLICT (id) DO UPDATE SET
+                    text = EXCLUDED.text,
+                    drawings = EXCLUDED.drawings,
+                    mood = EXCLUDED.mood,
+                    updated_at = now()
+                WHERE journal_entries.updated_at < EXCLUDED.updated_at
+                """,
+                user_id,
+                entry.text,
+                json.dumps(entry.drawings),
+                entry.mood,
+                entry.poll_token_id,
+                entry.created_at,
+            )
+
+        # Return all entries updated since last sync (or all if first sync)
+        if body.last_sync:
+            rows = await conn.fetch(
+                """
+                SELECT id, user_id, text, drawings, mood, poll_token_id, created_at, updated_at
+                FROM journal_entries
+                WHERE user_id = $1 AND updated_at > $2
+                ORDER BY created_at DESC
+                """,
+                user_id, body.last_sync,
+            )
+        else:
+            rows = await conn.fetch(
+                """
+                SELECT id, user_id, text, drawings, mood, poll_token_id, created_at, updated_at
+                FROM journal_entries
+                WHERE user_id = $1
+                ORDER BY created_at DESC
+                """,
+                user_id,
+            )
+
+    return JournalSyncResponse(
+        entries=[_row_to_response(r) for r in rows],
+        server_time=now,
+    )
+
+
+def _row_to_response(row) -> JournalEntryResponse:
+    d = dict(row)
+    # asyncpg returns jsonb as str or dict depending on type codec
+    if isinstance(d.get("drawings"), str):
+        d["drawings"] = json.loads(d["drawings"])
+    return JournalEntryResponse(**d)

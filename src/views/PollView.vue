@@ -108,36 +108,47 @@ interface SessionOption {
   recommended?: boolean
 }
 
+// Shared cards available across all themes
+const sharedSessions: SessionOption[] = [
+  { route: '/journal', label: 'Journal', description: 'Write, draw, record — reflective journaling with TTS' },
+  { route: '/checkin', label: 'Daily Check-In', description: 'Mood arc, synthesis, and intention setting' },
+]
+
 const themeSessions: Record<string, SessionOption[]> = {
   dreamlike: [
     { route: '/webaudio', label: 'Star Tunnel', description: 'Immersive star field with binaural entrainment', recommended: true },
     { route: '/zeromind', label: 'Zeromind', description: 'Generative visuals with streaming text' },
     { route: '/spiral', label: 'Spiral', description: 'Hypnotic spiral with trance words' },
     { route: '/trance', label: 'Tone Engine', description: 'Raw binaural tone laboratory' },
+    ...sharedSessions,
   ],
   electric: [
     { route: '/zeromind', label: 'Zeromind', description: 'Generative visuals with streaming text', recommended: true },
     { route: '/webaudio', label: 'Star Tunnel', description: 'Immersive star field with binaural entrainment' },
     { route: '/spiral', label: 'Spiral', description: 'Hypnotic spiral with trance words' },
     { route: '/trance', label: 'Tone Engine', description: 'Raw binaural tone laboratory' },
+    ...sharedSessions,
   ],
   void: [
     { route: '/spiral', label: 'Spiral', description: 'Hypnotic spiral — minimalist and absorbing', recommended: true },
     { route: '/trance', label: 'Tone Engine', description: 'Raw binaural tone laboratory' },
     { route: '/webaudio', label: 'Star Tunnel', description: 'Immersive star field with binaural entrainment' },
     { route: '/zeromind', label: 'Zeromind', description: 'Generative visuals with streaming text' },
+    ...sharedSessions,
   ],
   organic: [
     { route: '/trance', label: 'Tone Engine', description: 'Binaural tone engine — grounded and tactile', recommended: true },
     { route: '/webaudio', label: 'Star Tunnel', description: 'Immersive star field with binaural entrainment' },
     { route: '/spiral', label: 'Spiral', description: 'Hypnotic spiral with trance words' },
     { route: '/zeromind', label: 'Zeromind', description: 'Generative visuals with streaming text' },
+    ...sharedSessions,
   ],
   liminal: [
     { route: '/webaudio', label: 'Star Tunnel', description: 'Ambient star drift with entrainment layers', recommended: true },
     { route: '/zeromind', label: 'Zeromind', description: 'Generative visuals with streaming text' },
     { route: '/spiral', label: 'Spiral', description: 'Hypnotic spiral with trance words' },
     { route: '/trance', label: 'Tone Engine', description: 'Raw binaural tone laboratory' },
+    ...sharedSessions,
   ],
 }
 
