@@ -7,7 +7,7 @@ this.reset(canvas); } } // Inside your Vue Component or Store const scheduleDeep
 const loop = new Tone.Loop((time) => { // 1. Audio: Trigger a deep sub-bass drop
 subBass.triggerAttackRelease("E1", "8n", time); // 2. Visuals: DEFERRED CALLBACK // This will run on
 the requestAnimationFrame closest to 'time' Tone.Draw.schedule(() => { tunnelPulseStrength.value =
-1.0; // Trigger a visual flash/lunge console.log("Visual sync triggered at:", Tone.now()); }, time);
+1.0; // Trigger a visual flash/lunge }, time);
 }, "2n").start(0); }; const renderTunnel = () => { const ctx = canvasRef.value.getContext('2d');
 const { width, height } = canvasRef.value; // Fade previous frame slightly for "motion blur"
 ctx.fillStyle = "rgba(0, 0, 0, 0.15)"; ctx.fillRect(0, 0, width, height); // Speed increases when

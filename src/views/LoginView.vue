@@ -1,14 +1,15 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '@/composables/useAuthStore'
 
 const router = useRouter()
+const route = useRoute()
 const { login, register, loading, error, isAuthenticated } = useAuthStore()
 
 // If already logged in, redirect
 if (isAuthenticated.value) {
-  router.replace('/')
+  router.replace((route.query.redirect as string) || '/')
 }
 
 const mode = ref<'login' | 'register'>('login')
@@ -31,7 +32,7 @@ async function submit() {
     } else {
       await register(email.value.trim(), password.value, displayName.value.trim() || undefined)
     }
-    router.push('/')
+    router.push((route.query.redirect as string) || '/')
   } catch (e: any) {
     localError.value = e.message || 'Something went wrong'
   }
