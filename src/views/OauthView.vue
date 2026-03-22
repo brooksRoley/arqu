@@ -3,7 +3,11 @@
     <div class="max-w-3xl w-full space-y-12">
 
       <div class="text-center space-y-4">
-        <h1 class="text-4xl font-extrabold tracking-tight text-white">Calibrate Your Vibes</h1>
+        <div class="flex items-center justify-center gap-4 mb-2">
+          <RadarIcon />
+          <h1 class="text-4xl font-extrabold tracking-tight text-white">Calibrate Your Vibes</h1>
+          <SignalIcon />
+        </div>
         <p class="text-gray-400 text-lg">
           We don't care what you look like. We care about what you listen to, what you laugh at, and how you spend your time. Connect your accounts to train the algorithm.
         </p>
@@ -19,16 +23,7 @@
               <h2 class="text-2xl font-bold text-green-400">Spotify</h2>
               <h3 class="text-sm font-medium text-gray-500 uppercase tracking-wider mt-1">The Sonic Blueprint</h3>
             </div>
-            <button
-              @click="connectSpotify"
-              :disabled="oauthState.spotify.connected"
-              class="font-bold py-2 px-6 rounded-full transition-colors disabled:cursor-default"
-              :class="oauthState.spotify.connected
-                ? 'bg-green-900 text-green-400 border border-green-500/40'
-                : 'bg-green-500 hover:bg-green-600 text-gray-900'"
-            >
-              {{ oauthState.spotify.connected ? '✓ Connected' : 'Connect' }}
-            </button>
+            <SpotifyConnect />
           </div>
           <div class="space-y-3 text-gray-300">
             <p><strong>Data Collected:</strong> Top artists, heavy-rotation tracks, acoustic properties (danceability, valence, tempo).</p>
@@ -40,35 +35,48 @@
         </div>
 
         <!-- Twitter -->
-        <div class="bg-gray-800 border border-gray-700/50 rounded-2xl p-6 shadow-xl opacity-60">
+        <div class="bg-gray-800 border rounded-2xl p-6 shadow-xl transition-transform hover:-translate-y-1"
+             :class="oauthState.twitter.connected ? 'border-green-500/50' : 'border-gray-700'">
           <div class="flex justify-between items-start mb-4">
             <div>
               <h2 class="text-2xl font-bold text-blue-400">X / Twitter</h2>
               <h3 class="text-sm font-medium text-gray-500 uppercase tracking-wider mt-1">The Neurotic Imprint</h3>
             </div>
-            <span class="text-xs text-gray-500 border border-gray-700 rounded-full px-4 py-2">Coming soon</span>
+            <TwitterConnect />
           </div>
-          <div class="space-y-3 text-gray-400">
+          <div class="space-y-3 text-gray-300">
             <p><strong>Data Collected:</strong> Followed accounts, liked tweets, linguistic patterns, chronological posting habits.</p>
             <p><strong>Correlation Engine:</strong> Humor compatibility and ideological alignment. The LLM extracts dominance, neuroticism, and dark humor scores from your social graph to deepen the match signal.</p>
           </div>
+          <p v-if="oauthState.twitter.lastSync" class="mt-3 text-xs text-gray-600">
+            Last synced {{ new Date(oauthState.twitter.lastSync).toLocaleString() }}
+          </p>
         </div>
 
         <!-- Google Calendar -->
-        <div class="bg-gray-800 border border-gray-700/50 rounded-2xl p-6 shadow-xl opacity-60">
+        <div class="bg-gray-800 border rounded-2xl p-6 shadow-xl transition-transform hover:-translate-y-1"
+             :class="oauthState.google.connected ? 'border-red-500/50' : 'border-gray-700'">
           <div class="flex justify-between items-start mb-4">
             <div>
               <h2 class="text-2xl font-bold text-red-400">Google Calendar</h2>
               <h3 class="text-sm font-medium text-gray-500 uppercase tracking-wider mt-1">The Temporal Logistics</h3>
             </div>
-            <span class="text-xs text-gray-500 border border-gray-700 rounded-full px-4 py-2">Coming soon</span>
+            <GCalConnect />
           </div>
-          <div class="space-y-3 text-gray-400">
+          <div class="space-y-3 text-gray-300">
             <p><strong>Data Collected:</strong> Free blocks of time, routine commitments, location constraints.</p>
             <p><strong>Correlation Engine:</strong> Zero-friction meetups. Once a vibe match occurs, the app cross-references calendars and queries local APIs for live events during mutually available windows — a single curated itinerary, bypassing the "when are you free" phase entirely.</p>
           </div>
+          <p v-if="oauthState.google.lastSync" class="mt-3 text-xs text-gray-600">
+            Last synced {{ new Date(oauthState.google.lastSync).toLocaleString() }}
+          </p>
         </div>
 
+      </div>
+
+      <!-- BYOK LLM Key Management -->
+      <div class="bg-gray-800 border border-gray-700 rounded-2xl p-6 shadow-xl">
+        <LLMKeyManager />
       </div>
 
       <div class="flex justify-center pt-6">
@@ -89,10 +97,16 @@
 import { onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useVibeStore } from '@/composables/useVibeStore'
+import RadarIcon from '@/components/icons/RadarIcon.vue'
+import SignalIcon from '@/components/icons/SignalIcon.vue'
+import SpotifyConnect from '@/components/SpotifyConnect.vue'
+import TwitterConnect from '@/components/TwitterConnect.vue'
+import GCalConnect from '@/components/GCalConnect.vue'
+import LLMKeyManager from '@/components/LLMKeyManager.vue'
 
 const router = useRouter()
 const route = useRoute()
-const { oauthState, isMatchReady, connectSpotify, markConnected } = useVibeStore()
+const { oauthState, isMatchReady, markConnected } = useVibeStore()
 
 // Handle return from Spotify OAuth callback
 // Backend redirects to /game?spotify=connected — but we land on /calibrate first
@@ -109,3 +123,4 @@ function proceed() {
   router.push('/game')
 }
 </script>
+

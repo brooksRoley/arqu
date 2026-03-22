@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+from contextlib import asynccontextmanager
 
 import httpx
 import numpy as np
@@ -154,11 +155,25 @@ async def find_nearest_users(user_id: str, top_k: int = 3) -> list[dict]:
         return []
 
 
+# ── Per-user lock for read-modify-write on Pinecone vectors ───────────────────
+# Pinecone has no native CAS/transactions, so we use an in-process asyncio lock
+# keyed by user_id to serialize concurrent penalty operations for the same user.
+_user_locks: dict[str, asyncio.Lock] = {}
+
+
+def _get_user_lock(user_id: str) -> asyncio.Lock:
+    if user_id not in _user_locks:
+        _user_locks[user_id] = asyncio.Lock()
+    return _user_locks[user_id]
+
+
 async def apply_karma_penalty(user_id: str, karma_delta: float) -> None:
     """
     When a user's karma drops, add scaled Gaussian noise to their vector —
     pushing their coordinate point away from healthy clusters into the margins.
     karma_delta should be negative (e.g. -10 for a 10-point drop).
+
+    Uses a per-user asyncio lock to prevent concurrent read-modify-write races.
     """
     if karma_delta >= 0:
         return
@@ -166,32 +181,37 @@ async def apply_karma_penalty(user_id: str, karma_delta: float) -> None:
     # Scale noise: a 100-point drop → σ=0.5 perturbation; clamp at 0.5
     penalty_scale = min(0.5, abs(karma_delta) / 100.0)
 
-    try:
-        index = await asyncio.to_thread(_get_index_sync)
-        if index is None:
-            return
+    lock = _get_user_lock(user_id)
+    async with lock:
+        try:
+            index = await asyncio.to_thread(_get_index_sync)
+            if index is None:
+                return
 
-        fetch_result = await asyncio.to_thread(
-            index.fetch, ids=[user_id], namespace=NAMESPACE_USERS,
-        )
-        if user_id not in fetch_result.vectors:
-            return
+            fetch_result = await asyncio.to_thread(
+                index.fetch, ids=[user_id], namespace=NAMESPACE_USERS,
+            )
+            if user_id not in fetch_result.vectors:
+                return
 
-        record = fetch_result.vectors[user_id]
-        arr = np.array(record.values, dtype=np.float32)
-        noise = np.random.randn(len(arr)).astype(np.float32) * penalty_scale
-        perturbed = arr + noise
-        norm = np.linalg.norm(perturbed)
-        penalized = (perturbed / norm).tolist() if norm > 0 else perturbed.tolist()
+            record = fetch_result.vectors[user_id]
+            arr = np.array(record.values, dtype=np.float32)
+            noise = np.random.randn(len(arr)).astype(np.float32) * penalty_scale
+            perturbed = arr + noise
+            norm = np.linalg.norm(perturbed)
+            if norm == 0:
+                logger.warning("Zero-norm vector after penalty for %s — skipping", user_id)
+                return
+            penalized = (perturbed / norm).tolist()
 
-        await asyncio.to_thread(
-            index.upsert,
-            vectors=[{"id": user_id, "values": penalized, "metadata": record.metadata}],
-            namespace=NAMESPACE_USERS,
-        )
-        logger.info("Karma penalty applied to %s (scale=%.3f)", user_id, penalty_scale)
-    except Exception:
-        logger.exception("Karma penalty failed for user %s", user_id)
+            await asyncio.to_thread(
+                index.upsert,
+                vectors=[{"id": user_id, "values": penalized, "metadata": record.metadata}],
+                namespace=NAMESPACE_USERS,
+            )
+            logger.info("Karma penalty applied to %s (scale=%.3f)", user_id, penalty_scale)
+        except Exception:
+            logger.exception("Karma penalty failed for user %s", user_id)
 
 
 # ── Journal RAG ──────────────────────────────────────────────────────────────

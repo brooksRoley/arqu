@@ -19,6 +19,8 @@ import time
 from urllib.parse import urlencode
 from uuid import UUID
 
+import secrets
+
 import httpx
 import jwt
 from fastapi import APIRouter, Depends, HTTPException, Query, status
@@ -39,19 +41,44 @@ _SPOTIFY_API_BASE = "https://api.spotify.com/v1"
 _SCOPES = "user-top-read user-read-recently-played"
 
 
-# ── State helpers (stateless JWT — no DB round-trip needed) ──────────────────
+# ── State helpers ─────────────────────────────────────────────────────────────
+# State is a JWT with a one-time nonce. After first use the nonce is consumed
+# in the DB so the same state cannot be replayed within its TTL window.
 
 def _make_state(user_id: str) -> str:
-    payload = {"sub": user_id, "exp": int(time.time()) + 600}
+    nonce = secrets.token_urlsafe(16)
+    payload = {"sub": user_id, "nonce": nonce, "exp": int(time.time()) + 600}
     return jwt.encode(payload, get_settings().jwt_secret, algorithm="HS256")
 
 
-def _verify_state(state: str) -> str:
+async def _verify_state(state: str) -> str:
+    """Decode, verify, and consume the state JWT (one-time use)."""
     try:
         payload = jwt.decode(state, get_settings().jwt_secret, algorithms=["HS256"])
-        return payload["sub"]
     except jwt.PyJWTError as exc:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid OAuth state") from exc
+
+    nonce = payload.get("nonce")
+    if not nonce:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid OAuth state — missing nonce")
+
+    # Consume the nonce — INSERT fails on replay due to UNIQUE constraint
+    async with get_conn() as conn:
+        try:
+            await conn.execute(
+                """
+                INSERT INTO _oauth_nonces (nonce, consumed_at)
+                VALUES ($1, now())
+                """,
+                nonce,
+            )
+        except Exception:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="OAuth state already consumed — possible replay attack",
+            )
+
+    return payload["sub"]
 
 
 # ── Routes ───────────────────────────────────────────────────────────────────
@@ -87,7 +114,7 @@ async def spotify_callback(code: str, state: str):
     Spotify redirects here after user authorizes.
     Exchanges code for tokens, fetches audio profile, stores everything.
     """
-    user_id = _verify_state(state)
+    user_id = await _verify_state(state)
     settings = get_settings()
 
     async with httpx.AsyncClient(timeout=20.0) as client:

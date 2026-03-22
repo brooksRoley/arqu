@@ -24,6 +24,10 @@ export interface OAuthState {
   spotify: ProviderState
   twitter: ProviderState
   google: ProviderState
+  strava: ProviderState
+  costar: ProviderState
+  letterboxd: ProviderState
+  steam: ProviderState
 }
 
 export interface VibeMatch {
@@ -43,9 +47,13 @@ const API = import.meta.env.VITE_API_URL || ''
 
 function defaultOAuthState(): OAuthState {
   return {
-    spotify: { connected: false, lastSync: null },
-    twitter: { connected: false, lastSync: null },
-    google:  { connected: false, lastSync: null },
+    spotify:    { connected: false, lastSync: null },
+    twitter:    { connected: false, lastSync: null },
+    google:     { connected: false, lastSync: null },
+    strava:     { connected: false, lastSync: null },
+    costar:     { connected: false, lastSync: null },
+    letterboxd: { connected: false, lastSync: null },
+    steam:      { connected: false, lastSync: null },
   }
 }
 
@@ -112,6 +120,29 @@ async function fetchMatches() {
   }
 }
 
+/**
+ * Trigger Oracle synthesis — sends all connected provider flags to the backend,
+ * which kicks off the LLM psychological coordinate pipeline as a background task.
+ */
+async function triggerSynthesis() {
+  const { apiFetch } = useAuthStore()
+  const providers = ['spotify', 'twitter', 'google', 'strava', 'costar', 'letterboxd', 'steam'] as const
+  const payload: Record<string, { data: Record<string, unknown> }> = {}
+
+  for (const p of providers) {
+    payload[p === 'google' ? 'gcal' : p] = {
+      data: oauthState.value[p].connected
+        ? { connected: true, synced_at: oauthState.value[p].lastSync }
+        : {},
+    }
+  }
+
+  return apiFetch<{ status: string; message: string }>('/api/oracle/synthesize', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  })
+}
+
 function disconnectAll() {
   oauthState.value = defaultOAuthState()
   matches.value = []
@@ -130,6 +161,7 @@ export function useVibeStore() {
 
     markConnected,
     connectSpotify,
+    triggerSynthesis,
     fetchMatches,
     disconnectAll,
   }

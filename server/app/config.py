@@ -22,12 +22,14 @@ class Settings(BaseSettings):
     database_url_unpooled: str = ""
 
     # ── Auth ────────────────────────────────────────────────────
-    jwt_secret: str = "changeme-generate-a-real-secret"
+    # No defaults — app MUST crash on boot if these are not set.
+    jwt_secret: str
     jwt_algorithm: str = "HS256"
     jwt_expire_minutes: int = 1440  # 24 hours
 
     # ── Encryption (for user API keys) ──────────────────────────
-    server_encryption_key: str = "changeme-generate-a-32-byte-key"
+    # No default — app MUST crash on boot if not set.
+    server_encryption_key: str
 
     # ── Pinecone ────────────────────────────────────────────────
     pinecone_api_key: str = ""

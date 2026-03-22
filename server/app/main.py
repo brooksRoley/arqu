@@ -17,6 +17,7 @@ from .poll.router import router as poll_router
 from .llm.router import router as llm_router
 from .intake.router import router as intake_router
 from .spotify.router import router as spotify_router
+from .oracle.router import router as oracle_router
 
 
 @asynccontextmanager
@@ -66,6 +67,7 @@ def create_app() -> FastAPI:
     app.include_router(llm_router, prefix=f"{prefix}/llm", tags=["llm"])
     app.include_router(intake_router, prefix=f"{prefix}/intake", tags=["intake"])
     app.include_router(spotify_router, prefix=f"{prefix}/spotify", tags=["spotify"])
+    app.include_router(oracle_router, prefix=f"{prefix}/oracle", tags=["oracle"])
 
     # ── Health ──────────────────────────────────────────────────
     @app.get("/health")

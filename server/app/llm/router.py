@@ -6,7 +6,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.responses import StreamingResponse
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 
 from .encryption import encrypt_api_key, decrypt_api_key, key_hint
 from ..auth.deps import get_current_user_id
@@ -28,12 +28,37 @@ class KeyInfo(BaseModel):
     key_hint: str
 
 
+_MAX_TOKENS_CEILING = 4096
+_ALLOWED_PROVIDERS = {"anthropic", "openai", "together", "google", "xai"}
+
+
 class LLMRequest(BaseModel):
     provider: str
     messages: list[dict]
     model: str | None = None
     max_tokens: int = 1024
     stream: bool = False
+
+    @field_validator("provider")
+    @classmethod
+    def validate_provider(cls, v: str) -> str:
+        if v not in _ALLOWED_PROVIDERS:
+            raise ValueError(f"Unsupported provider: {v}")
+        return v
+
+    @field_validator("max_tokens")
+    @classmethod
+    def cap_max_tokens(cls, v: int) -> int:
+        return min(max(1, v), _MAX_TOKENS_CEILING)
+
+    @field_validator("messages")
+    @classmethod
+    def validate_messages(cls, v: list[dict]) -> list[dict]:
+        if not v:
+            raise ValueError("At least one message is required")
+        if len(v) > 100:
+            raise ValueError("Maximum 100 messages allowed")
+        return v
 
 
 # ── Key Management ──────────────────────────────────────────────
@@ -130,17 +155,20 @@ async def proxy_llm(
     api_key = decrypt_api_key(row["encrypted_key"], row["key_nonce"])
 
     # Route to the correct provider
-    if body.provider == "anthropic":
-        return await _proxy_anthropic(api_key, body)
-    elif body.provider == "openai":
-        return await _proxy_openai(api_key, body)
-    elif body.provider == "together":
-        return await _proxy_together(api_key, body)
-    else:
+    router_map = {
+        "anthropic": _proxy_anthropic,
+        "openai": _proxy_openai,
+        "together": _proxy_together,
+        "google": _proxy_google,
+        "xai": _proxy_xai,
+    }
+    handler = router_map.get(body.provider)
+    if not handler:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"Unsupported provider: {body.provider}",
         )
+    return await handler(api_key, body)
 
 
 async def _proxy_anthropic(api_key: str, body: LLMRequest):
@@ -216,6 +244,60 @@ async def _proxy_together(api_key: str, body: LLMRequest):
 
     async with httpx.AsyncClient(timeout=120) as client:
         resp = await client.post("https://api.together.xyz/v1/chat/completions", json=payload, headers=headers)
+    return resp.json()
+
+
+async def _proxy_google(api_key: str, body: LLMRequest):
+    """Google Gemini — uses the OpenAI-compatible endpoint."""
+    import httpx
+
+    model = body.model or "gemini-2.5-flash"
+    payload = {
+        "model": model,
+        "max_tokens": body.max_tokens,
+        "messages": body.messages,
+    }
+    if body.stream:
+        payload["stream"] = True
+
+    headers = {
+        "Authorization": f"Bearer {api_key}",
+        "Content-Type": "application/json",
+    }
+    url = "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions"
+
+    if body.stream:
+        return await _stream_proxy(url, headers, payload)
+
+    async with httpx.AsyncClient(timeout=120) as client:
+        resp = await client.post(url, json=payload, headers=headers)
+    return resp.json()
+
+
+async def _proxy_xai(api_key: str, body: LLMRequest):
+    """xAI Grok — OpenAI-compatible endpoint."""
+    import httpx
+
+    model = body.model or "grok-3"
+    payload = {
+        "model": model,
+        "max_tokens": body.max_tokens,
+        "messages": body.messages,
+    }
+    if body.stream:
+        payload["stream"] = True
+
+    headers = {
+        "Authorization": f"Bearer {api_key}",
+        "Content-Type": "application/json",
+    }
+    url = "https://api.x.ai/v1/chat/completions"
+
+    if body.stream:
+        return await _stream_proxy(url, headers, payload)
+
+    async with httpx.AsyncClient(timeout=120) as client:
+        resp = await client.post(url, json=payload, headers=headers)
     return resp.json()
 
 

@@ -82,6 +82,14 @@ const router = createRouter({
       meta: { requiresAuth: true },
     },
 
+    // ── Peripheral data sync (auth required) ────────────────────
+    {
+      path: '/peripheral',
+      name: 'peripheral',
+      component: () => import('@/views/PeripheralSync.vue'),
+      meta: { requiresAuth: true },
+    },
+
     // ── Intake → Game pipeline (auth required) ──────────────────
     {
       path: '/intake',

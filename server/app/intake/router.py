@@ -9,7 +9,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 
 from .models import ConfessRequest, ConfessResponse
 from ..auth.deps import get_current_user_id
-from ..db import get_conn
+from ..db import get_conn, get_tx
 from ..llm.encryption import encrypt_api_key
 from ..vector.service import query_relevant_journal, upsert_user_vector, find_nearest_users
 
@@ -82,10 +82,19 @@ async def confess(
     """
     raw_text = "\n\n".join(body.confessions)
 
-    # 1. Store in encrypted shadow log (raw text never hits the public users table)
+    # 1. NLP extraction (local fallback — phase 2 adds LLM call)
+    attachment, defense, readiness = _analyze_local(body.confessions)
+
+    # 2. Query Pinecone for resonant journal memories
+    memory_hits = await query_relevant_journal(str(user_id), raw_text, top_k=5)
+    memory_previews = [m["text_preview"] for m in memory_hits if m.get("text_preview")]
+    # Memories signal deeper engagement — nudge readiness up slightly
+    readiness = min(100, readiness + len(memory_previews) * 3)
+
+    # 3. Store shadow log + upsert vibe vector atomically
     encrypted_text, nonce = encrypt_api_key(raw_text)  # reuse AES-GCM encryption
 
-    async with get_conn() as conn:
+    async with get_tx() as conn:
         await conn.execute(
             """
             INSERT INTO intake_shadow_logs (user_id, encrypted_text, text_nonce)
@@ -94,17 +103,6 @@ async def confess(
             user_id, encrypted_text, nonce,
         )
 
-    # 2. Query Pinecone for resonant journal memories
-    memory_hits = await query_relevant_journal(str(user_id), raw_text, top_k=5)
-    memory_previews = [m["text_preview"] for m in memory_hits if m.get("text_preview")]
-
-    # 3. NLP extraction (local fallback — phase 2 adds LLM call)
-    attachment, defense, readiness = _analyze_local(body.confessions)
-    # Memories signal deeper engagement — nudge readiness up slightly
-    readiness = min(100, readiness + len(memory_previews) * 3)
-
-    # 4. Upsert vibe vector
-    async with get_conn() as conn:
         await conn.execute(
             """
             INSERT INTO vibe_vectors (user_id, attachment_style, defense_mechanism, readiness_score, poll_theme)
