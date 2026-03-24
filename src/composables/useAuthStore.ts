@@ -113,6 +113,28 @@ async function fetchMe() {
   }
 }
 
+async function loginWithProvider(provider: 'google' | 'x', code: string, codeVerifier?: string) {
+  loading.value = true
+  error.value = null
+  try {
+    const body: Record<string, string> = { code }
+    if (codeVerifier) body.code_verifier = codeVerifier
+    const data = await apiFetch<{ access_token: string; user: User }>(
+      `/api/auth/${provider}`,
+      { method: 'POST', body: JSON.stringify(body) },
+    )
+    token.value = data.access_token
+    localStorage.setItem(TOKEN_KEY, data.access_token)
+    user.value = data.user
+    localStorage.setItem(USER_KEY, JSON.stringify(data.user))
+  } catch (e: any) {
+    error.value = e.message
+    throw e
+  } finally {
+    loading.value = false
+  }
+}
+
 function logout() {
   token.value = null
   user.value = null
@@ -132,6 +154,7 @@ export function useAuthStore() {
 
     register,
     login,
+    loginWithProvider,
     logout,
     fetchMe,
 

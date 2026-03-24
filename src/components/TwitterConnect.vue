@@ -55,19 +55,18 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { ref, computed } from 'vue'
 import { useAuthStore } from '@/composables/useAuthStore'
 import { useVibeStore } from '@/composables/useVibeStore'
 
-const route = useRoute()
-const router = useRouter()
 const { token } = useAuthStore()
-const { oauthState, markConnected } = useVibeStore()
+const { oauthState } = useVibeStore()
 
-const API = import.meta.env.VITE_API_URL || ''
+const X_CLIENT_ID = import.meta.env.VITE_X_CLIENT_ID || ''
+const X_REDIRECT_URI = import.meta.env.VITE_X_REDIRECT_URI || `${window.location.origin}/auth/x/callback`
+const VERIFIER_KEY = 'channelzero-x-pkce-verifier'
+
 const isConnecting = ref(false)
-
 const isConnected = computed(() => oauthState.value.twitter.connected)
 
 const buttonText = computed(() => {
@@ -76,41 +75,45 @@ const buttonText = computed(() => {
   return 'CONNECT X (TWITTER)'
 })
 
+// ── PKCE helpers ──────────────────────────────────────────────
+function generateVerifier(): string {
+  const array = new Uint8Array(32)
+  crypto.getRandomValues(array)
+  return Array.from(array, (b) => b.toString(16).padStart(2, '0')).join('')
+}
+
+async function sha256(plain: string): Promise<ArrayBuffer> {
+  const encoder = new TextEncoder()
+  return crypto.subtle.digest('SHA-256', encoder.encode(plain))
+}
+
+function base64url(buffer: ArrayBuffer): string {
+  const bytes = new Uint8Array(buffer)
+  let binary = ''
+  bytes.forEach((b) => (binary += String.fromCharCode(b)))
+  return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')
+}
+
 async function initiateXAuth() {
   if (isConnected.value || !token.value) return
   isConnecting.value = true
 
-  try {
-    const response = await fetch(`${API}/api/auth/x/init?token=${token.value}`)
-    const data = await response.json()
+  const codeVerifier = generateVerifier()
+  const codeChallenge = base64url(await sha256(codeVerifier))
 
-    if (data.auth_url) {
-      window.location.href = data.auth_url
-    } else {
-      throw new Error('Failed to generate Auth URL')
-    }
-  } catch (error) {
-    console.error('Vector sync failed:', error)
-    isConnecting.value = false
-  }
+  // Store verifier so the callback page can retrieve it
+  localStorage.setItem(VERIFIER_KEY, codeVerifier)
+
+  const params = new URLSearchParams({
+    response_type: 'code',
+    client_id: X_CLIENT_ID,
+    redirect_uri: X_REDIRECT_URI,
+    scope: 'tweet.read users.read offline.access',
+    state: 'x-oauth',
+    code_challenge: codeChallenge,
+    code_challenge_method: 'S256',
+  })
+
+  window.location.href = `https://twitter.com/i/oauth2/authorize?${params}`
 }
-
-onMounted(() => {
-  const { code, state } = route.query
-
-  if (code && state && !isConnected.value) {
-    isConnecting.value = true
-
-    fetch(`${API}/api/auth/x/callback?code=${code}&state=${state}`, {
-      headers: { Authorization: `Bearer ${token.value}` },
-    })
-      .then((res) => {
-        if (!res.ok) throw new Error('X OAuth callback failed')
-        markConnected('twitter')
-        router.replace({ path: '/calibrate' })
-      })
-      .catch((err) => console.error('Failed to ingest X data:', err))
-      .finally(() => { isConnecting.value = false })
-  }
-})
 </script>

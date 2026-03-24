@@ -70,19 +70,17 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { ref, computed } from 'vue'
 import { useAuthStore } from '@/composables/useAuthStore'
 import { useVibeStore } from '@/composables/useVibeStore'
 
-const route = useRoute()
-const router = useRouter()
 const { token } = useAuthStore()
-const { oauthState, markConnected } = useVibeStore()
+const { oauthState } = useVibeStore()
 
-const API = import.meta.env.VITE_API_URL || ''
+const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || ''
+const GOOGLE_REDIRECT_URI = import.meta.env.VITE_GOOGLE_REDIRECT_URI || `${window.location.origin}/auth/google/callback`
+
 const isConnecting = ref(false)
-
 const isConnected = computed(() => oauthState.value.google.connected)
 
 const buttonText = computed(() => {
@@ -91,41 +89,19 @@ const buttonText = computed(() => {
   return 'CONNECT GOOGLE'
 })
 
-async function initiateGoogleAuth() {
+function initiateGoogleAuth() {
   if (isConnected.value || !token.value) return
   isConnecting.value = true
 
-  try {
-    const response = await fetch(`${API}/api/auth/google/init?token=${token.value}`)
-    const data = await response.json()
+  const params = new URLSearchParams({
+    client_id: GOOGLE_CLIENT_ID,
+    redirect_uri: GOOGLE_REDIRECT_URI,
+    response_type: 'code',
+    scope: 'openid email profile',
+    access_type: 'offline',
+    prompt: 'consent',
+  })
 
-    if (data.auth_url) {
-      window.location.href = data.auth_url
-    } else {
-      throw new Error('Google OAuth failed to initialize')
-    }
-  } catch (error) {
-    console.error('Temporal sync failed:', error)
-    isConnecting.value = false
-  }
+  window.location.href = `https://accounts.google.com/o/oauth2/v2/auth?${params}`
 }
-
-onMounted(() => {
-  const { code, state, scope } = route.query
-
-  if (code && state && !isConnected.value) {
-    isConnecting.value = true
-
-    fetch(`${API}/api/auth/google/callback?code=${code}&state=${state}`, {
-      headers: { Authorization: `Bearer ${token.value}` },
-    })
-      .then((res) => {
-        if (!res.ok) throw new Error('Google OAuth callback failed')
-        markConnected('google')
-        router.replace({ path: '/calibrate' })
-      })
-      .catch((err) => console.error('Failed to ingest Calendar data:', err))
-      .finally(() => { isConnecting.value = false })
-  }
-})
 </script>

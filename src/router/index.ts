@@ -74,6 +74,18 @@ const router = createRouter({
       meta: { requiresAuth: true },
     },
 
+    // ── OAuth callback routes ────────────────────────────────────
+    {
+      path: '/auth/google/callback',
+      name: 'google-callback',
+      component: () => import('@/views/GoogleCallback.vue'),
+    },
+    {
+      path: '/auth/x/callback',
+      name: 'x-callback',
+      component: () => import('@/views/XCallback.vue'),
+    },
+
     // ── Vibe calibration (OAuth connections) ────────────────────
     {
       path: '/calibrate',

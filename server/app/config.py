@@ -40,6 +40,16 @@ class Settings(BaseSettings):
     spotify_client_secret: str = ""
     spotify_redirect_uri: str = "http://localhost:8000/api/spotify/callback"
 
+    # ── Google OAuth ──────────────────────────────────────────────
+    google_client_id: str = ""
+    google_client_secret: str = ""
+    google_redirect_uri: str = "http://localhost:5173/auth/google/callback"
+
+    # ── X (Twitter) OAuth 2.0 ─────────────────────────────────────
+    x_client_id: str = ""
+    x_client_secret: str = ""
+    x_redirect_uri: str = "http://localhost:5173/auth/x/callback"
+
     # ── Embeddings (server-level OpenAI key — NOT stored per-user) ──
     # Used exclusively for generating vibe vectors and journal embeddings.
     # Required for user matching and karma mechanics to function.
