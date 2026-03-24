@@ -140,24 +140,26 @@ async def spotify_callback(code: str, state: str):
         headers = {"Authorization": f"Bearer {access_token}"}
 
         # 2. Fetch top artists (medium-term ~6 months)
+        artists_data = []
         artists_resp = await client.get(
             f"{_SPOTIFY_API_BASE}/me/top/artists",
             headers=headers,
             params={"limit": 10, "time_range": "medium_term"},
         )
-        artists_resp.raise_for_status()
-        artists_data = artists_resp.json().get("items", [])
+        if artists_resp.status_code == 200:
+            artists_data = artists_resp.json().get("items", [])
 
         # 3. Fetch top tracks to get audio features
+        track_ids: list[str] = []
         tracks_resp = await client.get(
             f"{_SPOTIFY_API_BASE}/me/top/tracks",
             headers=headers,
             params={"limit": 20, "time_range": "medium_term"},
         )
-        tracks_resp.raise_for_status()
-        track_ids = [t["id"] for t in tracks_resp.json().get("items", [])]
+        if tracks_resp.status_code == 200:
+            track_ids = [t["id"] for t in tracks_resp.json().get("items", [])]
 
-        # 4. Fetch audio features for those tracks
+        # 4. Fetch audio features for those tracks (may be deprecated/restricted)
         audio_features: list[dict] = []
         if track_ids:
             features_resp = await client.get(
@@ -165,8 +167,8 @@ async def spotify_callback(code: str, state: str):
                 headers=headers,
                 params={"ids": ",".join(track_ids)},
             )
-            features_resp.raise_for_status()
-            audio_features = [f for f in features_resp.json().get("audio_features", []) if f]
+            if features_resp.status_code == 200:
+                audio_features = [f for f in features_resp.json().get("audio_features", []) if f]
 
     # 5. Distill the audio profile
     spotify_profile = _distill_profile(artists_data, audio_features)

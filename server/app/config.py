@@ -50,6 +50,11 @@ class Settings(BaseSettings):
     x_client_secret: str = ""
     x_redirect_uri: str = "http://localhost:5173/auth/x/callback"
 
+    # ── Strava OAuth ─────────────────────────────────────────────────
+    strava_client_id: str = ""
+    strava_client_secret: str = ""
+    strava_redirect_uri: str = "http://localhost:5173/auth/strava/callback"
+
     # ── Embeddings (server-level OpenAI key — NOT stored per-user) ──
     # Used exclusively for generating vibe vectors and journal embeddings.
     # Required for user matching and karma mechanics to function.

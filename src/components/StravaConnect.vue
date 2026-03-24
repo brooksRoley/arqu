@@ -55,15 +55,12 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { ref, computed } from 'vue'
 import { useAuthStore } from '@/composables/useAuthStore'
 import { useVibeStore } from '@/composables/useVibeStore'
 
-const route = useRoute()
-const router = useRouter()
 const { token } = useAuthStore()
-const { oauthState, markConnected } = useVibeStore()
+const { oauthState } = useVibeStore()
 
 const API = import.meta.env.VITE_API_URL || ''
 const isConnecting = ref(false)
@@ -81,7 +78,7 @@ async function initiateStravaAuth() {
   isConnecting.value = true
 
   try {
-    const response = await fetch(`${API}/api/auth/strava/init?token=${token.value}`)
+    const response = await fetch(`${API}/api/strava/connect?token=${token.value}`)
     const data = await response.json()
 
     if (data.auth_url) {
@@ -94,23 +91,4 @@ async function initiateStravaAuth() {
     isConnecting.value = false
   }
 }
-
-onMounted(() => {
-  const { code, state } = route.query
-
-  if (code && state && route.query.provider === 'strava' && !isConnected.value) {
-    isConnecting.value = true
-
-    fetch(`${API}/api/auth/strava/callback?code=${code}&state=${state}`, {
-      headers: { Authorization: `Bearer ${token.value}` },
-    })
-      .then((res) => {
-        if (!res.ok) throw new Error('Strava OAuth callback failed')
-        markConnected('strava')
-        router.replace({ path: '/peripheral' })
-      })
-      .catch((err) => console.error('Failed to ingest Strava data:', err))
-      .finally(() => { isConnecting.value = false })
-  }
-})
 </script>

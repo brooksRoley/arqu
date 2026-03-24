@@ -85,6 +85,11 @@ const router = createRouter({
       name: 'x-callback',
       component: () => import('@/views/XCallback.vue'),
     },
+    {
+      path: '/auth/strava/callback',
+      name: 'strava-callback',
+      component: () => import('@/views/StravaCallback.vue'),
+    },
 
     // ── Vibe calibration (OAuth connections) ────────────────────
     {
