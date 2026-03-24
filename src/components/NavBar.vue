@@ -3,6 +3,7 @@ import { computed, ref, watch, onMounted, onUnmounted } from 'vue'
 import { RouterLink, useRouter, useRoute } from 'vue-router'
 import { useStoryStore } from '@/composables/useStoryStore'
 import { useTranceEngine } from '@/composables/useTranceEngine'
+import { useAuthStore } from '@/composables/useAuthStore'
 
 const router = useRouter()
 const route = useRoute()
@@ -36,6 +37,14 @@ const {
   togglePtosisInducer: tranceTogglePtosis,
   toggleAVSync: tranceToggleAV
 } = useTranceEngine()
+
+const { isAuthenticated, user, logout } = useAuthStore()
+
+function handleLogout() {
+  logout()
+  menuOpen.value = false
+  router.push('/')
+}
 
 // Panel toggle
 const menuOpen = ref(false)
@@ -124,8 +133,11 @@ const fileName = ref('')
 // Background modal state
 const showBgModal = ref(false)
 
-// Session routes are accessed through the poll/Discover flow, not the main nav
-const hiddenRoutes = new Set(['zeromind', 'spiral', 'trance', 'webaudio', 'fitting', 'poll'])
+// Routes hidden from the main nav bar
+const hiddenRoutes = new Set([
+  'zeromind', 'spiral', 'trance', 'webaudio', 'fitting', 'poll',
+  'login', 'google-callback', 'x-callback',
+])
 
 const navRoutes = computed(() => {
   return router
@@ -388,6 +400,20 @@ onUnmounted(() => {
             </button>
             <button class="panel-btn" @click="reset">⏮ Reset</button>
             <span class="panel-stat">{{ currentIndex + 1 }} / {{ words.length }}</span>
+          </div>
+        </div>
+
+        <!-- Account -->
+        <div class="panel-section">
+          <span class="section-label">Account</span>
+          <div class="section-row">
+            <template v-if="isAuthenticated">
+              <span class="panel-stat">{{ user?.display_name || user?.email }}</span>
+              <button class="panel-btn" @click="handleLogout">Logout</button>
+            </template>
+            <RouterLink v-else to="/login" class="panel-btn" @click="menuOpen = false">
+              Login
+            </RouterLink>
           </div>
         </div>
       </div>
