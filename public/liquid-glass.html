@@ -362,8 +362,23 @@
         ctx.restore()
       }
 
+      let isPointerDown = false
+
       // Event listeners
+      window.addEventListener('mousedown', (e) => {
+        isPointerDown = true
+        mouse.x = e.clientX
+        mouse.y = e.clientY
+        mouse.prevX = e.clientX
+        mouse.prevY = e.clientY
+        ripples.push(new Ripple(mouse.x, mouse.y))
+        createParticles(mouse.x, mouse.y, 10)
+      })
+      window.addEventListener('mouseup', () => {
+        isPointerDown = false
+      })
       window.addEventListener('mousemove', (e) => {
+        if (!isPointerDown) return
         mouse.x = e.clientX
         mouse.y = e.clientY
       })
@@ -376,6 +391,8 @@
         mouse.y = touch.clientY
         mouse.prevX = touch.clientX
         mouse.prevY = touch.clientY
+        ripples.push(new Ripple(mouse.x, mouse.y))
+        createParticles(mouse.x, mouse.y, 10)
       }, { passive: false })
 
       canvas.addEventListener('touchmove', (e) => {

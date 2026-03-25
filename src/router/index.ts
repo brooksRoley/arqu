@@ -36,6 +36,11 @@ const router = createRouter({
       component: () => import('@/views/GlassView.vue'),
     },
     {
+      path: '/liquidglass',
+      name: 'liquidglass',
+      component: () => import('@/views/LiquidGlassView.vue'),
+    },
+    {
       path: '/audio',
       name: 'audio',
       component: () => import('@/views/AudioplayerView.vue'),
