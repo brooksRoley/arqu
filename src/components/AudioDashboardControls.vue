@@ -59,9 +59,9 @@ import { useAudioEngine } from '@/composables/useAudioEngine'
 const route = useRoute()
 const store = useSyncStore()
 
-let audioFile = '/audio/float.mp3'
+let audioFile = '/audio/floating.mp3'
 if (route.query.heavy !== undefined) {
-  audioFile = '/audio/heavy.mp3'
+  audioFile = '/audio/heavyGB.mp3'
 } else if (route.query.gradual !== undefined) {
   audioFile = '/audio/gradualGB.mp3'
 }
