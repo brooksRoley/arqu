@@ -37,6 +37,7 @@
 
 <script setup>
 import { ref } from 'vue'
+import { useRoute } from 'vue-router'
 import { useSyncStore } from '@/stores/useSyncStore'
 import { useHypnosisStore } from '@/stores/useHypnosisStore'
 import AudioDashboardControls from '@/components/AudioDashboardControls.vue'
@@ -44,9 +45,10 @@ import HypnoticPattern from '@/components/HypnoticPattern.vue'
 
 const syncStore = useSyncStore()
 const hypnosisStore = useHypnosisStore()
+const route = useRoute()
 
-const mediaUrl = ref('')
-const mediaType = ref('')
+const mediaUrl = ref(route.query.heavy !== undefined ? '/hideBG.webm' : '')
+const mediaType = ref(route.query.heavy !== undefined ? 'video' : '')
 
 const handleFileUpload = (event) => {
   const file = event.target.files[0]

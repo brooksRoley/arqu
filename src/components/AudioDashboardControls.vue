@@ -52,11 +52,21 @@
 
 <script setup>
 import { onMounted } from 'vue'
+import { useRoute } from 'vue-router'
 import { useSyncStore } from '@/stores/useSyncStore'
 import { useAudioEngine } from '@/composables/useAudioEngine'
 
+const route = useRoute()
 const store = useSyncStore()
-const { initAudio } = useAudioEngine('/audio/gradualGB.mp3')
+
+let audioFile = '/audio/float.mp3'
+if (route.query.heavy !== undefined) {
+  audioFile = '/audio/heavy.mp3'
+} else if (route.query.gradual !== undefined) {
+  audioFile = '/audio/gradualGB.mp3'
+}
+
+const { initAudio } = useAudioEngine(audioFile)
 
 onMounted(() => {
   // Wait for user interaction to initialize AudioContext (browser policy)

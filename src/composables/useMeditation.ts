@@ -156,7 +156,7 @@ export function useMeditation() {
     pausedElapsed = 0
     startTime = performance.now()
 
-    musicEl = new Audio('/audio/gradualGB.mp3')
+    musicEl = new Audio('/audio/float.mp3')
     musicEl.loop = true
     musicEl.volume = musicVolume.value
     musicEl.play().catch(() => {})
