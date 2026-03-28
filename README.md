@@ -4,26 +4,76 @@
 
 Psychoanalytic profiling engine disguised as a meditation app. Your listening history, your journal, your confessions are reduced to a single coordinate point in a 1,536-dimensional psychological space. Three shadows served per night. You either show up or you don't.
 
-## The Pipeline
+---
+
+## What Is This (ELI5)
+
+Channel Zero is two things layered on top of each other:
+
+**On the surface** — a set of immersive audio/visual experiences. Binaural beats, trance inductions, a speed reader, a video studio. Things that alter your state.
+
+**Underneath** — a psychological profiling engine. Every quiz answer, journal entry, and confession feeds a machine that figures out where you sit in a map of minds. Then it finds the three people closest to you on that map and shows them to you.
+
+---
+
+## Every Page, Explained Simply
+
+### Public (no account needed)
+
+| Route | What it does |
+|---|---|
+| `/` | The home page. Shows a "Discover" card on your first visit. After you take the quiz it shows you recommended sessions based on your result. There's also a 5-minute guided meditation you can launch from here. |
+| `/glass` | **Glass Studio.** Upload a video or audio file. Type words that appear huge over it. Pick a Tone.js synth bed that reacts to the speech in the file — it gets quieter when someone is talking and swells in the pauses. Hit Export and it records everything together as a video file you can download. |
+| `/trance` | **Trance Tone Engine.** Five gamma-range binaural beat patterns (Focus, Relaxation, Deepening, Sensory, Suggestion), each with its own canvas animation and word cycling. Tap to shift between them. Drag to push the visual center. Needs stereo headphones to actually work. |
+| `/webaudio` | **Star Tunnel.** A starfield that flies toward you while binaural tones play. Has a full guided session: induction → breath coherence phase → deep entrainment → warmth → wake. The breathing ring tells you when to inhale and exhale. Hold the sync button to match your breath and build coherence. |
+| `/spiral` | A hypnotic spiral with trance words cycling over it. No controls — just stare. |
+| `/zeromind` | Generative visuals with streaming text. Words appear and dissolve over flowing patterns. |
+| `/reader` | A speed reader. Paste or upload any text. Words flash one at a time (or in 2–3 word phrases) at a set WPM. It can sync with the trance engine so the reading tempo locks to a 2.4 Hz entrainment baseline. Click any word to jump to that position. |
+| `/audio` | A simple audio player. Play the ambient tracks with a visual interface. |
+| `/liquidglass` | Liquid glass sandbox. A mouse-tracking water/liquid canvas effect. Upload an image or video as a background. The `?heavy` query param preloads the heavy ambient track. |
+
+### Requires Account
+
+| Route | What it does |
+|---|---|
+| `/login` | Create an account or sign in. Passwords are hashed with Argon2. JWT tokens last 24 hours. |
+| `/journal` | Write, draw, record audio. Entries sync to the backend and embed into Pinecone so the system can find memories relevant to your confessional. Local-first — works offline. |
+| `/checkin` | Daily dashboard. Mood arc, streak counter, intention setting. Pulls recent journal entries and synthesizes a daily reflection. |
+| `/intake` | The confessional. Write about what's actually going on. The text is encrypted at rest (AES-256-GCM). The server extracts your attachment style and defense mechanisms, combines it with your Spotify audio profile, and generates a 1,536-dimensional embedding that becomes your coordinate in psychological space. |
+| `/game` | The result. Your three nearest psychological neighbors. The people who, right now, occupy the same region of the map as you. Karma mechanics — whether you follow through or ghost — shift your coordinates over time. |
+| `/calibrate` | Connect your accounts: Spotify, Google, Twitter, Strava, Letterboxd, Steam. Each adds another data layer to your vibe vector. |
+| `/peripheral` | Sync peripheral data from connected accounts. |
+| `/psychoanalysis` | Your psychometric scores: Big Five (IPIP-NEO), attachment (ECR-R), love language, sociosexual orientation, values cluster. Generated from your intake and quiz history. |
+
+---
+
+## How the Profiling Works
+
+```
+Poll quiz answers
+  + Journal entries (semantic search)
+  + Intake confession text
+  + Spotify: top artists, genres, valence, energy, danceability
+  → OpenAI text-embedding-3-small
+  → 1,536-dim float array
+  → Pinecone "users" namespace
+```
+
+The coordinate is re-plotted on every intake session and every Spotify reconnect. When karma drops, the vector is nudged with Gaussian noise and drifts away from healthy clusters — you start bumping into different kinds of people.
+
+---
+
+## The Full Pipeline
 
 ```
 Login → Poll (profiling) → Journal → Intake (confessional) → Game (deployment)
 ```
 
 - **Poll** — Dissociation/fantasy quiz derives attachment archetype + theme palette
-- **Journal** — Write, draw, record audio. Local-first with backend sync (entries auto-embed into Pinecone)
+- **Journal** — Write, draw, record audio. Entries auto-embed into Pinecone on sync
 - **Check-In** — Daily dashboard: mood arc, streak, synthesis, intention setting
-- **Intake** — Psychoanalytic confessional. Text encrypted at rest (AES-256-GCM). NLP extracts attachment style + defense mechanism. Confession + Spotify profile → 1,536-dim embedding → user's coordinate in Pinecone
-- **Game** — ANN query on Pinecone returns 3 nearest psychological neighbors. Karma mechanics shift coordinates over time
-
-## Experiences
-
-Binaural entrainment, visual sync, and trance induction modules:
-
-- **Star Tunnel** (`/webaudio`) — Starfield with binaural beat layers
-- **Zeromind** (`/zeromind`) — Generative visuals + streaming text
-- **Spiral** (`/spiral`) — Hypnotic spiral with trance words
-- **Tone Engine** (`/trance`) — Raw binaural tone laboratory (theta/delta descent)
+- **Intake** — Confessional. Text encrypted at rest. NLP extracts attachment style + defense mechanism. Confession + Spotify profile → 1,536-dim embedding → user's coordinate in Pinecone
+- **Game** — ANN query on Pinecone returns 3 nearest psychological neighbors. Karma shifts coordinates over time
 
 ---
 
@@ -38,6 +88,7 @@ Binaural entrainment, visual sync, and trance induction modules:
 | Embeddings | OpenAI `text-embedding-3-small` (1,536 dims, server-level key) |
 | Encryption | AES-256-GCM (confession logs, API keys, OAuth tokens) |
 | Auth | JWT (24-hour tokens, Argon2 password hashing) |
+| Audio | Tone.js 15 + Web Audio API |
 | Deployment | Vercel (frontend) + Render (backend) |
 
 ---
@@ -109,6 +160,11 @@ Migrations run in order on deploy (`python -m app.migrate`):
 | `001_init.sql` | users, journal_entries, poll_tokens, audio_clips, user_api_keys |
 | `002_intake.sql` | intake_shadow_logs, vibe_vectors |
 | `003_social.sql` | oauth_tokens, karma_ledger, venues, `vibe_vectors.spotify_data` |
+| `004_oauth_nonces.sql` | OAuth replay protection nonces |
+| `005_oauth_providers.sql` | Provider-specific OAuth token columns |
+| `006_strava_provider.sql` | Strava OAuth + activity data |
+| `007_psychometrics.sql` | user_psychometrics (Big Five, ECR-R, love language, etc.) |
+| `008_peripheral_data.sql` | Peripheral data columns on vibe_vectors, Steam/Letterboxd on users |
 
 ---
 

@@ -1,5 +1,5 @@
 CREATE TABLE IF NOT EXISTS user_psychometrics (
-    user_id TEXT PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+    user_id UUID PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
     scorable_responses TEXT NOT NULL,
     ipip_neo_scores JSONB,
     ecr_r_scores JSONB,
