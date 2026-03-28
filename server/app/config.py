@@ -55,6 +55,21 @@ class Settings(BaseSettings):
     strava_client_secret: str = ""
     strava_redirect_uri: str = "http://localhost:5173/auth/strava/callback"
 
+    # ── Twitter/X data connector (separate from auth login) ─────────
+    twitter_data_redirect_uri: str = "http://localhost:8000/api/twitter/callback"
+
+    # ── Google Calendar (reuses Google OAuth creds, separate scope) ──
+    gcal_redirect_uri: str = "http://localhost:8000/api/gcal/callback"
+
+    # ── Steam (OpenID 2.0 + Web API) ─────────────────────────────────
+    steam_api_key: str = ""
+    steam_redirect_uri: str = "http://localhost:8000/api/steam/callback"
+
+    # ── Letterboxd API ────────────────────────────────────────────────
+    letterboxd_api_key: str = ""
+    letterboxd_api_secret: str = ""
+    letterboxd_redirect_uri: str = "http://localhost:8000/api/letterboxd/callback"
+
     # ── Embeddings (server-level OpenAI key — NOT stored per-user) ──
     # Used exclusively for generating vibe vectors and journal embeddings.
     # Required for user matching and karma mechanics to function.

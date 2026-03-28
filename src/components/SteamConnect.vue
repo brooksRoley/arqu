@@ -81,11 +81,10 @@ async function initiateSteamAuth() {
   isConnecting.value = true
 
   try {
-    const response = await fetch(`${API}/api/auth/steam/init?token=${token.value}`)
+    const response = await fetch(`${API}/api/steam/connect?token=${token.value}`)
     const data = await response.json()
 
     if (data.auth_url) {
-      // Steam uses OpenID 2.0 — redirect to Steam's login page
       window.location.href = data.auth_url
     } else {
       throw new Error('Steam OpenID failed to initialize')
@@ -97,22 +96,10 @@ async function initiateSteamAuth() {
 }
 
 onMounted(() => {
-  // Steam OpenID returns openid params, not code/state
-  const steamId = route.query['openid.claimed_id'] as string | undefined
-
-  if (steamId && !isConnected.value) {
-    isConnecting.value = true
-
-    fetch(`${API}/api/auth/steam/callback${window.location.search}`, {
-      headers: { Authorization: `Bearer ${token.value}` },
-    })
-      .then((res) => {
-        if (!res.ok) throw new Error('Steam OpenID callback failed')
-        markConnected('steam')
-        router.replace({ path: '/peripheral' })
-      })
-      .catch((err) => console.error('Failed to ingest Steam data:', err))
-      .finally(() => { isConnecting.value = false })
+  // Steam callback redirects back with ?steam=connected
+  if (route.query.steam === 'connected' && !isConnected.value) {
+    markConnected('steam')
+    router.replace({ path: '/peripheral' })
   }
 })
 </script>

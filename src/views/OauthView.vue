@@ -114,7 +114,14 @@ const { oauthState, isMatchReady, markConnected } = useVibeStore()
 onMounted(() => {
   if (route.query.spotify === 'connected') {
     markConnected('spotify')
-    // Clean the query param from the URL without a full navigation
+    router.replace({ path: '/calibrate' })
+  }
+  if (route.query.gcal === 'connected') {
+    markConnected('google')
+    router.replace({ path: '/calibrate' })
+  }
+  if (route.query.twitter === 'connected') {
+    markConnected('twitter')
     router.replace({ path: '/calibrate' })
   }
 })

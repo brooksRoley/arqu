@@ -164,8 +164,8 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { ref, onMounted } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
 import { useVibeStore } from '@/composables/useVibeStore'
 import RadarIcon from '@/components/icons/RadarIcon.vue'
 import SignalIcon from '@/components/icons/SignalIcon.vue'
@@ -175,8 +175,20 @@ import LetterboxdConnect from '@/components/LetterboxdConnect.vue'
 import SteamConnect from '@/components/SteamConnect.vue'
 
 const router = useRouter()
-const { oauthState, triggerSynthesis } = useVibeStore()
+const route = useRoute()
+const { oauthState, triggerSynthesis, markConnected } = useVibeStore()
 const synthesizing = ref(false)
+
+onMounted(() => {
+  if (route.query.steam === 'connected') {
+    markConnected('steam')
+    router.replace({ path: '/peripheral' })
+  }
+  if (route.query.twitter === 'connected') {
+    markConnected('twitter')
+    router.replace({ path: '/peripheral' })
+  }
+})
 
 async function proceed() {
   synthesizing.value = true

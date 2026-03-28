@@ -138,7 +138,7 @@ async function submitCoStar() {
   isConnecting.value = true
 
   try {
-    const res = await fetch(`${API}/api/auth/costar/ingest`, {
+    const res = await fetch(`${API}/api/costar/ingest`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

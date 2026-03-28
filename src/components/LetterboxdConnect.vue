@@ -87,13 +87,13 @@ async function initiateLetterboxdAuth() {
   isConnecting.value = true
 
   try {
-    const response = await fetch(`${API}/api/auth/letterboxd/init?token=${token.value}`)
+    const response = await fetch(`${API}/api/letterboxd/connect?token=${token.value}`)
     const data = await response.json()
 
     if (data.auth_url) {
       window.location.href = data.auth_url
     } else {
-      throw new Error('Letterboxd OAuth failed to initialize')
+      throw new Error('Letterboxd init failed')
     }
   } catch (error) {
     console.error('Empathy simulator offline:', error)
@@ -102,16 +102,22 @@ async function initiateLetterboxdAuth() {
 }
 
 onMounted(() => {
-  const { code, state } = route.query
+  // Letterboxd uses username-based ingest, not standard OAuth callback
+  const lbState = route.query.letterboxd_state as string | undefined
 
-  if (code && state && route.query.provider === 'letterboxd' && !isConnected.value) {
+  if (lbState && !isConnected.value) {
+    // The backend redirected here with a state token — prompt for username
+    const username = prompt('Enter your Letterboxd username:')
+    if (!username) return
+
     isConnecting.value = true
 
-    fetch(`${API}/api/auth/letterboxd/callback?code=${code}&state=${state}`, {
+    fetch(`${API}/api/letterboxd/ingest?username=${encodeURIComponent(username)}&state=${lbState}`, {
+      method: 'POST',
       headers: { Authorization: `Bearer ${token.value}` },
     })
       .then((res) => {
-        if (!res.ok) throw new Error('Letterboxd OAuth callback failed')
+        if (!res.ok) throw new Error('Letterboxd ingestion failed')
         markConnected('letterboxd')
         router.replace({ path: '/peripheral' })
       })

@@ -60,12 +60,9 @@ import { useAuthStore } from '@/composables/useAuthStore'
 import { useVibeStore } from '@/composables/useVibeStore'
 
 const { token } = useAuthStore()
-const { oauthState } = useVibeStore()
+const { oauthState, markConnected } = useVibeStore()
 
-const X_CLIENT_ID = import.meta.env.VITE_X_CLIENT_ID || ''
-const X_REDIRECT_URI = import.meta.env.VITE_X_REDIRECT_URI || `${window.location.origin}/auth/x/callback`
-const VERIFIER_KEY = 'channelzero-x-pkce-verifier'
-
+const API = import.meta.env.VITE_API_URL || ''
 const isConnecting = ref(false)
 const isConnected = computed(() => oauthState.value.twitter.connected)
 
@@ -75,45 +72,23 @@ const buttonText = computed(() => {
   return 'CONNECT X (TWITTER)'
 })
 
-// ── PKCE helpers ──────────────────────────────────────────────
-function generateVerifier(): string {
-  const array = new Uint8Array(32)
-  crypto.getRandomValues(array)
-  return Array.from(array, (b) => b.toString(16).padStart(2, '0')).join('')
-}
-
-async function sha256(plain: string): Promise<ArrayBuffer> {
-  const encoder = new TextEncoder()
-  return crypto.subtle.digest('SHA-256', encoder.encode(plain))
-}
-
-function base64url(buffer: ArrayBuffer): string {
-  const bytes = new Uint8Array(buffer)
-  let binary = ''
-  bytes.forEach((b) => (binary += String.fromCharCode(b)))
-  return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')
-}
-
 async function initiateXAuth() {
   if (isConnected.value || !token.value) return
   isConnecting.value = true
 
-  const codeVerifier = generateVerifier()
-  const codeChallenge = base64url(await sha256(codeVerifier))
+  try {
+    // Server-side PKCE — verifier is embedded in the state JWT
+    const response = await fetch(`${API}/api/twitter/connect?token=${token.value}`)
+    const data = await response.json()
 
-  // Store verifier so the callback page can retrieve it
-  localStorage.setItem(VERIFIER_KEY, codeVerifier)
-
-  const params = new URLSearchParams({
-    response_type: 'code',
-    client_id: X_CLIENT_ID,
-    redirect_uri: X_REDIRECT_URI,
-    scope: 'tweet.read users.read offline.access',
-    state: 'x-oauth',
-    code_challenge: codeChallenge,
-    code_challenge_method: 'S256',
-  })
-
-  window.location.href = `https://twitter.com/i/oauth2/authorize?${params}`
+    if (data.auth_url) {
+      window.location.href = data.auth_url
+    } else {
+      throw new Error('X OAuth failed to initialize')
+    }
+  } catch (error) {
+    console.error('Neurotic handshake failed:', error)
+    isConnecting.value = false
+  }
 }
 </script>

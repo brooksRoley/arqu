@@ -9,60 +9,60 @@ const router = createRouter({
       path: '/login',
       name: 'login',
       component: () => import('@/views/LoginView.vue'),
-      meta: { guest: true },
+      meta: { guest: true }
     },
 
     // ── Hub ──────────────────────────────────────────────────────
     {
       path: '/',
       name: 'home',
-      component: HomeView,
+      component: HomeView
     },
 
     // ── Experiences (existing) ───────────────────────────────────
     {
       path: '/reader',
       name: 'reader',
-      component: () => import('@/views/ReaderView.vue'),
+      component: () => import('@/views/ReaderView.vue')
     },
     {
       path: '/zeromind',
       name: 'zeromind',
-      component: () => import('@/views/ZeromindView.vue'),
+      component: () => import('@/views/ZeromindView.vue')
     },
     {
       path: '/glass',
       name: 'glass',
-      component: () => import('@/views/GlassView.vue'),
+      component: () => import('@/views/GlassView.vue')
     },
     {
       path: '/liquidglass',
-      name: 'liquidglass',
-      component: () => import('@/views/LiquidGlassView.vue'),
+      name: 'mp3-reader sandbox',
+      component: () => import('@/views/LiquidGlassView.vue')
     },
     {
       path: '/audio',
       name: 'audio',
-      component: () => import('@/views/AudioplayerView.vue'),
+      component: () => import('@/views/AudioplayerView.vue')
     },
     {
       path: '/spiral',
       name: 'spiral',
-      component: () => import('@/views/SpiralView.vue'),
+      component: () => import('@/views/SpiralView.vue')
     },
     {
       path: '/trance',
       name: 'trance',
-      component: () => import('@/views/TranceView.vue'),
+      component: () => import('@/views/TranceView.vue')
     },
     {
       path: '/poll',
-      redirect: '/',
+      redirect: '/'
     },
     {
       path: '/webaudio',
       name: 'webaudio',
-      component: () => import('@/views/WebAudioView.vue'),
+      component: () => import('@/views/WebAudioView.vue')
     },
 
     // ── Journal + Check-in (auth required) ──────────────────────
@@ -70,30 +70,30 @@ const router = createRouter({
       path: '/journal',
       name: 'journal',
       component: () => import('@/views/JournalView.vue'),
-      meta: { requiresAuth: true },
+      meta: { requiresAuth: true }
     },
     {
       path: '/checkin',
       name: 'checkin',
       component: () => import('@/views/CheckInView.vue'),
-      meta: { requiresAuth: true },
+      meta: { requiresAuth: true }
     },
 
     // ── OAuth callback routes ────────────────────────────────────
     {
       path: '/auth/google/callback',
       name: 'google-callback',
-      component: () => import('@/views/GoogleCallback.vue'),
+      component: () => import('@/views/GoogleCallback.vue')
     },
     {
       path: '/auth/x/callback',
       name: 'x-callback',
-      component: () => import('@/views/XCallback.vue'),
+      component: () => import('@/views/XCallback.vue')
     },
     {
       path: '/auth/strava/callback',
       name: 'strava-callback',
-      component: () => import('@/views/StravaCallback.vue'),
+      component: () => import('@/views/StravaCallback.vue')
     },
 
     // ── Vibe calibration (OAuth connections) ────────────────────
@@ -101,7 +101,7 @@ const router = createRouter({
       path: '/calibrate',
       name: 'calibrate',
       component: () => import('@/views/OauthView.vue'),
-      meta: { requiresAuth: true },
+      meta: { requiresAuth: true }
     },
 
     // ── Peripheral data sync (auth required) ────────────────────
@@ -109,7 +109,15 @@ const router = createRouter({
       path: '/peripheral',
       name: 'peripheral',
       component: () => import('@/views/PeripheralSync.vue'),
-      meta: { requiresAuth: true },
+      meta: { requiresAuth: true }
+    },
+
+    // ── Psychometrics / Psychoanalysis (auth required) ───────────
+    {
+      path: '/psychoanalysis',
+      name: 'psychoanalysis',
+      component: () => import('@/views/PsychoanalysisView.vue'),
+      meta: { requiresAuth: true }
     },
 
     // ── Intake → Game pipeline (auth required) ──────────────────
@@ -117,15 +125,15 @@ const router = createRouter({
       path: '/intake',
       name: 'intake',
       component: () => import('@/views/IntakeView.vue'),
-      meta: { requiresAuth: true },
+      meta: { requiresAuth: true }
     },
     {
       path: '/game',
       name: 'game',
       component: () => import('@/views/GameView.vue'),
-      meta: { requiresAuth: true },
-    },
-  ],
+      meta: { requiresAuth: true }
+    }
+  ]
 })
 
 // ── Auth guard ──────────────────────────────────────────────────────

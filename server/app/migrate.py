@@ -50,6 +50,10 @@ async def run_migrations():
             print(f"  → Applying {f.name}...")
             sql = f.read_text()
             await conn.execute(sql)
+            await conn.execute(
+                "INSERT INTO _migrations (filename) VALUES ($1)",
+                f.name,
+            )
             print(f"  ✓ {f.name} applied")
 
         print("\nAll migrations up to date.")

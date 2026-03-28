@@ -77,31 +77,20 @@ import { useVibeStore } from '@/composables/useVibeStore'
 const { token } = useAuthStore()
 const { oauthState } = useVibeStore()
 
-const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || ''
-const GOOGLE_REDIRECT_URI = import.meta.env.VITE_GOOGLE_REDIRECT_URI || `${window.location.origin}/auth/google/callback`
-
+const API = import.meta.env.VITE_API_URL || ''
 const isConnecting = ref(false)
 const isConnected = computed(() => oauthState.value.google.connected)
 
 const buttonText = computed(() => {
   if (isConnecting.value) return 'AUTHORIZING PLANNER...'
   if (isConnected.value) return 'CALENDAR SYNCED'
-  return 'CONNECT GOOGLE'
+  return 'CONNECT GOOGLE CALENDAR'
 })
 
 function initiateGoogleAuth() {
   if (isConnected.value || !token.value) return
   isConnecting.value = true
-
-  const params = new URLSearchParams({
-    client_id: GOOGLE_CLIENT_ID,
-    redirect_uri: GOOGLE_REDIRECT_URI,
-    response_type: 'code',
-    scope: 'openid email profile',
-    access_type: 'offline',
-    prompt: 'consent',
-  })
-
-  window.location.href = `https://accounts.google.com/o/oauth2/v2/auth?${params}`
+  // Server-side redirect builds the URL with calendar.readonly scope
+  window.location.href = `${API}/api/gcal/connect?token=${token.value}`
 }
 </script>

@@ -13,10 +13,13 @@ const isFullBleed = computed(() => {
 })
 
 function toggleFullscreen() {
-  if (document.fullscreenElement) {
-    document.exitFullscreen()
-  } else if (mainRef.value) {
-    mainRef.value.requestFullscreen()
+  const el = document.documentElement
+  if (document.fullscreenElement || (document as any).webkitFullscreenElement) {
+    if (document.exitFullscreen) document.exitFullscreen()
+    else if ((document as any).webkitExitFullscreen) (document as any).webkitExitFullscreen()
+  } else {
+    if (el.requestFullscreen) el.requestFullscreen()
+    else if ((el as any).webkitRequestFullscreen) (el as any).webkitRequestFullscreen()
   }
 }
 

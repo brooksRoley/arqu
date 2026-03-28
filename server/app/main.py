@@ -20,6 +20,12 @@ from .intake.router import router as intake_router
 from .spotify.router import router as spotify_router
 from .oracle.router import router as oracle_router
 from .strava.router import router as strava_router
+from .psychometrics.router import router as psychometrics_router
+from .gcal.router import router as gcal_router
+from .steam.router import router as steam_router
+from .twitter.router import router as twitter_router
+from .letterboxd.router import router as letterboxd_router
+from .costar.router import router as costar_router
 
 
 @asynccontextmanager
@@ -72,6 +78,12 @@ def create_app() -> FastAPI:
     app.include_router(spotify_router, prefix=f"{prefix}/spotify", tags=["spotify"])
     app.include_router(oracle_router, prefix=f"{prefix}/oracle", tags=["oracle"])
     app.include_router(strava_router, prefix=f"{prefix}/strava", tags=["strava"])
+    app.include_router(psychometrics_router, prefix=f"{prefix}/psychometrics", tags=["psychometrics"])
+    app.include_router(gcal_router, prefix=f"{prefix}/gcal", tags=["gcal"])
+    app.include_router(steam_router, prefix=f"{prefix}/steam", tags=["steam"])
+    app.include_router(twitter_router, prefix=f"{prefix}/twitter", tags=["twitter"])
+    app.include_router(letterboxd_router, prefix=f"{prefix}/letterboxd", tags=["letterboxd"])
+    app.include_router(costar_router, prefix=f"{prefix}/costar", tags=["costar"])
 
     # ── Health ──────────────────────────────────────────────────
     @app.get("/health")
