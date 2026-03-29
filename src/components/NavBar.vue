@@ -26,17 +26,44 @@ const {
   sessionActive: tranceSessionActive,
   phase: trancePhase,
   coherenceScore: tranceCoherence,
-  baselineModulatorActive: tranceBaselineActive,
-  ptosisInducerActive: trancePtosisActive,
-  avSyncActive: tranceAVActive,
   phaseAccent: tranceAccent,
+  phaseDisplayName,
+  activeLayerCount,
+  totalLayers,
   startSession: tranceStart,
   stopSession: tranceStop,
   windDown: tranceWindDown,
-  toggleBaselineModulator: tranceToggleBaseline,
-  togglePtosisInducer: tranceTogglePtosis,
-  toggleAVSync: tranceToggleAV
+  // Layer toggles
+  baselineModulatorActive,
+  ptosisInducerActive,
+  avSyncActive,
+  alphaWaveActive,
+  thetaDreamActive,
+  schumannActive,
+  solfeggioActive,
+  toggleBaselineModulator,
+  togglePtosisInducer,
+  toggleAVSync,
+  toggleAlphaWave,
+  toggleThetaDream,
+  toggleSchumann,
+  toggleSolfeggio,
 } = useTranceEngine()
+
+// Tone layer definitions for the panel UI
+const toneLayers = computed(() => [
+  { key: 'alpha',    name: 'Alpha Flow',   desc: 'calm focus',     active: alphaWaveActive.value,        toggle: toggleAlphaWave },
+  { key: 'theta',    name: 'Deep Theta',   desc: 'meditation',     active: thetaDreamActive.value,       toggle: toggleThetaDream },
+  { key: 'schumann', name: 'Earth Tone',   desc: 'grounding',      active: schumannActive.value,         toggle: toggleSchumann },
+  { key: 'baseline', name: 'Nerve Pulse',  desc: 'resonance',      active: baselineModulatorActive.value, toggle: toggleBaselineModulator },
+  { key: 'ptosis',   name: 'Drift',        desc: 'surrender',      active: ptosisInducerActive.value,    toggle: togglePtosisInducer },
+  { key: 'av',       name: 'Pulse Sync',   desc: 'audiovisual',    active: avSyncActive.value,           toggle: toggleAVSync },
+  { key: 'solfeg',   name: 'Restore',      desc: 'healing tone',   active: solfeggioActive.value,        toggle: toggleSolfeggio },
+])
+
+const canWindDown = computed(() =>
+  tranceSessionActive.value && (trancePhase.value === 'deepen' || trancePhase.value === 'joy')
+)
 
 const { isAuthenticated, user, logout } = useAuthStore()
 
@@ -51,7 +78,7 @@ const menuOpen = ref(false)
 
 // Fullbleed detection — auto-minimize on immersive routes
 const isFullBleed = computed(() => {
-  return ['reader', 'zeromind', 'glass', 'spiral', 'trance', 'webaudio'].includes(
+  return ['reader', 'zeromind', 'glass', 'spiral', 'trance', 'webaudio', 'hypno', 'audio'].includes(
     route.name as string
   )
 })
@@ -135,7 +162,7 @@ const showBgModal = ref(false)
 
 // Routes hidden from the main nav bar
 const hiddenRoutes = new Set([
-  'zeromind', 'spiral', 'trance', 'webaudio', 'fitting', 'poll',
+  'zeromind', 'spiral', 'trance', 'webaudio', 'hypno', 'fitting', 'poll',
   'login', 'google-callback', 'x-callback', 'strava-callback',
   'peripheral', 'intake', 'game',
 ])
@@ -348,47 +375,53 @@ onUnmounted(() => {
         </div>
 
         <!-- Trance Engine -->
-        <div class="panel-section">
-          <span class="section-label" :style="tranceSessionActive ? { color: tranceAccent } : {}">Trance</span>
+        <div class="panel-section trance-section">
+          <div class="trance-header">
+            <span class="section-label" :style="tranceSessionActive ? { color: tranceAccent } : {}">Trance</span>
+            <div v-if="activeLayerCount > 0" class="depth-meter">
+              <span class="depth-label">depth</span>
+              <span
+                v-for="i in totalLayers"
+                :key="i"
+                class="depth-dot"
+                :class="{ filled: i <= activeLayerCount }"
+              />
+            </div>
+          </div>
+
+          <!-- Session journey control -->
           <div class="section-row">
             <button
               class="panel-btn"
               :class="{ 'panel-btn--active': tranceSessionActive }"
               @click="tranceSessionActive ? tranceStop() : tranceStart()"
             >
-              {{ tranceSessionActive ? '&#9632; Stop' : '&#9654; Session' }}
+              {{ tranceSessionActive ? '&#9632; End' : '&#9654; Journey' }}
             </button>
-            <span v-if="tranceSessionActive" class="panel-stat" :style="{ color: tranceAccent }">
-              {{ trancePhase.toUpperCase() }}
-              <template v-if="trancePhase === 'coherence'">&middot; {{ tranceCoherence }}%</template>
+            <span v-if="tranceSessionActive && phaseDisplayName" class="phase-pill" :style="{ borderColor: tranceAccent, color: tranceAccent }">
+              {{ phaseDisplayName }}
+              <template v-if="trancePhase === 'coherence'"> &middot; {{ tranceCoherence }}%</template>
             </span>
             <button
-              v-if="tranceSessionActive && (trancePhase === 'deepen' || trancePhase === 'joy')"
+              v-if="canWindDown"
               class="panel-btn"
               @click="tranceWindDown()"
             >
               Wind Down
             </button>
+          </div>
+
+          <!-- Tone layers -->
+          <div class="tone-layers">
             <button
-              class="panel-btn"
-              :class="{ 'panel-btn--active': tranceBaselineActive }"
-              @click="tranceToggleBaseline()"
+              v-for="layer in toneLayers"
+              :key="layer.key"
+              class="tone-chip"
+              :class="{ 'tone-chip--active': layer.active }"
+              @click="layer.toggle()"
             >
-              2.4Hz Pulse
-            </button>
-            <button
-              class="panel-btn"
-              :class="{ 'panel-btn--active': trancePtosisActive }"
-              @click="tranceTogglePtosis()"
-            >
-              Ptosis
-            </button>
-            <button
-              class="panel-btn"
-              :class="{ 'panel-btn--active': tranceAVActive }"
-              @click="tranceToggleAV()"
-            >
-              AV Sync
+              <span class="tone-name">{{ layer.name }}</span>
+              <span class="tone-desc">{{ layer.desc }}</span>
             </button>
           </div>
         </div>
@@ -546,6 +579,7 @@ onUnmounted(() => {
 }
 
 .navbar--floating .menu-btn,
+.navbar--floating .fullscreen-btn,
 .navbar--floating .nav-links,
 .navbar--floating .navbar-panel {
   pointer-events: auto;
@@ -827,6 +861,107 @@ onUnmounted(() => {
   font-variant-numeric: tabular-nums;
 }
 
+/* ── Trance section ── */
+.trance-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.depth-meter {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.depth-label {
+  font-size: 0.55rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #475569;
+  margin-right: 4px;
+}
+
+.depth-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.08);
+  transition: background 0.3s, box-shadow 0.3s;
+}
+
+.depth-dot.filled {
+  background: #6366f1;
+  box-shadow: 0 0 6px rgba(99, 102, 241, 0.5);
+}
+
+.phase-pill {
+  font-size: 0.7rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  padding: 0.2rem 0.6rem;
+  border: 1px solid;
+  border-radius: 1rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.tone-layers {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.tone-chip {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 0.5rem;
+  padding: 0.35rem 0.6rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  min-width: 5rem;
+  font-family: inherit;
+  color: #94a3b8;
+}
+
+.tone-chip:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.15);
+  color: #cbd5e1;
+}
+
+.tone-chip--active {
+  background: rgba(99, 102, 241, 0.15);
+  border-color: rgba(99, 102, 241, 0.4);
+  color: #e2e8f0;
+  box-shadow: 0 0 8px rgba(99, 102, 241, 0.15);
+}
+
+.tone-chip--active:hover {
+  background: rgba(99, 102, 241, 0.25);
+}
+
+.tone-name {
+  font-size: 0.75rem;
+  font-weight: 500;
+  line-height: 1.2;
+}
+
+.tone-desc {
+  font-size: 0.55rem;
+  letter-spacing: 0.06em;
+  color: #64748b;
+  text-transform: lowercase;
+}
+
+.tone-chip--active .tone-desc {
+  color: rgba(165, 180, 252, 0.6);
+}
+
 /* ── Desktop tweaks ── */
 @media (min-width: 769px) {
   .navbar-panel {
@@ -839,6 +974,12 @@ onUnmounted(() => {
     flex-direction: row;
     align-items: center;
     gap: 0.5rem;
+  }
+
+  /* Trance section stays columnar on desktop for the layer grid */
+  .panel-section.trance-section {
+    flex-direction: column;
+    align-items: stretch;
   }
 
   .section-label {

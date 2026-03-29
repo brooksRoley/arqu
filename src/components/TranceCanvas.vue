@@ -20,14 +20,25 @@
       </div>
     </Transition>
 
-    <!-- Word + formula overlay -->
+    <!-- Word + formula overlay (unified via useTextOverlay) -->
     <div class="text-overlay">
-      <div class="category-label" :class="{ fading: isFading }" :style="{ color: accentColor }">
-        {{ displayCategory }}
+      <div v-if="overlayLabel" class="category-label" :class="{ fading: !overlayVisible }" :style="{ color: accentColor }">
+        {{ overlayLabel }}
       </div>
-      <div class="word-display" :class="{ fading: isFading }">{{ displayWord }}</div>
-      <div class="formula-display" :class="{ fading: isFading }">{{ displayFormula }}</div>
-      <div class="beat-info" :class="{ fading: isFading }">{{ displayBeat }}</div>
+      <div class="word-display" :class="[{ fading: !overlayVisible }, isReaderMode ? 'reader-word' : '']">
+        {{ overlayText }}
+      </div>
+      <div v-if="!isReaderMode" class="formula-display" :class="{ fading: !overlayVisible }">{{ displayFormula }}</div>
+      <div v-if="!isReaderMode" class="beat-info" :class="{ fading: !overlayVisible }">{{ displayBeat }}</div>
+      <div v-if="isReaderMode" class="reader-status">
+        <span class="reader-dot" :class="{ active: readerPlaying }" />
+        {{ readerPlaying ? 'reading' : 'tap to play' }}
+      </div>
+    </div>
+
+    <!-- Progress bar (reader or timelapse) -->
+    <div v-if="isReaderMode" class="reader-progress-bar">
+      <div class="reader-progress-fill" :style="{ width: `${readerProgress}%` }" />
     </div>
 
     <!-- Volume control -->
@@ -39,8 +50,6 @@
     <!-- Hint -->
     <div v-if="audioReady" class="click-hint">click anywhere to shift &middot; auto-advances</div>
 
-    <!-- Timelapse progress bar -->
-    <div class="timelapse-bar" :style="{ width: `${timelapseProgress * 100}%`, background: barColor }" />
 
     <!-- Cursor glow -->
     <div
@@ -64,26 +73,39 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { useBinauralEngine } from '@/composables/useBinauralEngine'
-import { categories, pickRandom, type ViewOffset } from '@/composables/useTranceCategories'
+import { categories, type ViewOffset } from '@/composables/useTranceCategories'
+import { useTextOverlay } from '@/composables/useTextOverlay'
 
 const { initialized: audioReady, volume, init: initAudio, setBeat, setVolume, getWaveformData, destroy: destroyAudio } = useBinauralEngine()
+const {
+  displayText: overlayText,
+  displayLabel: overlayLabel,
+  activeCatKey: overlayCatKey,
+  isVisible: overlayVisible,
+  isReaderMode,
+  readerProgress,
+  isPlaying: readerPlaying,
+  toggleOrSkip: overlayToggle,
+} = useTextOverlay()
 
 // ── Display state ──
 const mouseX = ref(typeof window !== 'undefined' ? window.innerWidth / 2 : 0)
 const mouseY = ref(typeof window !== 'undefined' ? window.innerHeight / 2 : 0)
-const displayWord = ref('')
-const displayFormula = ref('')
-const displayCategory = ref('')
-const displayBeat = ref('')
-const isFading = ref(false)
-const timelapseProgress = ref(0)
-const accentColor = ref('rgba(123, 94, 167, 0.4)')
-const currentCatKey = ref('focus')
 const canvasEl = ref<HTMLCanvasElement | null>(null)
 
-const barColor = computed(() => categories[currentCatKey.value]?.colorBright ?? '#7b5ea7')
+// Derived from the unified overlay's active category
+const currentCatKey = computed(() => overlayCatKey.value)
+const accentColor = computed(() => categories[currentCatKey.value]?.color ?? 'rgba(123, 94, 167, 0.4)')
+const displayFormula = computed(() => categories[currentCatKey.value]?.formula ?? '')
+const displayBeat = computed(() => {
+  const cat = categories[currentCatKey.value]
+  if (!cat) return ''
+  const L = (cat.carrier - cat.beatHz / 2).toFixed(0)
+  const R = (cat.carrier + cat.beatHz / 2).toFixed(0)
+  return `\u03B3 ${cat.beatHz} Hz binaural \u00B7 ${cat.carrier} Hz carrier \u00B7 L ${L} Hz \u00B7 R ${R} Hz`
+})
 
 // ── Drag / swipe ──
 const viewOffset: ViewOffset = { x: 0, y: 0 }
@@ -114,52 +136,24 @@ function dragEnd(): boolean {
   return !dragMoved // true = tap
 }
 
-// ── Category transitions ──
-const TIMELAPSE_MS = 4500
-let timelapseTimer: ReturnType<typeof setInterval> | undefined
+// ── Sync binaural beats with overlay category ──
 let animFrame: number | undefined
 let globalTime = 0
 
-function transitionTo(catKey: string, word: string) {
-  isFading.value = true
-  setTimeout(() => {
-    currentCatKey.value = catKey
-    const cat = categories[catKey]
-    displayWord.value = word
-    displayFormula.value = cat.formula
-    displayCategory.value = cat.label
-    accentColor.value = cat.color
-    setBeat(cat.beatHz, cat.carrier, 1.5)
-    const L = (cat.carrier - cat.beatHz / 2).toFixed(0)
-    const R = (cat.carrier + cat.beatHz / 2).toFixed(0)
-    displayBeat.value = `\u03B3 ${cat.beatHz} Hz binaural \u00B7 ${cat.carrier} Hz carrier \u00B7 L ${L} Hz \u00B7 R ${R} Hz`
-    isFading.value = false
-  }, 600)
-}
-
-function triggerNext() {
-  const { catKey, word } = pickRandom()
-  transitionTo(catKey, word)
-  timelapseProgress.value = 0
-  clearInterval(timelapseTimer)
-  const start = Date.now()
-  timelapseTimer = setInterval(() => {
-    const elapsed = Date.now() - start
-    timelapseProgress.value = Math.min(elapsed / TIMELAPSE_MS, 1)
-    if (elapsed >= TIMELAPSE_MS) {
-      clearInterval(timelapseTimer)
-      triggerNext()
-    }
-  }, 30)
-}
+watch(overlayCatKey, (key) => {
+  if (!audioReady.value) return
+  const cat = categories[key]
+  if (cat) setBeat(cat.beatHz, cat.carrier, 1.5)
+})
 
 function handleTap() {
   if (!audioReady.value) {
     initAudio()
-    triggerNext()
-    return
+    // Set initial beat from current category
+    const cat = categories[overlayCatKey.value]
+    if (cat) setBeat(cat.beatHz, cat.carrier, 1.5)
   }
-  triggerNext()
+  overlayToggle()
 }
 
 // ── Mouse / touch handlers ──
@@ -284,7 +278,6 @@ onMounted(() => {
 
 onUnmounted(() => {
   if (animFrame) cancelAnimationFrame(animFrame)
-  clearInterval(timelapseTimer)
   destroyAudio()
 })
 </script>
@@ -418,7 +411,7 @@ onUnmounted(() => {
 /* ── Volume ── */
 .volume-ctrl {
   position: absolute;
-  top: 2vh; right: 2vw;
+  bottom: 5vh; right: 2vw;
   z-index: 10;
   display: flex;
   align-items: center;
@@ -480,15 +473,6 @@ onUnmounted(() => {
   50% { opacity: 0.4; }
 }
 
-/* ── Timelapse bar ── */
-.timelapse-bar {
-  position: absolute;
-  bottom: 0; left: 0;
-  height: 2px;
-  z-index: 3;
-  transition: background 0.8s ease;
-  opacity: 0.6;
-}
 
 /* ── Cursor glow ── */
 .cursor-glow {
@@ -560,5 +544,59 @@ onUnmounted(() => {
 .tutorial-slide-leave-to {
   opacity: 0;
   transform: translateX(-50%) translateY(8px);
+}
+
+/* ── Reader mode overlays ── */
+.reader-word {
+  font-size: clamp(1.8rem, 5vw, 4rem);
+  letter-spacing: 0.08em;
+}
+
+.reader-status {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  margin-top: 1.5rem;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.6rem;
+  font-weight: 200;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: rgba(180, 170, 200, 0.35);
+}
+
+.reader-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: rgba(99, 102, 241, 0.3);
+  transition: background 0.3s;
+}
+
+.reader-dot.active {
+  background: #6366f1;
+  animation: reader-pulse 1s ease-in-out infinite alternate;
+}
+
+@keyframes reader-pulse {
+  from { opacity: 0.5; }
+  to { opacity: 1; }
+}
+
+.reader-progress-bar {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: rgba(255, 255, 255, 0.04);
+  z-index: 3;
+}
+
+.reader-progress-fill {
+  height: 100%;
+  background: rgba(99, 102, 241, 0.6);
+  transition: width 0.15s linear;
 }
 </style>

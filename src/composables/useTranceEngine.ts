@@ -18,6 +18,10 @@ const tunnelPulseStrength = ref(0)
 const baselineModulatorActive = ref(false)
 const ptosisInducerActive = ref(false)
 const avSyncActive = ref(false)
+const alphaWaveActive = ref(false)
+const thetaDreamActive = ref(false)
+const schumannActive = ref(false)
+const solfeggioActive = ref(false)
 
 const BREATH_CYCLE = 10
 const INHALE_TIME = 5
@@ -107,6 +111,29 @@ let piLFO: Tone.LFO | null = null
 let avSynth: Tone.Synth | null = null
 let avVisualCallback: ((flash: boolean) => void) | null = null
 let avLoopId: number | undefined
+
+// Module 4: Alpha Wave (10 Hz binaural — calm focus, flow state)
+let alphaL: Tone.Oscillator | null = null
+let alphaR: Tone.Oscillator | null = null
+let alphaPanL: Tone.Panner | null = null
+let alphaPanR: Tone.Panner | null = null
+
+// Module 5: Theta Dream (6 Hz binaural — deep meditation, creativity)
+let thetaL: Tone.Oscillator | null = null
+let thetaR: Tone.Oscillator | null = null
+let thetaPanL: Tone.Panner | null = null
+let thetaPanR: Tone.Panner | null = null
+
+// Module 6: Schumann Resonance (7.83 Hz binaural — earth frequency, grounding)
+let schumannL: Tone.Oscillator | null = null
+let schumannR: Tone.Oscillator | null = null
+let schumannPanL: Tone.Panner | null = null
+let schumannPanR: Tone.Panner | null = null
+
+// Module 7: Solfeggio 528 Hz ("miracle tone" — restoration, DNA repair)
+let solOsc: Tone.Oscillator | null = null
+let solGain: Tone.Gain | null = null
+let solLfo: Tone.LFO | null = null
 
 // ── Core audio setup ──
 function initCoreAudio() {
@@ -209,6 +236,102 @@ function stopAVSync() {
   avVisualCallback = null
   avLoopId = undefined
   avSyncActive.value = false
+}
+
+// ── Module 4: Alpha Wave (10 Hz binaural) ──
+// Left 195 Hz / Right 205 Hz → 10 Hz perceived beat (alpha band)
+// Alpha entrainment promotes relaxed alertness and flow state
+async function startAlphaWave() {
+  await Tone.start()
+  if (alphaL) return
+  alphaPanL = new Tone.Panner(-1).toDestination()
+  alphaPanR = new Tone.Panner(1).toDestination()
+  alphaL = new Tone.Oscillator(195, 'sine').connect(alphaPanL)
+  alphaR = new Tone.Oscillator(205, 'sine').connect(alphaPanR)
+  alphaL.volume.value = -18
+  alphaR.volume.value = -18
+  alphaL.start()
+  alphaR.start()
+  alphaWaveActive.value = true
+}
+
+function stopAlphaWave() {
+  alphaL?.stop(); alphaL?.dispose(); alphaL = null
+  alphaR?.stop(); alphaR?.dispose(); alphaR = null
+  alphaPanL?.dispose(); alphaPanL = null
+  alphaPanR?.dispose(); alphaPanR = null
+  alphaWaveActive.value = false
+}
+
+// ── Module 5: Theta Dream (6 Hz binaural) ──
+// Left 177 Hz / Right 183 Hz → 6 Hz perceived beat (theta band)
+// Theta entrainment promotes deep meditation, creativity, hypnagogic imagery
+async function startThetaDream() {
+  await Tone.start()
+  if (thetaL) return
+  thetaPanL = new Tone.Panner(-1).toDestination()
+  thetaPanR = new Tone.Panner(1).toDestination()
+  thetaL = new Tone.Oscillator(177, 'sine').connect(thetaPanL)
+  thetaR = new Tone.Oscillator(183, 'sine').connect(thetaPanR)
+  thetaL.volume.value = -18
+  thetaR.volume.value = -18
+  thetaL.start()
+  thetaR.start()
+  thetaDreamActive.value = true
+}
+
+function stopThetaDream() {
+  thetaL?.stop(); thetaL?.dispose(); thetaL = null
+  thetaR?.stop(); thetaR?.dispose(); thetaR = null
+  thetaPanL?.dispose(); thetaPanL = null
+  thetaPanR?.dispose(); thetaPanR = null
+  thetaDreamActive.value = false
+}
+
+// ── Module 6: Schumann Resonance (7.83 Hz binaural) ──
+// Left 246.085 Hz / Right 253.915 Hz → 7.83 Hz perceived beat
+// Earth's electromagnetic resonant frequency — grounding, coherence
+async function startSchumann() {
+  await Tone.start()
+  if (schumannL) return
+  schumannPanL = new Tone.Panner(-1).toDestination()
+  schumannPanR = new Tone.Panner(1).toDestination()
+  schumannL = new Tone.Oscillator(246.085, 'sine').connect(schumannPanL)
+  schumannR = new Tone.Oscillator(253.915, 'sine').connect(schumannPanR)
+  schumannL.volume.value = -18
+  schumannR.volume.value = -18
+  schumannL.start()
+  schumannR.start()
+  schumannActive.value = true
+}
+
+function stopSchumann() {
+  schumannL?.stop(); schumannL?.dispose(); schumannL = null
+  schumannR?.stop(); schumannR?.dispose(); schumannR = null
+  schumannPanL?.dispose(); schumannPanL = null
+  schumannPanR?.dispose(); schumannPanR = null
+  schumannActive.value = false
+}
+
+// ── Module 7: Solfeggio 528 Hz ──
+// Pure 528 Hz tone with gentle 1 Hz amplitude tremolo
+// Associated with transformation, DNA repair, and restoration
+async function startSolfeggio() {
+  await Tone.start()
+  if (solOsc) return
+  solGain = new Tone.Gain(0.06).toDestination()
+  solOsc = new Tone.Oscillator(528, 'sine').connect(solGain)
+  solLfo = new Tone.LFO({ frequency: 1, type: 'sine', min: 0.02, max: 0.08 }).start()
+  solLfo.connect(solGain.gain)
+  solOsc.start()
+  solfeggioActive.value = true
+}
+
+function stopSolfeggio() {
+  solOsc?.stop(); solOsc?.dispose(); solOsc = null
+  solLfo?.dispose(); solLfo = null
+  solGain?.dispose(); solGain = null
+  solfeggioActive.value = false
 }
 
 // ── Phase helpers ──
@@ -327,6 +450,10 @@ function stopSession() {
   stopBaselineModulator()
   stopPtosisInducer()
   stopAVSync()
+  stopAlphaWave()
+  stopThetaDream()
+  stopSchumann()
+  stopSolfeggio()
   Tone.getTransport().stop()
 
   phase.value = 'idle'
@@ -389,6 +516,53 @@ async function toggleAVSync(onFlash?: (flash: boolean) => void) {
   else await startAVSync(onFlash)
 }
 
+async function toggleAlphaWave() {
+  if (alphaWaveActive.value) stopAlphaWave()
+  else await startAlphaWave()
+}
+
+async function toggleThetaDream() {
+  if (thetaDreamActive.value) stopThetaDream()
+  else await startThetaDream()
+}
+
+async function toggleSchumann() {
+  if (schumannActive.value) stopSchumann()
+  else await startSchumann()
+}
+
+async function toggleSolfeggio() {
+  if (solfeggioActive.value) stopSolfeggio()
+  else await startSolfeggio()
+}
+
+// ── Gamification helpers ──
+const activeLayerCount = computed(() =>
+  [
+    baselineModulatorActive.value,
+    ptosisInducerActive.value,
+    avSyncActive.value,
+    alphaWaveActive.value,
+    thetaDreamActive.value,
+    schumannActive.value,
+    solfeggioActive.value,
+  ].filter(Boolean).length
+)
+
+const TOTAL_LAYERS = 7
+
+const phaseDisplayName = computed(() => {
+  const names: Record<TrancePhase, string> = {
+    idle: '',
+    induction: 'settling',
+    coherence: 'breathing',
+    deepen: 'descent',
+    joy: 'glow',
+    wake: 'return',
+  }
+  return names[phase.value]
+})
+
 // ── Phase-aware visual accent ────────────────────────────────────
 // Used by WebAudio canvas to tint star trails and glow
 const phaseAccent = computed(() => {
@@ -421,8 +595,15 @@ export function useTranceEngine() {
     baselineModulatorActive: readonly(baselineModulatorActive),
     ptosisInducerActive: readonly(ptosisInducerActive),
     avSyncActive: readonly(avSyncActive),
+    alphaWaveActive: readonly(alphaWaveActive),
+    thetaDreamActive: readonly(thetaDreamActive),
+    schumannActive: readonly(schumannActive),
+    solfeggioActive: readonly(solfeggioActive),
     phaseAccent,
     isNarrativePhase,
+    activeLayerCount,
+    totalLayers: TOTAL_LAYERS,
+    phaseDisplayName,
 
     // Session control
     startSession,
@@ -435,5 +616,9 @@ export function useTranceEngine() {
     toggleBaselineModulator,
     togglePtosisInducer,
     toggleAVSync,
+    toggleAlphaWave,
+    toggleThetaDream,
+    toggleSchumann,
+    toggleSolfeggio,
   }
 }

@@ -3,11 +3,23 @@ import { ref, reactive, computed, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { usePollStore } from '@/composables/usePollStore'
 import { useMeditation } from '@/composables/useMeditation'
+import { useCosmicPhysics } from '@/composables/useCosmicPhysics'
 import type { PollAnswers } from '@/composables/usePollStore'
 
 const router = useRouter()
 const { answers, token, setAnswer, submitPoll, resetPoll } = usePollStore()
 const med = useMeditation()
+
+// ── Cosmic physics background ────────────────────────────────────
+const bgCanvas = ref<HTMLCanvasElement>()
+const { init: initCosmic, destroy: destroyCosmic } = useCosmicPhysics(bgCanvas, {
+  particleCount: 120,
+  starCount: 100,
+  enableKeyboard: false,
+  enableMouseInteract: true,
+  clearAlpha: 0.08,
+  mouseAttractForce: 0.5,
+})
 
 // ── Stage management ─────────────────────────────────────────────
 type Stage = 'home' | 'poll'
@@ -180,47 +192,7 @@ function handleFeaturedClick() {
   }
 }
 
-// ── Ambient background drift ─────────────────────────────────────
-const bgCanvas = ref<HTMLCanvasElement | null>(null)
-let bgFrameId: number | null = null
-
-function initBg() {
-  const canvas = bgCanvas.value
-  if (!canvas) return
-  canvas.width = canvas.offsetWidth
-  canvas.height = canvas.offsetHeight
-
-  const ctx = canvas.getContext('2d')!
-  const W = canvas.width
-  const H = canvas.height
-  const PARTICLES = 55
-  const pts = Array.from({ length: PARTICLES }, () => ({
-    x: Math.random() * W,
-    y: Math.random() * H,
-    r: 0.6 + Math.random() * 1.6,
-    vx: (Math.random() - 0.5) * 0.18,
-    vy: (Math.random() - 0.5) * 0.18,
-    o: 0.08 + Math.random() * 0.22,
-  }))
-
-  function draw() {
-    ctx.clearRect(0, 0, W, H)
-    for (const p of pts) {
-      ctx.beginPath()
-      ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2)
-      ctx.fillStyle = `rgba(99,102,241,${p.o})`
-      ctx.fill()
-      p.x += p.vx
-      p.y += p.vy
-      if (p.x < 0) p.x = W
-      if (p.x > W) p.x = 0
-      if (p.y < 0) p.y = H
-      if (p.y > H) p.y = 0
-    }
-    bgFrameId = requestAnimationFrame(draw)
-  }
-  draw()
-}
+// (Cosmic physics background replaces old ambient particle drift)
 
 // ── Scene drag tilt ──────────────────────────────────────────────
 const sceneTilt = reactive({ x: 0, y: 0 })
@@ -355,19 +327,19 @@ function cardStyle(key: string) {
 }
 
 // ── Lifecycle ────────────────────────────────────────────────────
-onMounted(() => {
+onMounted(async () => {
   window.addEventListener('mousedown', onMouseDown)
   window.addEventListener('mousemove', onMouseMove)
   window.addEventListener('mouseup', onMouseUp)
   window.addEventListener('touchstart', onTouchStart, { passive: true })
   window.addEventListener('touchmove', onTouchMove, { passive: true })
   window.addEventListener('touchend', onTouchEnd, { passive: true })
-  initBg()
+  await initCosmic()
 })
 
 onUnmounted(() => {
   if (springId) cancelAnimationFrame(springId)
-  if (bgFrameId) cancelAnimationFrame(bgFrameId)
+  destroyCosmic()
   window.removeEventListener('mousedown', onMouseDown)
   window.removeEventListener('mousemove', onMouseMove)
   window.removeEventListener('mouseup', onMouseUp)
@@ -646,18 +618,18 @@ onUnmounted(() => {
   user-select: none;
   -webkit-user-select: none;
   position: relative;
-  background-image: url('../assets/zero.jpg');
+  background: #08060e;
   min-height: calc(100vh - 3rem);
   padding-bottom: 2rem;
 }
 
 .home-bg {
-  position: absolute;
+  position: fixed;
   inset: 0;
   width: 100%;
   height: 100%;
   pointer-events: none;
-  opacity: 0.6;
+  z-index: 0;
 }
 
 .content-scene {

@@ -156,7 +156,8 @@ export function useMeditation() {
     pausedElapsed = 0
     startTime = performance.now()
 
-    musicEl = new Audio('/audio/float.mp3')
+    musicEl = new Audio('/audio/pulse.wav')
+    // musicEl = new Audio('/audio/delta_descent.wav')
     musicEl.loop = true
     musicEl.volume = musicVolume.value
     musicEl.play().catch(() => {})

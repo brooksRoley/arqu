@@ -56,6 +56,11 @@ const router = createRouter({
       component: () => import('@/views/TranceView.vue')
     },
     {
+      path: '/hypno',
+      name: 'hypno',
+      component: () => import('@/views/HypnoView.vue')
+    },
+    {
       path: '/poll',
       redirect: '/'
     },
