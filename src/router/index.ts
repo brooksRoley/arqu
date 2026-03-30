@@ -37,7 +37,7 @@ const router = createRouter({
     },
     {
       path: '/liquidglass',
-      name: 'mp3-reader sandbox',
+      name: 'Song sandbox',
       component: () => import('@/views/LiquidGlassView.vue')
     },
     {

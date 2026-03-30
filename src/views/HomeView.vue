@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, reactive, computed, onMounted, onUnmounted } from 'vue'
+import { ref, reactive, computed, nextTick, watch, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { usePollStore } from '@/composables/usePollStore'
 import { useMeditation } from '@/composables/useMeditation'
@@ -12,7 +12,16 @@ const med = useMeditation()
 
 // ── Cosmic physics background ────────────────────────────────────
 const bgCanvas = ref<HTMLCanvasElement>()
-const { init: initCosmic, destroy: destroyCosmic } = useCosmicPhysics(bgCanvas, {
+// Card element refs for physics attractor positions
+const featuredCardEl = ref<HTMLElement>()
+const checkinCardEl = ref<HTMLElement>()
+const journalCardEl = ref<HTMLElement>()
+const meditationCardEl = ref<HTMLElement>()
+const readerCardEl = ref<HTMLElement>()
+const audioCardEl = ref<HTMLElement>()
+const glassCardEl = ref<HTMLElement>()
+
+const { init: initCosmic, destroy: destroyCosmic, setTiltGravity, setCardAttractors } = useCosmicPhysics(bgCanvas, {
   particleCount: 120,
   starCount: 100,
   enableKeyboard: false,
@@ -203,6 +212,7 @@ let lastDragY = 0
 let springId: number | null = null
 
 function runSpring() {
+  setTiltGravity(tiltTarget.y * 0.022, tiltTarget.x * 0.016)
   tiltTarget.x *= 0.87
   tiltTarget.y *= 0.87
   sceneTilt.x += (tiltTarget.x - sceneTilt.x) * 0.11
@@ -238,6 +248,7 @@ function onMouseMove(e: MouseEvent) {
   tiltTarget.x = Math.max(-6, Math.min(6, tiltTarget.x - dy * 0.06))
   sceneTilt.x = tiltTarget.x
   sceneTilt.y = tiltTarget.y
+  setTiltGravity(tiltTarget.y * 0.022, tiltTarget.x * 0.016)
 }
 
 function onMouseUp() {
@@ -263,6 +274,7 @@ function onTouchMove(e: TouchEvent) {
   tiltTarget.x = Math.max(-6, Math.min(6, tiltTarget.x - dy * 0.04))
   sceneTilt.x = tiltTarget.x
   sceneTilt.y = tiltTarget.y
+  setTiltGravity(tiltTarget.y * 0.022, tiltTarget.x * 0.016)
 }
 
 function onTouchEnd() {
@@ -276,6 +288,75 @@ const sceneStyle = computed(() => ({
 const titleStyle = computed(() => ({
   transform: `translate(${-sceneTilt.y * 3.5}px, ${sceneTilt.x * 2.5}px)`,
 }))
+
+// ── Physics integration ──────────────────────────────────────────
+// Masses normalized from source file sizes (bytes → 0.4–3.0 range)
+// min=useMeditation 6.6KB, max=HomeView 37.6KB
+const CARD_MASSES: Record<string, number> = {
+  featured:   1.5,  // discovery hub
+  checkin:    1.3,  // CheckInView 17.8KB
+  journal:    1.2,  // JournalView 16.4KB
+  meditation: 0.4,  // useMeditation 6.6KB
+  reader:     0.8,  // ReaderView 11.8KB
+  audio:      1.7,  // AudioplayerView 21.6KB — heaviest view
+  glass:      0.7,  // GlassView 10.4KB
+}
+const NAV_MASSES: Record<string, number> = {
+  '/':               3.0,  // HomeView 37.6KB
+  '/reader':         0.8,  // ReaderView 11.8KB
+  '/glass':          0.7,  // GlassView 10.4KB
+  '/audio':          1.7,  // AudioplayerView 21.6KB
+  '/journal':        1.2,  // JournalView 16.4KB
+  '/checkin':        1.3,  // CheckInView 17.8KB
+  '/calibrate':      0.5,  // OauthView 6.3KB
+  '/psychoanalysis': 1.1,  // PsychoanalysisView 15.2KB
+}
+
+function updateCardAttractors() {
+  const defs: { el: HTMLElement | undefined; key: string }[] = [
+    { el: featuredCardEl.value,   key: 'featured' },
+    { el: checkinCardEl.value,    key: 'checkin' },
+    { el: journalCardEl.value,    key: 'journal' },
+    { el: meditationCardEl.value, key: 'meditation' },
+    { el: readerCardEl.value,     key: 'reader' },
+    { el: audioCardEl.value,      key: 'audio' },
+    { el: glassCardEl.value,      key: 'glass' },
+  ]
+  const attractors: { x: number; y: number; mass: number }[] = defs
+    .filter((d) => d.el)
+    .map((d) => {
+      const r = d.el!.getBoundingClientRect()
+      return { x: r.left + r.width / 2, y: r.top + r.height / 2, mass: CARD_MASSES[d.key] }
+    })
+
+  // Nav links as additional attractors, sized by their bundle weight
+  const navLinks = document.querySelectorAll<HTMLAnchorElement>('.nav-link')
+  const linkRects: { rect: DOMRect; mass: number }[] = []
+  navLinks.forEach((el) => {
+    const href = el.getAttribute('href') ?? '/'
+    const mass = NAV_MASSES[href] ?? 0.6
+    const rect = el.getBoundingClientRect()
+    linkRects.push({ rect, mass })
+    attractors.push({ x: rect.left + rect.width / 2, y: rect.top + rect.height / 2, mass })
+  })
+
+  // Gap attractors between adjacent nav links (lighter, proportional to neighbors)
+  for (let i = 0; i < linkRects.length - 1; i++) {
+    const a = linkRects[i], b = linkRects[i + 1]
+    attractors.push({
+      x: (a.rect.right + b.rect.left) / 2,
+      y: (a.rect.top + a.rect.bottom + b.rect.top + b.rect.bottom) / 4,
+      mass: (a.mass + b.mass) * 0.2,
+    })
+  }
+
+  setCardAttractors(attractors)
+}
+
+watch(stage, (val) => {
+  if (val === 'home') nextTick(updateCardAttractors)
+  else setCardAttractors([])
+})
 
 // ── Per-card 3D tilt (key-based for dynamic cards) ───────────────
 const cardTilts = reactive(
@@ -334,7 +415,10 @@ onMounted(async () => {
   window.addEventListener('touchstart', onTouchStart, { passive: true })
   window.addEventListener('touchmove', onTouchMove, { passive: true })
   window.addEventListener('touchend', onTouchEnd, { passive: true })
+  window.addEventListener('resize', updateCardAttractors)
   await initCosmic()
+  await nextTick()
+  updateCardAttractors()
 })
 
 onUnmounted(() => {
@@ -346,6 +430,7 @@ onUnmounted(() => {
   window.removeEventListener('touchstart', onTouchStart)
   window.removeEventListener('touchmove', onTouchMove)
   window.removeEventListener('touchend', onTouchEnd)
+  window.removeEventListener('resize', updateCardAttractors)
   med.stop()
 })
 </script>
@@ -376,6 +461,7 @@ onUnmounted(() => {
           <!-- Featured card -->
           <div
             class="featured-card"
+            ref="featuredCardEl"
             :style="cardStyle('featured')"
             @pointermove="onCardMove($event, 'featured')"
             @pointerenter="onCardEnter('featured')"
@@ -406,6 +492,7 @@ onUnmounted(() => {
           <div class="nav-grid">
             <router-link
               to="/checkin"
+              ref="checkinCardEl"
               class="nav-card nav-card--pipeline"
               :style="cardStyle('checkin')"
               @pointermove="onCardMove($event, 'checkin')"
@@ -420,6 +507,7 @@ onUnmounted(() => {
 
             <router-link
               to="/journal"
+              ref="journalCardEl"
               class="nav-card"
               :style="cardStyle('journal')"
               @pointermove="onCardMove($event, 'journal')"
@@ -434,6 +522,7 @@ onUnmounted(() => {
 
             <div
               class="nav-card nav-card--meditation"
+              ref="meditationCardEl"
               :style="cardStyle('meditation')"
               @pointermove="onCardMove($event, 'meditation')"
               @pointerenter="onCardEnter('meditation')"
@@ -448,6 +537,7 @@ onUnmounted(() => {
 
             <router-link
               to="/reader"
+              ref="readerCardEl"
               class="nav-card"
               :style="cardStyle('reader')"
               @pointermove="onCardMove($event, 'reader')"
@@ -462,6 +552,7 @@ onUnmounted(() => {
 
             <router-link
               to="/audio"
+              ref="audioCardEl"
               class="nav-card"
               :style="cardStyle('audio')"
               @pointermove="onCardMove($event, 'audio')"
@@ -476,6 +567,7 @@ onUnmounted(() => {
 
             <router-link
               to="/glass"
+              ref="glassCardEl"
               class="nav-card"
               :style="cardStyle('glass')"
               @pointermove="onCardMove($event, 'glass')"

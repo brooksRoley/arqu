@@ -135,6 +135,50 @@ let solOsc: Tone.Oscillator | null = null
 let solGain: Tone.Gain | null = null
 let solLfo: Tone.LFO | null = null
 
+// ── Phase-aware layer balance ─────────────────────────────────────
+// Defines per-phase dB levels for each entrainment layer and the Nerve Pulse
+// LFO frequency. Binaural layers are staggered so only one is dominant per
+// phase; the others act as harmonics rather than competing targets.
+interface LayerBalance {
+  alpha: number      // alphaL/R volume dB — dominant during induction/coherence
+  theta: number      // thetaL/R volume dB — dominant during deepen
+  schumann: number   // schumannL/R volume dB — dominant during joy
+  baselineVol: number // bmCarrier.volume additive offset (LFO adds to this)
+  baselineHz: number  // bmPulse.frequency — ramps down with session depth
+}
+
+const PHASE_BALANCE: Partial<Record<TrancePhase, LayerBalance>> = {
+  //             alpha   theta   schumann  bVol  bHz
+  induction: {   alpha: -18, theta: -30, schumann: -32, baselineVol:  -8, baselineHz: 4.0 },
+  coherence: {   alpha: -20, theta: -22, schumann: -28, baselineVol:  -8, baselineHz: 4.0 },
+  deepen:    {   alpha: -30, theta: -16, schumann: -26, baselineVol:  -4, baselineHz: 2.4 },
+  joy:       {   alpha: -28, theta: -22, schumann: -18, baselineVol: -16, baselineHz: 2.0 },
+  wake:      {   alpha: -40, theta: -40, schumann: -40, baselineVol: -30, baselineHz: 1.5 },
+}
+
+function applyPhaseLayerBalance(p: TrancePhase, ramp = 6) {
+  const b = PHASE_BALANCE[p]
+  if (!b) return
+  if (alphaL) {
+    alphaL.volume.rampTo(b.alpha, ramp)
+    alphaR!.volume.rampTo(b.alpha, ramp)
+  }
+  if (thetaL) {
+    thetaL.volume.rampTo(b.theta, ramp)
+    thetaR!.volume.rampTo(b.theta, ramp)
+  }
+  if (schumannL) {
+    schumannL.volume.rampTo(b.schumann, ramp)
+    schumannR!.volume.rampTo(b.schumann, ramp)
+  }
+  if (bmCarrier) bmCarrier.volume.rampTo(b.baselineVol, ramp)
+  if (bmPulse)   bmPulse.frequency.rampTo(b.baselineHz, ramp)
+}
+
+function phaseVol(key: keyof Omit<LayerBalance, 'baselineVol' | 'baselineHz'>, fallback = -18): number {
+  return PHASE_BALANCE[phase.value]?.[key] ?? fallback
+}
+
 // ── Core audio setup ──
 function initCoreAudio() {
   if (audioReady) return
@@ -158,8 +202,11 @@ async function startBaselineModulator() {
   await Tone.start()
   if (bmCarrier) return
   bmCarrier = new Tone.Oscillator(432, 'sine').toDestination()
-  bmCarrier.volume.value = -12
-  bmPulse = new Tone.LFO({ frequency: 2.4, type: 'square', min: -24, max: 0 }).start()
+  // Base volume is the phase-appropriate offset; LFO adds ±12 dB swing on top
+  bmCarrier.volume.value = PHASE_BALANCE[phase.value]?.baselineVol ?? -8
+  // Sine LFO for smooth amplitude swell; frequency matches current phase depth
+  const initHz = PHASE_BALANCE[phase.value]?.baselineHz ?? 2.4
+  bmPulse = new Tone.LFO({ frequency: initHz, type: 'sine', min: -28, max: -4 }).start()
   bmPulse.connect(bmCarrier.volume)
   bmCarrier.start()
   baselineModulatorActive.value = true
@@ -248,8 +295,8 @@ async function startAlphaWave() {
   alphaPanR = new Tone.Panner(1).toDestination()
   alphaL = new Tone.Oscillator(195, 'sine').connect(alphaPanL)
   alphaR = new Tone.Oscillator(205, 'sine').connect(alphaPanR)
-  alphaL.volume.value = -18
-  alphaR.volume.value = -18
+  alphaL.volume.value = phaseVol('alpha')
+  alphaR.volume.value = phaseVol('alpha')
   alphaL.start()
   alphaR.start()
   alphaWaveActive.value = true
@@ -273,8 +320,8 @@ async function startThetaDream() {
   thetaPanR = new Tone.Panner(1).toDestination()
   thetaL = new Tone.Oscillator(177, 'sine').connect(thetaPanL)
   thetaR = new Tone.Oscillator(183, 'sine').connect(thetaPanR)
-  thetaL.volume.value = -18
-  thetaR.volume.value = -18
+  thetaL.volume.value = phaseVol('theta')
+  thetaR.volume.value = phaseVol('theta')
   thetaL.start()
   thetaR.start()
   thetaDreamActive.value = true
@@ -298,8 +345,8 @@ async function startSchumann() {
   schumannPanR = new Tone.Panner(1).toDestination()
   schumannL = new Tone.Oscillator(246.085, 'sine').connect(schumannPanL)
   schumannR = new Tone.Oscillator(253.915, 'sine').connect(schumannPanR)
-  schumannL.volume.value = -18
-  schumannR.volume.value = -18
+  schumannL.volume.value = phaseVol('schumann')
+  schumannR.volume.value = phaseVol('schumann')
   schumannL.start()
   schumannR.start()
   schumannActive.value = true
@@ -372,6 +419,7 @@ function runInduction() {
   phase.value = 'induction'
   gainNode!.gain.rampTo(0.5, 5)
   lfo!.frequency.rampTo(6, 30)
+  applyPhaseLayerBalance('induction', 5)
   // Cycle through induction phrases every ~3s over the 30s window
   schedulePhrases(INDUCTION_PHRASES, 3000)
   phaseTimer = setTimeout(() => runCoherence(), 30000)
@@ -380,6 +428,7 @@ function runInduction() {
 function runCoherence() {
   phase.value = 'coherence'
   clearPhraseTimers()
+  applyPhaseLayerBalance('coherence', 10)
   setupCoherenceLoop()
 }
 
@@ -387,6 +436,7 @@ function runDeepen() {
   if (phase.value === 'deepen') return
   phase.value = 'deepen'
   lfo!.frequency.rampTo(4.5, 60)
+  applyPhaseLayerBalance('deepen', 20)
   if (swellOsc) { swellOsc.stop(); swellOsc.dispose(); swellOsc = null }
   if (swellGain) { swellGain.dispose(); swellGain = null }
   if (coherenceLoopId !== undefined) {
@@ -401,19 +451,21 @@ function runDeepen() {
 function runJoy() {
   if (phase.value === 'joy') return
   phase.value = 'joy'
-  // Audio: stop sub-bass pulses, soften gain
+  // Audio: stop sub-bass pulses, soften core gain
   if (deepenLoop) { deepenLoop.stop().dispose(); deepenLoop = null }
   gainNode?.gain.rampTo(0.2, 8)
   lfo?.frequency.rampTo(3, 12)
+  applyPhaseLayerBalance('joy', 10)
   // Joy phrases every ~4s, then auto-wake
   schedulePhrases(JOY_PHRASES, 4000, () => runWake())
 }
 
 function runWake() {
   phase.value = 'wake'
-  // Audio: fade everything out over ~18s
+  // Audio: fade core and all layers out over ~18s
   gainNode?.gain.rampTo(0, 18)
   lfo?.frequency.rampTo(1, 18)
+  applyPhaseLayerBalance('wake', 18)
   // Wake countdown phrases every ~3s, then end session
   schedulePhrases(WAKE_PHRASES, 3000, () => {
     setTimeout(() => stopSession(), 2000)

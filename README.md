@@ -20,30 +20,30 @@ Channel Zero is two things layered on top of each other:
 
 ### Public (no account needed)
 
-| Route | What it does |
-|---|---|
-| `/` | The home page. Shows a "Discover" card on your first visit. After you take the quiz it shows you recommended sessions based on your result. There's also a 5-minute guided meditation you can launch from here. |
-| `/glass` | **Glass Studio.** Upload a video or audio file. Type words that appear huge over it. Pick a Tone.js synth bed that reacts to the speech in the file — it gets quieter when someone is talking and swells in the pauses. Hit Export and it records everything together as a video file you can download. |
-| `/trance` | **Trance Tone Engine.** Five gamma-range binaural beat patterns (Focus, Relaxation, Deepening, Sensory, Suggestion), each with its own canvas animation and word cycling. Tap to shift between them. Drag to push the visual center. Needs stereo headphones to actually work. |
-| `/webaudio` | **Star Tunnel.** A starfield that flies toward you while binaural tones play. Has a full guided session: induction → breath coherence phase → deep entrainment → warmth → wake. The breathing ring tells you when to inhale and exhale. Hold the sync button to match your breath and build coherence. |
-| `/spiral` | A hypnotic spiral with trance words cycling over it. No controls — just stare. |
-| `/zeromind` | Generative visuals with streaming text. Words appear and dissolve over flowing patterns. |
-| `/reader` | A speed reader. Paste or upload any text. Words flash one at a time (or in 2–3 word phrases) at a set WPM. It can sync with the trance engine so the reading tempo locks to a 2.4 Hz entrainment baseline. Click any word to jump to that position. |
-| `/audio` | A simple audio player. Play the ambient tracks with a visual interface. |
-| `/liquidglass` | Liquid glass sandbox. A mouse-tracking water/liquid canvas effect. Upload an image or video as a background. The `?heavy` query param preloads the heavy ambient track. |
+| Route          | What it does                                                                                                                                                                                                                                                                                            |
+| -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `/`            | The home page. Shows a "Discover" card on your first visit. After you take the quiz it shows you recommended sessions based on your result. There's also a 5-minute guided meditation you can launch from here.                                                                                         |
+| `/glass`       | **Glass Studio.** Upload a video or audio file. Type words that appear huge over it. Pick a Tone.js synth bed that reacts to the speech in the file — it gets quieter when someone is talking and swells in the pauses. Hit Export and it records everything together as a video file you can download. |
+| `/trance`      | **Trance Tone Engine.** Five gamma-range binaural beat patterns (Focus, Relaxation, Deepening, Sensory, Suggestion), each with its own canvas animation and word cycling. Tap to shift between them. Drag to push the visual center. Needs stereo headphones to actually work.                          |
+| `/webaudio`    | **Star Tunnel.** A starfield that flies toward you while binaural tones play. Has a full guided session: induction → breath coherence phase → deep entrainment → warmth → wake. The breathing ring tells you when to inhale and exhale. Hold the sync button to match your breath and build coherence.  |
+| `/spiral`      | A hypnotic spiral with trance words cycling over it. No controls — just stare.                                                                                                                                                                                                                          |
+| `/zeromind`    | Generative visuals with streaming text. Words appear and dissolve over flowing patterns.                                                                                                                                                                                                                |
+| `/reader`      | A speed reader. Paste or upload any text. Words flash one at a time (or in 2–3 word phrases) at a set WPM. It can sync with the trance engine so the reading tempo locks to a 2.4 Hz entrainment baseline. Click any word to jump to that position.                                                     |
+| `/audio`       | A simple audio player. Play the ambient tracks with a visual interface.                                                                                                                                                                                                                                 |
+| `/liquidglass` | Liquid glass sandbox. A mouse-tracking water/liquid canvas effect. Upload an image or video as a background. The `?heavy` query param preloads the heavy ambient track.                                                                                                                                 |
 
 ### Requires Account
 
-| Route | What it does |
-|---|---|
-| `/login` | Create an account or sign in. Passwords are hashed with Argon2. JWT tokens last 24 hours. |
-| `/journal` | Write, draw, record audio. Entries sync to the backend and embed into Pinecone so the system can find memories relevant to your confessional. Local-first — works offline. |
-| `/checkin` | Daily dashboard. Mood arc, streak counter, intention setting. Pulls recent journal entries and synthesizes a daily reflection. |
-| `/intake` | The confessional. Write about what's actually going on. The text is encrypted at rest (AES-256-GCM). The server extracts your attachment style and defense mechanisms, combines it with your Spotify audio profile, and generates a 1,536-dimensional embedding that becomes your coordinate in psychological space. |
-| `/game` | The result. Your three nearest psychological neighbors. The people who, right now, occupy the same region of the map as you. Karma mechanics — whether you follow through or ghost — shift your coordinates over time. |
-| `/calibrate` | Connect your accounts: Spotify, Google, Twitter, Strava, Letterboxd, Steam. Each adds another data layer to your vibe vector. |
-| `/peripheral` | Sync peripheral data from connected accounts. |
-| `/psychoanalysis` | Your psychometric scores: Big Five (IPIP-NEO), attachment (ECR-R), love language, sociosexual orientation, values cluster. Generated from your intake and quiz history. |
+| Route             | What it does                                                                                                                                                                                                                                                                                                         |
+| ----------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `/login`          | Create an account or sign in. Passwords are hashed with Argon2. JWT tokens last 24 hours.                                                                                                                                                                                                                            |
+| `/journal`        | Write, draw, record audio. Entries sync to the backend and embed into Pinecone so the system can find memories relevant to your confessional. Local-first — works offline.                                                                                                                                           |
+| `/checkin`        | Daily dashboard. Mood arc, streak counter, intention setting. Pulls recent journal entries and synthesizes a daily reflection.                                                                                                                                                                                       |
+| `/intake`         | The confessional. Write about what's actually going on. The text is encrypted at rest (AES-256-GCM). The server extracts your attachment style and defense mechanisms, combines it with your Spotify audio profile, and generates a 1,536-dimensional embedding that becomes your coordinate in psychological space. |
+| `/game`           | The result. Your three nearest psychological neighbors. The people who, right now, occupy the same region of the map as you. Karma mechanics — whether you follow through or ghost — shift your coordinates over time.                                                                                               |
+| `/calibrate`      | Connect your accounts: Spotify, Google, Twitter, Strava, Letterboxd, Steam. Each adds another data layer to your vibe vector.                                                                                                                                                                                        |
+| `/peripheral`     | Sync peripheral data from connected accounts.                                                                                                                                                                                                                                                                        |
+| `/psychoanalysis` | Your psychometric scores: Big Five (IPIP-NEO), attachment (ECR-R), love language, sociosexual orientation, values cluster. Generated from your intake and quiz history.                                                                                                                                              |
 
 ---
 
@@ -79,17 +79,17 @@ Login → Poll (profiling) → Journal → Intake (confessional) → Game (deplo
 
 ## Stack
 
-| Layer | Technology |
-|---|---|
-| Frontend | Vue 3 + Vite + TypeScript |
-| Backend | FastAPI + asyncpg (Python) |
-| Primary DB | Neon (serverless PostgreSQL) |
-| Vector DB | Pinecone (ANN matching + semantic memory) |
+| Layer      | Technology                                                     |
+| ---------- | -------------------------------------------------------------- |
+| Frontend   | Vue 3 + Vite + TypeScript                                      |
+| Backend    | FastAPI + asyncpg (Python)                                     |
+| Primary DB | Neon (serverless PostgreSQL)                                   |
+| Vector DB  | Pinecone (ANN matching + semantic memory)                      |
 | Embeddings | OpenAI `text-embedding-3-small` (1,536 dims, server-level key) |
-| Encryption | AES-256-GCM (confession logs, API keys, OAuth tokens) |
-| Auth | JWT (24-hour tokens, Argon2 password hashing) |
-| Audio | Tone.js 15 + Web Audio API |
-| Deployment | Vercel (frontend) + Render (backend) |
+| Encryption | AES-256-GCM (confession logs, API keys, OAuth tokens)          |
+| Auth       | JWT (24-hour tokens, Argon2 password hashing)                  |
+| Audio      | Tone.js 15 + Web Audio API                                     |
+| Deployment | Vercel (frontend) + Render (backend)                           |
 
 ---
 
@@ -131,23 +131,23 @@ Journal entries embed into Pinecone's `journal` namespace on create/sync (fire-a
 
 ## API Routes
 
-| Method | Path | Description |
-|---|---|---|
-| POST | `/api/auth/register` | Create account |
-| POST | `/api/auth/login` | Get JWT |
-| GET | `/api/auth/me` | Current user |
-| POST | `/api/journal/entries` | Create entry (auto-embeds to Pinecone) |
-| GET | `/api/journal/entries` | List entries |
-| PATCH | `/api/journal/entries/:id` | Update entry |
-| POST | `/api/journal/sync` | Offline-first bulk sync |
-| POST | `/api/poll/submit` | Submit personality quiz |
-| POST | `/api/intake/confess` | Confessional → vibe vector → Pinecone |
-| GET | `/api/intake/vector` | Current vibe vector (Neon) |
-| GET | `/api/intake/match` | 3 nearest psychological neighbors (Pinecone ANN) |
-| GET | `/api/spotify/connect` | Redirect to Spotify OAuth |
-| GET | `/api/spotify/callback` | OAuth callback — fetches audio profile, re-embeds |
-| POST | `/api/llm/proxy` | Forward LLM request with user's stored key |
-| POST | `/api/llm/keys` | Store encrypted LLM API key |
+| Method | Path                       | Description                                       |
+| ------ | -------------------------- | ------------------------------------------------- |
+| POST   | `/api/auth/register`       | Create account                                    |
+| POST   | `/api/auth/login`          | Get JWT                                           |
+| GET    | `/api/auth/me`             | Current user                                      |
+| POST   | `/api/journal/entries`     | Create entry (auto-embeds to Pinecone)            |
+| GET    | `/api/journal/entries`     | List entries                                      |
+| PATCH  | `/api/journal/entries/:id` | Update entry                                      |
+| POST   | `/api/journal/sync`        | Offline-first bulk sync                           |
+| POST   | `/api/poll/submit`         | Submit personality quiz                           |
+| POST   | `/api/intake/confess`      | Confessional → vibe vector → Pinecone             |
+| GET    | `/api/intake/vector`       | Current vibe vector (Neon)                        |
+| GET    | `/api/intake/match`        | 3 nearest psychological neighbors (Pinecone ANN)  |
+| GET    | `/api/spotify/connect`     | Redirect to Spotify OAuth                         |
+| GET    | `/api/spotify/callback`    | OAuth callback — fetches audio profile, re-embeds |
+| POST   | `/api/llm/proxy`           | Forward LLM request with user's stored key        |
+| POST   | `/api/llm/keys`            | Store encrypted LLM API key                       |
 
 ---
 
@@ -155,15 +155,15 @@ Journal entries embed into Pinecone's `journal` namespace on create/sync (fire-a
 
 Migrations run in order on deploy (`python -m app.migrate`):
 
-| File | Contents |
-|---|---|
-| `001_init.sql` | users, journal_entries, poll_tokens, audio_clips, user_api_keys |
-| `002_intake.sql` | intake_shadow_logs, vibe_vectors |
-| `003_social.sql` | oauth_tokens, karma_ledger, venues, `vibe_vectors.spotify_data` |
-| `004_oauth_nonces.sql` | OAuth replay protection nonces |
-| `005_oauth_providers.sql` | Provider-specific OAuth token columns |
-| `006_strava_provider.sql` | Strava OAuth + activity data |
-| `007_psychometrics.sql` | user_psychometrics (Big Five, ECR-R, love language, etc.) |
+| File                      | Contents                                                           |
+| ------------------------- | ------------------------------------------------------------------ |
+| `001_init.sql`            | users, journal_entries, poll_tokens, audio_clips, user_api_keys    |
+| `002_intake.sql`          | intake_shadow_logs, vibe_vectors                                   |
+| `003_social.sql`          | oauth_tokens, karma_ledger, venues, `vibe_vectors.spotify_data`    |
+| `004_oauth_nonces.sql`    | OAuth replay protection nonces                                     |
+| `005_oauth_providers.sql` | Provider-specific OAuth token columns                              |
+| `006_strava_provider.sql` | Strava OAuth + activity data                                       |
+| `007_psychometrics.sql`   | user_psychometrics (Big Five, ECR-R, love language, etc.)          |
 | `008_peripheral_data.sql` | Peripheral data columns on vibe_vectors, Steam/Letterboxd on users |
 
 ---
@@ -276,7 +276,7 @@ Red-team audit identified 15 vulnerabilities. Critical and high items remediated
 
 ### BYOK LLM Architecture (User-Supplied API Keys)
 
-> **Goal:** Users bring their own LLM API keys so Oracle synthesis, intake analysis, and community games run on *their* tokens instead of our server-level `OPENAI_EMBED_KEY`.
+> **Goal:** Users bring their own LLM API keys so Oracle synthesis, intake analysis, and community games run on _their_ tokens instead of our server-level `OPENAI_EMBED_KEY`.
 
 - [ ] Add OAuth/BYOK flows for: **OpenAI**, **Anthropic (Claude)**, **Google (Gemini)**, **xAI (Grok)**
 - [ ] Extend `user_api_keys` table — already supports `provider` field (`'anthropic'`, `'openai'`, `'together'`); add `'google'`, `'xai'`

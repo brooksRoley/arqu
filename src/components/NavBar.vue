@@ -52,13 +52,41 @@ const {
 
 // Tone layer definitions for the panel UI
 const toneLayers = computed(() => [
-  { key: 'alpha',    name: 'Alpha Flow',   desc: 'calm focus',     active: alphaWaveActive.value,        toggle: toggleAlphaWave },
-  { key: 'theta',    name: 'Deep Theta',   desc: 'meditation',     active: thetaDreamActive.value,       toggle: toggleThetaDream },
-  { key: 'schumann', name: 'Earth Tone',   desc: 'grounding',      active: schumannActive.value,         toggle: toggleSchumann },
-  { key: 'baseline', name: 'Nerve Pulse',  desc: 'resonance',      active: baselineModulatorActive.value, toggle: toggleBaselineModulator },
-  { key: 'ptosis',   name: 'Drift',        desc: 'surrender',      active: ptosisInducerActive.value,    toggle: togglePtosisInducer },
-  { key: 'av',       name: 'Pulse Sync',   desc: 'audiovisual',    active: avSyncActive.value,           toggle: toggleAVSync },
-  { key: 'solfeg',   name: 'Restore',      desc: 'healing tone',   active: solfeggioActive.value,        toggle: toggleSolfeggio },
+  {
+    key: 'alpha', name: 'Alpha Flow', desc: '10 Hz · binaural',
+    active: alphaWaveActive.value, toggle: toggleAlphaWave,
+    tooltip: '195 Hz left / 205 Hz right → 10 Hz perceived beat.\nAlpha entrainment for relaxed focus and flow state.\nUse at session start or during coherence phase.\n⚠ Requires headphones.',
+  },
+  {
+    key: 'theta', name: 'Deep Theta', desc: '6 Hz · binaural',
+    active: thetaDreamActive.value, toggle: toggleThetaDream,
+    tooltip: '177 Hz left / 183 Hz right → 6 Hz perceived beat.\nTheta band deepens meditation and invites hypnagogic imagery.\nBest activated during descent phase.\n⚠ Requires headphones.',
+  },
+  {
+    key: 'schumann', name: 'Earth Tone', desc: '7.83 Hz · binaural',
+    active: schumannActive.value, toggle: toggleSchumann,
+    tooltip: '246 Hz left / 254 Hz right → 7.83 Hz perceived beat.\nEarth\'s Schumann resonance — grounding and coherence.\nLayer lightly under a dominant binaural beat.\n⚠ Requires headphones.',
+  },
+  {
+    key: 'baseline', name: 'Nerve Pulse', desc: '2.4 Hz · isochronic',
+    active: baselineModulatorActive.value, toggle: toggleBaselineModulator,
+    tooltip: '432 Hz carrier · 2.4 Hz amplitude modulation.\nIsochronic delta pulse — no headphones required.\nPairs with Pulse Sync for audiovisual reinforcement.\nSlower than theta; most effective in deep descent.',
+  },
+  {
+    key: 'ptosis', name: 'Drift', desc: '0.5 Hz · noise sweep',
+    active: ptosisInducerActive.value, toggle: togglePtosisInducer,
+    tooltip: 'Pink noise through a swept lowpass filter.\nCutoff oscillates 100–800 Hz at 0.5 Hz, slowly drifting\nto 0.42 Hz over 5 min to prevent neural adaptation.\nSupports eyelid heaviness and bodily surrender.',
+  },
+  {
+    key: 'av', name: 'Pulse Sync', desc: '2.4 Hz · AV lock',
+    active: avSyncActive.value, toggle: toggleAVSync,
+    tooltip: '144 BPM synth pulse (2.4 beat/s).\nAudiovisual isochronic entrainment — aligns with\nNerve Pulse frequency for reinforced delta rhythm.\nVisual flash fires in lockstep with the audio pulse.',
+  },
+  {
+    key: 'solfeg', name: 'Restore', desc: '528 Hz · solfeggio',
+    active: solfeggioActive.value, toggle: toggleSolfeggio,
+    tooltip: '528 Hz pure sine with 1 Hz tremolo.\nSolfeggio "miracle tone" associated with restoration\nand cellular coherence. Gentle, always-on presence —\nsafe to layer under any other module.',
+  },
 ])
 
 const canWindDown = computed(() =>
@@ -170,7 +198,12 @@ const hiddenRoutes = new Set([
 const navRoutes = computed(() => {
   return router
     .getRoutes()
-    .filter((route) => route.name && route.path !== '/:pathMatch(.*)*' && !hiddenRoutes.has(route.name as string))
+    .filter((route) =>
+      route.name &&
+      route.path !== '/:pathMatch(.*)*' &&
+      !hiddenRoutes.has(route.name as string) &&
+      (!route.meta?.requiresAuth || isAuthenticated.value)
+    )
     .map((route) => ({
       name: route.name as string,
       path: route.path,
@@ -350,6 +383,30 @@ onUnmounted(() => {
         </svg>
       </button>
 
+      <!-- Auth button -->
+      <RouterLink
+        v-if="!isAuthenticated"
+        to="/login"
+        class="auth-btn"
+        aria-label="Login"
+        @click="menuOpen = false"
+      >
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M15 3h4a2 2 0 012 2v14a2 2 0 01-2 2h-4M10 17l5-5-5-5M15 12H3"/>
+        </svg>
+      </RouterLink>
+      <button
+        v-else
+        class="auth-btn auth-btn--user"
+        @click="handleLogout"
+        :title="`Logout ${user?.display_name || user?.email || ''}`"
+        aria-label="Logout"
+      >
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
+        </svg>
+      </button>
+
       <button
         :class="['menu-btn', { 'menu-btn--floating': isFullBleed && !menuOpen }]"
         @click="menuOpen = !menuOpen"
@@ -420,6 +477,7 @@ onUnmounted(() => {
               :class="{ 'tone-chip--active': layer.active }"
               @click="layer.toggle()"
             >
+              <span class="tone-tip">{{ layer.tooltip }}</span>
               <span class="tone-name">{{ layer.name }}</span>
               <span class="tone-desc">{{ layer.desc }}</span>
             </button>
@@ -438,19 +496,6 @@ onUnmounted(() => {
           </div>
         </div>
 
-        <!-- Account -->
-        <div class="panel-section">
-          <span class="section-label">Account</span>
-          <div class="section-row">
-            <template v-if="isAuthenticated">
-              <span class="panel-stat">{{ user?.display_name || user?.email }}</span>
-              <button class="panel-btn" @click="handleLogout">Logout</button>
-            </template>
-            <RouterLink v-else to="/login" class="panel-btn" @click="menuOpen = false">
-              Login
-            </RouterLink>
-          </div>
-        </div>
       </div>
     </transition>
   </nav>
@@ -581,7 +626,8 @@ onUnmounted(() => {
 .navbar--floating .menu-btn,
 .navbar--floating .fullscreen-btn,
 .navbar--floating .nav-links,
-.navbar--floating .navbar-panel {
+.navbar--floating .navbar-panel,
+.navbar--floating .auth-btn {
   pointer-events: auto;
 }
 
@@ -677,6 +723,43 @@ onUnmounted(() => {
 .menu-btn:hover {
   color: #e2e8f0;
   border-color: rgba(255, 255, 255, 0.25);
+}
+
+/* ── Auth button ── */
+.auth-btn {
+  flex-shrink: 0;
+  margin-left: auto;
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 0.4rem;
+  color: #94a3b8;
+  width: 2.25rem;
+  height: 2.25rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+  transition:
+    color 0.15s,
+    border-color 0.15s,
+    background 0.15s;
+  padding: 0;
+}
+
+.auth-btn svg {
+  width: 16px;
+  height: 16px;
+}
+
+.auth-btn:hover {
+  color: #e2e8f0;
+  border-color: rgba(255, 255, 255, 0.25);
+}
+
+.auth-btn--user:hover {
+  color: #f87171;
+  border-color: rgba(248, 113, 113, 0.4);
 }
 
 /* ── Fullscreen button ── */
@@ -913,6 +996,7 @@ onUnmounted(() => {
 }
 
 .tone-chip {
+  position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -960,6 +1044,51 @@ onUnmounted(() => {
 
 .tone-chip--active .tone-desc {
   color: rgba(165, 180, 252, 0.6);
+}
+
+/* ── Tone chip tooltip ── */
+.tone-tip {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+  width: 220px;
+  background: rgba(10, 8, 20, 0.97);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 0.55rem;
+  padding: 0.55rem 0.7rem;
+  font-size: 0.6rem;
+  line-height: 1.65;
+  color: #94a3b8;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.18s ease;
+  z-index: 200;
+  text-transform: none;
+  text-align: left;
+  white-space: pre-line;
+  letter-spacing: 0.01em;
+  font-weight: 400;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.5);
+}
+
+.tone-tip::after {
+  content: '';
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border: 5px solid transparent;
+  border-top-color: rgba(10, 8, 20, 0.97);
+}
+
+.tone-chip:hover .tone-tip {
+  opacity: 1;
+}
+
+.tone-chip--active .tone-tip {
+  border-color: rgba(99, 102, 241, 0.25);
+  color: #a5b4fc;
 }
 
 /* ── Desktop tweaks ── */

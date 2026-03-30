@@ -20,7 +20,7 @@ function loadScript(src: string): Promise<void> {
 
 // ── Canvas + cosmic physics ───────────────────────────────────────
 const canvasRef = ref<HTMLCanvasElement>()
-const { loaded, adapt, init: initCosmic, destroy: destroyCosmic, heatOrb } = useCosmicPhysics(canvasRef)
+const { loaded, adapt, init: initCosmic, destroy: destroyCosmic, heatOrb, clickImpulse } = useCosmicPhysics(canvasRef)
 
 // ── Audio state ───────────────────────────────────────────────────
 const audioOn = ref(false)
@@ -103,8 +103,9 @@ watch(() => adapt.engage, (eng) => {
   }
 })
 
-// ── Tap ───────────────────────────────────────────────────────────
-async function handleTap() {
+// ── Tap / Click ───────────────────────────────────────────────────
+async function handleClick(e: MouseEvent) {
+  clickImpulse(e.clientX, e.clientY)
   if (!audioOn.value) {
     try { await T.start(); initAudio(); audioOn.value = true } catch { /* noop */ }
     if (isReaderMode.value && !isPlaying.value) toggleOrSkip()
@@ -131,7 +132,7 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div class="hypno" @click="handleTap">
+  <div class="hypno" @click="handleClick">
     <canvas ref="canvasRef" class="hypno-canvas" />
 
     <!-- Entry gate -->

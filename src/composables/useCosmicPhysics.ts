@@ -35,6 +35,8 @@ export interface Star {
 export interface Orb {
   body: any; color: OrbDef; radius: number
   heat: number; glowR: number; pulse: number
+  springTarget: { x: number; y: number } | null
+  springHome: { x: number; y: number }
 }
 
 export interface CosmicConfig {
@@ -82,7 +84,10 @@ export function useCosmicPhysics(canvasRef: Ref<HTMLCanvasElement | undefined>, 
   // Keyboard
   const keysDown = new Set<string>()
   let selectedOrb = 0
-  const KEY_FORCE = 4e-4
+  const KEY_FORCE = 6e-3
+
+  // Card attractors (DOM-space positions acting as gravity wells)
+  let cardAttractors: { x: number; y: number; mass: number }[] = []
 
   // ── Init helpers ────────────────────────────────────────────────
   function initStars() {
@@ -125,7 +130,7 @@ export function useCosmicPhysics(canvasRef: Ref<HTMLCanvasElement | undefined>, 
       )
       Body.setVelocity(body, { x: (Math.random() - 0.5) * 1.2, y: (Math.random() - 0.5) * 1.2 })
       Composite.add(engine.world, body)
-      return { body, color, radius: r, heat: 0, glowR: r * 3, pulse: Math.random() * Math.PI * 2 }
+      return { body, color, radius: r, heat: 0, glowR: r * 3, pulse: Math.random() * Math.PI * 2, springTarget: null, springHome: { x: cx, y: cy } }
     })
 
     // Invisible boundary walls
@@ -147,18 +152,50 @@ export function useCosmicPhysics(canvasRef: Ref<HTMLCanvasElement | undefined>, 
     for (let i = 0; i < orbs.length; i++) {
       const o = orbs[i], p = o.body.position
 
-      // Centering
-      Body.applyForce(o.body, p, {
-        x: (cx - p.x) * 3e-5 * centerMul,
-        y: (cy - p.y) * 3e-5 * centerMul,
-      })
+      // ── Resolve natural home (nearest card or screen center) ──
+      let homeX = cx, homeY = cy
+      if (cardAttractors.length > 0) {
+        let caDist = 1e9
+        for (const ca of cardAttractors) {
+          const d = Math.hypot(ca.x - p.x, ca.y - p.y) / ca.mass
+          if (d < caDist) { caDist = d * ca.mass; homeX = ca.x; homeY = ca.y }
+        }
+        const cdf = Math.max(Math.hypot(homeX - p.x, homeY - p.y), 1)
+        Body.applyForce(o.body, p, {
+          x: (homeX - p.x) / cdf * 6e-5 * centerMul,
+          y: (homeY - p.y) / cdf * 6e-5 * centerMul,
+        })
+        const cAng = Math.atan2(p.y - homeY, p.x - homeX) + Math.PI / 2
+        Body.applyForce(o.body, p, { x: Math.cos(cAng) * 3e-5, y: Math.sin(cAng) * 3e-5 })
+      } else {
+        Body.applyForce(o.body, p, {
+          x: (cx - p.x) * 3e-5 * centerMul,
+          y: (cy - p.y) * 3e-5 * centerMul,
+        })
+        const ang = Math.atan2(p.y - cy, p.x - cx) + Math.PI / 2
+        const orbitF = 2e-5 * (1 - adapt.focus * 0.5)
+        Body.applyForce(o.body, p, { x: Math.cos(ang) * orbitF, y: Math.sin(ang) * orbitF })
+      }
+      o.springHome.x = homeX; o.springHome.y = homeY
 
-      // Orbital drift
-      const ang = Math.atan2(p.y - cy, p.x - cx) + Math.PI / 2
-      const orbitF = 2e-5 * (1 - adapt.focus * 0.5)
-      Body.applyForce(o.body, p, { x: Math.cos(ang) * orbitF, y: Math.sin(ang) * orbitF })
+      // ── Spring oscillation (from click) ──
+      if (o.springTarget) {
+        const stx = o.springTarget.x, sty = o.springTarget.y
+        // Pull strongly toward spring target
+        Body.applyForce(o.body, p, {
+          x: (stx - p.x) * 5e-4,
+          y: (sty - p.y) * 5e-4,
+        })
+        // Decay spring target back toward home
+        o.springTarget.x += (homeX - stx) * 0.006
+        o.springTarget.y += (homeY - sty) * 0.006
+        if (Math.hypot(o.springTarget.x - homeX, o.springTarget.y - homeY) < 4) {
+          o.springTarget = null
+          o.body.frictionAir = 0.015
+        }
+      }
 
-      // Orb–orb repulsion
+      // ── Orb–orb repulsion ──
       for (let j = i + 1; j < orbs.length; j++) {
         const q = orbs[j].body.position
         const dx = p.x - q.x, dy = p.y - q.y
@@ -170,7 +207,7 @@ export function useCosmicPhysics(canvasRef: Ref<HTMLCanvasElement | undefined>, 
         }
       }
 
-      // Breathing pulse
+      // ── Breathing pulse ──
       o.pulse += 0.006 + adapt.depth * 0.003
       const wave = Math.sin(o.pulse) * 0.5 + 0.5
       o.glowR = o.radius * (2.5 + wave * 1.5 + o.heat * 2)
@@ -185,26 +222,43 @@ export function useCosmicPhysics(canvasRef: Ref<HTMLCanvasElement | undefined>, 
     const dt60 = dt * 60
 
     for (const p of particles) {
-      let mind = 1e9, mi = 0, mx = W / 2, my = H / 2
+      // Always track nearest orb for color/connections
+      let mind = 1e9, mi = 0
       for (let i = 0; i < orbs.length; i++) {
         const op = orbs[i].body.position
         const d = Math.hypot(op.x - p.x, op.y - p.y)
-        if (d < mind) { mind = d; mi = i; mx = op.x; my = op.y }
+        if (d < mind) { mind = d; mi = i }
       }
       p.nearOrb = mi; p.orbDist = mind
 
-      if (mind > 8) {
-        const dx = mx - p.x, dy = my - p.y
-        const f = attr / Math.max(mind, 40) * dt60
-        p.vx += (dx / mind) * f
-        p.vy += (dy / mind) * f
+      // Physics attraction: prefer card attractors when available
+      let attrX: number, attrY: number, attrDist: number
+      if (cardAttractors.length > 0) {
+        let best = 1e9
+        attrX = W / 2; attrY = H / 2; attrDist = 1e9
+        for (const ca of cardAttractors) {
+          const d = Math.hypot(ca.x - p.x, ca.y - p.y) / ca.mass
+          if (d < best) { best = d; attrX = ca.x; attrY = ca.y; attrDist = d * ca.mass }
+        }
+      } else {
+        const op = orbs[mi].body.position
+        attrX = op.x; attrY = op.y; attrDist = mind
       }
 
-      if (mind < 200 && mind > 8) {
-        const dx = mx - p.x, dy = my - p.y
-        const s = 0.12 * (1 - mind / 200) * dt60
-        p.vx += (-dy / mind) * s
-        p.vy += (dx / mind) * s
+      if (attrDist > 8) {
+        const dx = attrX - p.x, dy = attrY - p.y
+        const f = attr / Math.max(attrDist, 40) * dt60
+        p.vx += (dx / attrDist) * f
+        p.vy += (dy / attrDist) * f
+      }
+
+      const swirlRadius = cardAttractors.length > 0 ? 380 : 200
+      const swirlStr = cardAttractors.length > 0 ? 0.14 : 0.12
+      if (attrDist < swirlRadius && attrDist > 8) {
+        const dx = attrX - p.x, dy = attrY - p.y
+        const s = swirlStr * (1 - attrDist / swirlRadius) * dt60
+        p.vx += (-dy / attrDist) * s
+        p.vy += (dx / attrDist) * s
       }
 
       p.vx += (Math.random() - 0.5) * 0.015
@@ -432,6 +486,42 @@ export function useCosmicPhysics(canvasRef: Ref<HTMLCanvasElement | undefined>, 
     fx = (fx / len) * KEY_FORCE; fy = (fy / len) * KEY_FORCE
     Body.applyForce(o.body, p, { x: fx, y: fy })
     o.heat = Math.min(1, o.heat + 0.02)
+    // Suppress centering force while keys are held so orbs can escape center gravity
+    adapt.mVel = Math.max(adapt.mVel, 3)
+  }
+
+  /** Lunge all orbs toward (x, y) and set a spring target so they oscillate back */
+  function clickImpulse(x: number, y: number) {
+    if (!M || !orbs.length) return
+    const { Body } = M
+    for (const o of orbs) {
+      const p = o.body.position
+      const dx = x - p.x, dy = y - p.y
+      const d = Math.hypot(dx, dy)
+      if (d < 1) continue
+      // Set spring target — orb will be pulled here then spring back to home
+      o.springTarget = { x, y }
+      // Dramatic initial velocity lunge toward click point
+      const speed = Math.min(d * 0.055, 16)
+      Body.setVelocity(o.body, { x: dx / d * speed, y: dy / d * speed })
+      // Reduce air friction so oscillation cycles are visible
+      o.body.frictionAir = 0.004
+      o.heat = Math.min(1, o.heat + 0.7)
+    }
+    adapt.mVel = Math.max(adapt.mVel, 4)
+  }
+
+  /** Set gravity direction from scene tilt — gx/gy in engine gravity units */
+  function setTiltGravity(gx: number, gy: number) {
+    if (engine) {
+      engine.gravity.x = gx
+      engine.gravity.y = gy
+    }
+  }
+
+  /** Set card positions as gravity wells for particles and orbs */
+  function setCardAttractors(pts: { x: number; y: number; mass: number }[]) {
+    cardAttractors = pts
   }
 
   // ── Resize ──────────────────────────────────────────────────────
@@ -529,6 +619,9 @@ export function useCosmicPhysics(canvasRef: Ref<HTMLCanvasElement | undefined>, 
     init,
     destroy,
     heatOrb,
+    clickImpulse,
+    setTiltGravity,
+    setCardAttractors,
     getOrbPositions,
   }
 }
