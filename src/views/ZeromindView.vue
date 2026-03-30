@@ -37,10 +37,10 @@ interface AudioModeCfg {
 }
 
 const AUDIO_MODES: Record<string, AudioModeCfg> = {
-  void:    { bpm: 28,  note: 'A1', filterHz: 180, beatEvery: 4, droneMod: 1.5, reverbWet: 0.65, droneVol: -20, bellVol: -99, noiseVol: -30 },
-  flux:    { bpm: 62,  note: 'D2', filterHz: 420, beatEvery: 1, droneMod: 3,   reverbWet: 0.4,  droneVol: -18, bellVol: -99, noiseVol: -28 },
-  cascade: { bpm: 90,  note: 'F2', filterHz: 660, beatEvery: 1, droneMod: 5,   reverbWet: 0.25, droneVol: -16, bellVol: -99, noiseVol: -26 },
-  pulse:   { bpm: 76,  note: 'C2', filterHz: 360, beatEvery: 1, droneMod: 4,   reverbWet: 0.35, droneVol: -18, bellVol: -99, noiseVol: -27 },
+  void:    { bpm: 28,  note: 'A1', filterHz: 180, beatEvery: 4, droneMod: 1.5, reverbWet: 0.65, droneVol: -20, bellVol: -99, noiseVol: -30, bellArp: null },
+  flux:    { bpm: 62,  note: 'D2', filterHz: 420, beatEvery: 1, droneMod: 3,   reverbWet: 0.4,  droneVol: -18, bellVol: -99, noiseVol: -28, bellArp: null },
+  cascade: { bpm: 90,  note: 'F2', filterHz: 660, beatEvery: 1, droneMod: 5,   reverbWet: 0.25, droneVol: -16, bellVol: -99, noiseVol: -26, bellArp: null },
+  pulse:   { bpm: 76,  note: 'C2', filterHz: 360, beatEvery: 1, droneMod: 4,   reverbWet: 0.35, droneVol: -18, bellVol: -99, noiseVol: -27, bellArp: null },
   zen:     { bpm: 22,  note: 'E2', filterHz: 150, beatEvery: 4, droneMod: 1,   reverbWet: 0.72, droneVol: -22, bellVol: -18, noiseVol: -32, bellArp: null },
   settle:  { bpm: 40,  note: 'B1', filterHz: 240, beatEvery: 2, droneMod: 2,   reverbWet: 0.58, droneVol: -20, bellVol: -24, noiseVol: -30, bellArp: null },
   descent: { bpm: 35,  note: 'G1', filterHz: 165, beatEvery: 2, droneMod: 1.2, reverbWet: 0.62, droneVol: -19, bellVol: -26, noiseVol: -29, bellArp: null },
