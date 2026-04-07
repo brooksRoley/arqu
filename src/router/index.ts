@@ -62,7 +62,13 @@ const router = createRouter({
     },
     {
       path: '/poll',
-      redirect: '/'
+      name: 'poll',
+      component: () => import('@/views/PollView.vue')
+    },
+    {
+      path: '/fitting',
+      name: 'fitting',
+      component: () => import('@/views/Fitting.vue')
     },
     {
       path: '/webaudio',
@@ -125,6 +131,14 @@ const router = createRouter({
       meta: { requiresAuth: true }
     },
 
+    // ── Onboarding (auth required) ───────────────────────────────
+    {
+      path: '/onboarding',
+      name: 'onboarding',
+      component: () => import('@/views/OnboardingView.vue'),
+      meta: { requiresAuth: true }
+    },
+
     // ── Intake → Game pipeline (auth required) ──────────────────
     {
       path: '/intake',
@@ -147,7 +161,10 @@ router.beforeEach((to) => {
 
   // Redirect authenticated users away from guest-only pages
   if (to.meta.guest && token) {
-    return { name: 'home' }
+    // If onboarding isn't done, send to onboarding instead of home
+    const ob = localStorage.getItem('channelzero-onboarding')
+    const onboarded = ob ? JSON.parse(ob).completed : false
+    return { name: onboarded ? 'home' : 'onboarding' }
   }
 
   // Redirect unauthenticated users to login for protected pages

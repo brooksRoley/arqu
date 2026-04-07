@@ -227,23 +227,9 @@ VITE_API_URL=http://localhost:8000
 
 ## TODO
 
-### Security Audit Findings (2026-03-22)
+### Security — Open Items
 
-Red-team audit identified 15 vulnerabilities. Critical and high items remediated in-tree; remaining items below.
-
-#### Remediated (in current codebase)
-
-- [x] **CRIT 1.1** — `config.py` had insecure defaults for `jwt_secret` / `server_encryption_key`. Fixed: removed defaults, app crashes on boot if unset.
-- [x] **CRIT 2.1** — Oracle prompt injection. Raw user JSON dumped into LLM system prompt via f-string with no delimiters. Fixed: XML `<user_data>` / `<provider>` tags, anti-injection directive, `_sanitize_provider()` 50KB cap.
-- [x] **HIGH 2.3** — `ProviderPayload.data` accepted arbitrary dicts with no size limit. Fixed: Pydantic `field_validator` rejects payloads > 50KB.
-- [x] **MED 2.4** — LLM proxy forwarded arbitrary `max_tokens` / `messages` / `provider`. Fixed: 4096 token ceiling, provider allowlist, 100-message cap.
-- [x] **CRIT 3.2** — Karma ledger had no dedup protection. Fixed: `idempotency_key UNIQUE` column in migration 004.
-- [x] **HIGH 3.3** — `apply_karma_penalty()` had a read-modify-write race on Pinecone vectors. Fixed: per-user `asyncio.Lock`, zero-norm guard.
-- [x] **HIGH 3.4** — Intake shadow log + vibe vector upsert used separate connections (non-atomic). Fixed: single `get_tx()` transaction.
-- [x] **MED 3.5** — `ConfessRequest.confessions` had no bounds. Fixed: 1–20 items, 5000 chars each.
-- [x] **HIGH 4.1** — Spotify OAuth state JWT was replayable within 10-min TTL. Fixed: nonce in JWT + `_oauth_nonces` table with UNIQUE constraint, consumed on first use.
-
-#### Open — Secrets & Credentials
+#### Secrets & Credentials
 
 - [ ] **Rotate Render/Vercel env vars** — While `.env` was never committed to git and secrets are not in history, the local `.env` contains live production keys. If this file was ever shared, backed up to iCloud, or copied to a staging box, those keys are compromised. Rotation is cheap insurance: regenerate `JWT_SECRET`, `SERVER_ENCRYPTION_KEY`, `PINECONE_API_KEY`, `OPENAI_EMBED_KEY`, `SPOTIFY_CLIENT_SECRET`, and `PGPASSWORD` in your deployment platform. **Note:** rotating `SERVER_ENCRYPTION_KEY` breaks all encrypted rows (oauth_tokens, shadow_logs, user_api_keys) — you'll need a migration that re-encrypts with the new key or wipes and re-auths.
 - [ ] **Add pre-commit hook** — `git-secrets` or Husky hook to scan for `sk-proj-*`, `pcsk_*`, connection strings before commit.
@@ -313,6 +299,16 @@ Red-team audit identified 15 vulnerabilities. Critical and high items remediated
 - [ ] Post-date rating prompt for both users
 - [ ] Romantic miss → slide to platonic pool + `CO_OP_MODE` karma event
 - [ ] Community tier unlock on successful platonic conversion
+
+### Avatar / Digital Twin (from Fitting Room)
+
+> **Concept:** The SVG body model from `/fitting` becomes the user's personalized "pet avatar" — a digital twin that speaks to them throughout the app, delivering Oracle insights, match notifications, and daily check-in prompts.
+
+- [ ] Export fitting body config (measurements, skin, hair, garment) as a serializable JSON profile stored per-user
+- [ ] Create `AvatarSprite.vue` — compact SVG renderer that takes the profile JSON and renders a smaller version of the fitting room figure
+- [ ] Add speech bubble component — avatar "speaks" Oracle synthesis results, psychoanalysis insights, match alerts
+- [ ] Wire avatar into Oracle output, daily check-in prompts, and match presentation views
+- [ ] Persist avatar config to backend (new column or table) so it survives across devices
 
 ### LLM-Powered Intake
 

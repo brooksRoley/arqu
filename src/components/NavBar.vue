@@ -192,7 +192,7 @@ const showBgModal = ref(false)
 const hiddenRoutes = new Set([
   'zeromind', 'spiral', 'trance', 'webaudio', 'hypno', 'fitting', 'poll',
   'login', 'google-callback', 'x-callback', 'strava-callback',
-  'peripheral', 'intake', 'game',
+  'peripheral', 'intake', 'game', 'onboarding',
 ])
 
 const navRoutes = computed(() => {
