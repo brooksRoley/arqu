@@ -30,12 +30,32 @@ export interface OAuthState {
   steam: ProviderState
 }
 
+export interface SonicOverlap {
+  shared_genres: string[]
+  shared_artists: string[]
+  their_top_genres: string[]
+  valence_delta: number
+  energy_delta: number
+}
+
 export interface VibeMatch {
   user_id: string
   display_name: string
+  avatar_url: string | null
   attachment_style: string | null
   defense_mechanism: string | null
   similarity: number
+  match_reason: string
+  sonic_overlap: SonicOverlap | null
+  they_accepted: boolean
+  my_action: 'accept' | 'reject' | null
+}
+
+export interface InteractResult {
+  recorded: boolean
+  mutual_match: boolean
+  target_id: string
+  action: string
 }
 
 // ── Storage key ──────────────────────────────────────────────────────────────
@@ -69,6 +89,7 @@ const oauthState = ref<OAuthState>(loadPersistedState())
 const matches = ref<VibeMatch[]>([])
 const matchesLoading = ref(false)
 const matchesError = ref<string | null>(null)
+const mutualMatchUserId = ref<string | null>(null)
 
 // ── Derived ──────────────────────────────────────────────────────────────────
 
@@ -143,6 +164,34 @@ async function triggerSynthesis() {
   })
 }
 
+/**
+ * Send an accept or reject action for a matched user.
+ * Returns the interaction result including mutual match status.
+ */
+async function interactWithMatch(targetId: string, action: 'accept' | 'reject'): Promise<InteractResult> {
+  const { apiFetch } = useAuthStore()
+  const result = await apiFetch<InteractResult>('/api/match/interact', {
+    method: 'POST',
+    body: JSON.stringify({ target_id: targetId, action }),
+  })
+
+  // Update local match state
+  const match = matches.value.find((m) => m.user_id === targetId)
+  if (match) {
+    ;(match as VibeMatch).my_action = action
+  }
+
+  if (result.mutual_match) {
+    mutualMatchUserId.value = targetId
+  }
+
+  return result
+}
+
+function clearMutualMatch() {
+  mutualMatchUserId.value = null
+}
+
 function disconnectAll() {
   oauthState.value = defaultOAuthState()
   matches.value = []
@@ -159,10 +208,14 @@ export function useVibeStore() {
     matchesError: readonly(matchesError),
     isMatchReady,
 
+    mutualMatchUserId: readonly(mutualMatchUserId),
+
     markConnected,
     connectSpotify,
     triggerSynthesis,
     fetchMatches,
+    interactWithMatch,
+    clearMutualMatch,
     disconnectAll,
   }
 }

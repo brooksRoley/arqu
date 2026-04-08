@@ -3,6 +3,7 @@ import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 import { useStoryStore } from '@/composables/useStoryStore'
 import { useTranceEngine } from '@/composables/useTranceEngine'
+import { usePretextLayout } from '@/composables/usePretextLayout'
 
 const router = useRouter()
 const {
@@ -27,6 +28,7 @@ const {
 } = useStoryStore()
 
 const { sessionActive: tranceActive } = useTranceEngine()
+const { computeLayout, getScrollTarget } = usePretextLayout()
 
 // Auto-enable trance sync when a session is running
 watch(tranceActive, (active) => {
@@ -61,20 +63,41 @@ function handleKeydown(e: KeyboardEvent) {
   togglePlayback()
 }
 
+// Recompute Pretext layout when text or container changes
+const recomputeLayout = () => {
+  if (!storyContainer.value || words.value.length === 0) return
+  const containerWidth = storyContainer.value.clientWidth - 56 // subtract padding (1.75rem * 2)
+  computeLayout(words.value, containerWidth, '1.5rem "Caveat", cursive', 48)
+}
+
 const scrollToCurrentWord = () => {
+  if (!storyContainer.value) return
+  const container = storyContainer.value
+  const containerHeight = container.clientHeight
+  const targetIdx = phraseMode.value
+    ? (activePhraseRange.value?.start ?? currentIndex.value)
+    : currentIndex.value
+
+  // Try Pretext-computed scroll first (no DOM reflow)
+  const scrollTarget = getScrollTarget(targetIdx, containerHeight)
+  if (scrollTarget !== 0 || targetIdx === 0) {
+    container.scrollTo({ top: scrollTarget, behavior: 'smooth' })
+    return
+  }
+
+  // DOM fallback for first render or edge cases
   nextTick(() => {
     const selector = phraseMode.value ? '.word-span.phrase-lead' : '.word-span.active'
     const activeWord = document.querySelector(selector)
-    if (activeWord && storyContainer.value) {
-      const container = storyContainer.value
+    if (activeWord) {
       const containerRect = container.getBoundingClientRect()
       const wordRect = activeWord.getBoundingClientRect()
-      const scrollTarget =
+      const domTarget =
         container.scrollTop +
         (wordRect.top - containerRect.top) -
-        containerRect.height / 2 +
+        containerHeight / 2 +
         wordRect.height / 2
-      container.scrollTo({ top: scrollTarget, behavior: 'smooth' })
+      container.scrollTo({ top: domTarget, behavior: 'smooth' })
     }
   })
 }
@@ -83,15 +106,23 @@ watch(currentIndex, () => {
   scrollToCurrentWord()
 })
 
+// Recompute layout when words change or container resizes
+watch(words, recomputeLayout, { immediate: false })
+
 onMounted(() => {
   window.addEventListener('keydown', handleKeydown)
   if (!storyText.value) {
     router.push('/')
   }
+  // Compute Pretext layout once DOM has settled
+  nextTick(() => recomputeLayout())
+  // Recompute on resize
+  window.addEventListener('resize', recomputeLayout)
 })
 
 onUnmounted(() => {
   window.removeEventListener('keydown', handleKeydown)
+  window.removeEventListener('resize', recomputeLayout)
 })
 </script>
 

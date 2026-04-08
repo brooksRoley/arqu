@@ -147,6 +147,9 @@ async def find_matches(user_id: UUID = Depends(get_current_user_id)):
     """
     Return the 3 users psychologically closest to the current user in
     Pinecone's 1,536-dimensional space. Requires intake to have been completed.
+
+    Enriched response includes Spotify overlap, match reasoning, and
+    whether the target already accepted the current user (for mutual match).
     """
     matches = await find_nearest_users(str(user_id), top_k=3)
     if not matches:
@@ -155,25 +158,133 @@ async def find_matches(user_id: UUID = Depends(get_current_user_id)):
             detail="No matches found — complete intake first or embedding key not configured",
         )
 
-    # Hydrate display names from Postgres
     match_ids = [UUID(m["user_id"]) for m in matches if m.get("user_id")]
+
     async with get_conn() as conn:
-        rows = await conn.fetch(
-            "SELECT id, display_name FROM users WHERE id = ANY($1::uuid[])",
+        # Hydrate display names + avatar
+        user_rows = await conn.fetch(
+            "SELECT id, display_name, avatar_url FROM users WHERE id = ANY($1::uuid[])",
             match_ids,
         )
-    name_map = {str(r["id"]): r["display_name"] for r in rows}
+        user_map = {str(r["id"]): r for r in user_rows}
 
-    return [
-        {
-            "user_id": m["user_id"],
-            "display_name": name_map.get(m["user_id"], "Unknown"),
+        # Fetch vibe vectors for matched users (spotify_data, attachment, etc.)
+        vibe_rows = await conn.fetch(
+            "SELECT user_id, spotify_data, attachment_style, defense_mechanism, readiness_score "
+            "FROM vibe_vectors WHERE user_id = ANY($1::uuid[])",
+            match_ids,
+        )
+        vibe_map = {str(r["user_id"]): r for r in vibe_rows}
+
+        # Fetch current user's vibe vector for comparison
+        my_vibe = await conn.fetchrow(
+            "SELECT spotify_data, attachment_style, defense_mechanism "
+            "FROM vibe_vectors WHERE user_id = $1",
+            user_id,
+        )
+
+        # Check which targets have already accepted the current user
+        accepted_rows = await conn.fetch(
+            "SELECT actor_id FROM match_interactions "
+            "WHERE actor_id = ANY($1::uuid[]) AND target_id = $2 AND action = 'accept'",
+            match_ids, user_id,
+        )
+        accepted_by = {str(r["actor_id"]) for r in accepted_rows}
+
+        # Check current user's existing interactions with these targets
+        my_actions = await conn.fetch(
+            "SELECT target_id, action FROM match_interactions "
+            "WHERE actor_id = $1 AND target_id = ANY($2::uuid[])",
+            user_id, match_ids,
+        )
+        my_action_map = {str(r["target_id"]): r["action"] for r in my_actions}
+
+    results = []
+    for m in matches:
+        mid = m["user_id"]
+        u = user_map.get(mid, {})
+        v = vibe_map.get(mid)
+        reason = _build_match_reason(m, my_vibe, v)
+        spotify = _extract_spotify_overlap(my_vibe, v) if my_vibe and v else None
+
+        results.append({
+            "user_id": mid,
+            "display_name": u.get("display_name") or "Unknown",
+            "avatar_url": u.get("avatar_url"),
             "attachment_style": m.get("attachment_style"),
             "defense_mechanism": m.get("defense_mechanism"),
             "similarity": m["score"],
-        }
-        for m in matches
-    ]
+            "match_reason": reason,
+            "sonic_overlap": spotify,
+            "they_accepted": mid in accepted_by,
+            "my_action": my_action_map.get(mid),
+        })
+
+    return results
+
+
+def _build_match_reason(
+    match: dict, my_vibe: object | None, their_vibe: object | None,
+) -> str:
+    """Generate a human-readable explanation for why two users matched."""
+    reasons: list[str] = []
+    score = match["score"]
+
+    if score >= 0.92:
+        reasons.append("Exceptionally close psychological coordinates")
+    elif score >= 0.85:
+        reasons.append("Strong alignment in psychological space")
+    else:
+        reasons.append("Complementary psychological profiles")
+
+    my_attach = my_vibe["attachment_style"] if my_vibe else None
+    their_attach = match.get("attachment_style")
+    if my_attach and their_attach:
+        if my_attach == their_attach:
+            reasons.append(f"Shared attachment style: {their_attach}")
+        else:
+            reasons.append(f"Complementary attachment dynamics: {my_attach} + {their_attach}")
+
+    my_defense = my_vibe["defense_mechanism"] if my_vibe else None
+    their_defense = match.get("defense_mechanism")
+    if my_defense and their_defense and my_defense != their_defense:
+        reasons.append(f"Different defense patterns ({my_defense} / {their_defense}) — growth potential")
+
+    return ". ".join(reasons) + "."
+
+
+def _extract_spotify_overlap(my_vibe: object | None, their_vibe: object | None) -> dict | None:
+    """Compare Spotify data between two users for sonic overlap display."""
+    import json as _json
+    my_spotify = my_vibe.get("spotify_data") if my_vibe else None
+    their_spotify = their_vibe.get("spotify_data") if their_vibe else None
+    if not my_spotify or not their_spotify:
+        return None
+
+    # Handle JSONB — may already be dict or may be JSON string
+    if isinstance(my_spotify, str):
+        my_spotify = _json.loads(my_spotify)
+    if isinstance(their_spotify, str):
+        their_spotify = _json.loads(their_spotify)
+
+    my_genres = set(my_spotify.get("genres", []))
+    their_genres = set(their_spotify.get("genres", []))
+    shared_genres = sorted(my_genres & their_genres)
+
+    my_artists = set(my_spotify.get("top_artists", []))
+    their_artists = set(their_spotify.get("top_artists", []))
+    shared_artists = sorted(my_artists & their_artists)
+
+    my_audio = my_spotify.get("audio_avg", {})
+    their_audio = their_spotify.get("audio_avg", {})
+
+    return {
+        "shared_genres": shared_genres[:5],
+        "shared_artists": shared_artists[:3],
+        "their_top_genres": sorted(their_genres)[:5],
+        "valence_delta": abs((my_audio.get("valence") or 0) - (their_audio.get("valence") or 0)),
+        "energy_delta": abs((my_audio.get("energy") or 0) - (their_audio.get("energy") or 0)),
+    }
 
 
 @router.get("/vector")

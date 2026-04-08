@@ -26,6 +26,7 @@ from .steam.router import router as steam_router
 from .twitter.router import router as twitter_router
 from .letterboxd.router import router as letterboxd_router
 from .costar.router import router as costar_router
+from .match.router import router as match_router
 
 
 @asynccontextmanager
@@ -84,6 +85,7 @@ def create_app() -> FastAPI:
     app.include_router(twitter_router, prefix=f"{prefix}/twitter", tags=["twitter"])
     app.include_router(letterboxd_router, prefix=f"{prefix}/letterboxd", tags=["letterboxd"])
     app.include_router(costar_router, prefix=f"{prefix}/costar", tags=["costar"])
+    app.include_router(match_router, prefix=f"{prefix}/match", tags=["match"])
 
     # ── Health ──────────────────────────────────────────────────
     @app.get("/health")

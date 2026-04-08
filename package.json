@@ -16,6 +16,7 @@
     "test:coverage": "vitest run --coverage"
   },
   "dependencies": {
+    "@chenglou/pretext": "^0.0.4",
     "@vueuse/core": "^11.3.0",
     "pinia": "^3.0.4",
     "tone": "^15.1.22",

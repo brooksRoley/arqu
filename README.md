@@ -40,7 +40,8 @@ Channel Zero is two things layered on top of each other:
 | `/journal`        | Write, draw, record audio. Entries sync to the backend and embed into Pinecone so the system can find memories relevant to your confessional. Local-first — works offline.                                                                                                                                           |
 | `/checkin`        | Daily dashboard. Mood arc, streak counter, intention setting. Pulls recent journal entries and synthesizes a daily reflection.                                                                                                                                                                                       |
 | `/intake`         | The confessional. Write about what's actually going on. The text is encrypted at rest (AES-256-GCM). The server extracts your attachment style and defense mechanisms, combines it with your Spotify audio profile, and generates a 1,536-dimensional embedding that becomes your coordinate in psychological space. |
-| `/game`           | The result. Your three nearest psychological neighbors. The people who, right now, occupy the same region of the map as you. Karma mechanics — whether you follow through or ghost — shift your coordinates over time.                                                                                               |
+| `/discovery`      | **The Discovery Flow.** Physics-canvas onboarding replacing the old stepper. Four phases — Mirror (journal input with floating words), Ingestion (OAuth data bloom), Synthesis (vector convergence), Resonance (real Pinecone matches drift in as orbiting orbs). Powered by Matter.js + Pretext.js.                   |
+| `/game`           | The matching engine. Real Pinecone ANN matches with Accept/Pass flow. Match cards show "Why you matched" reasoning, Spotify sonic overlap, attachment/defense profiles. Mutual matches (both accept) trigger celebration + karma reward. Karma mechanics shift your coordinates over time.                             |
 | `/calibrate`      | Connect your accounts: Spotify, Google, Twitter, Strava, Letterboxd, Steam. Each adds another data layer to your vibe vector.                                                                                                                                                                                        |
 | `/peripheral`     | Sync peripheral data from connected accounts.                                                                                                                                                                                                                                                                        |
 | `/psychoanalysis` | Your psychometric scores: Big Five (IPIP-NEO), attachment (ECR-R), love language, sociosexual orientation, values cluster. Generated from your intake and quiz history.                                                                                                                                              |
@@ -66,14 +67,14 @@ The coordinate is re-plotted on every intake session and every Spotify reconnect
 ## The Full Pipeline
 
 ```
-Login → Poll (profiling) → Journal → Intake (confessional) → Game (deployment)
+Login → Discovery (Mirror → Ingestion → Synthesis → Resonance) → Game (accept/pass)
 ```
 
-- **Poll** — Dissociation/fantasy quiz derives attachment archetype + theme palette
-- **Journal** — Write, draw, record audio. Entries auto-embed into Pinecone on sync
-- **Check-In** — Daily dashboard: mood arc, streak, synthesis, intention setting
-- **Intake** — Confessional. Text encrypted at rest. NLP extracts attachment style + defense mechanism. Confession + Spotify profile → 1,536-dim embedding → user's coordinate in Pinecone
-- **Game** — ANN query on Pinecone returns 3 nearest psychological neighbors. Karma shifts coordinates over time
+- **Discovery: Mirror** — Free-form journal input. Words float on a physics canvas, spiraling toward center. Text is analyzed for attachment style + defense mechanism
+- **Discovery: Ingestion** — OAuth connections (Spotify, Twitter, etc.) with data bloom — individual data points appear as orbiting physics nodes
+- **Discovery: Synthesis** — Oracle displays your psychological coordinates: attachment, defense, readiness score
+- **Discovery: Resonance** — Real Pinecone ANN matches drift in from screen edges as orbiting orbs with vector overlap lines
+- **Game** — Card-by-card match review. Accept/Pass buttons. Mutual match detection (both accept → celebration + karma). Match reasoning explains _why_ you matched
 
 ---
 
@@ -88,6 +89,8 @@ Login → Poll (profiling) → Journal → Intake (confessional) → Game (deplo
 | Embeddings | OpenAI `text-embedding-3-small` (1,536 dims, server-level key) |
 | Encryption | AES-256-GCM (confession logs, API keys, OAuth tokens)          |
 | Auth       | JWT (24-hour tokens, Argon2 password hashing)                  |
+| Physics    | Matter.js (orb dynamics, particle attraction, canvas rendering) |
+| Text Layout| Pretext.js (DOM-free text measurement via canvas measureText)   |
 | Audio      | Tone.js 15 + Web Audio API                                     |
 | Deployment | Vercel (frontend) + Render (backend)                           |
 
@@ -143,7 +146,9 @@ Journal entries embed into Pinecone's `journal` namespace on create/sync (fire-a
 | POST   | `/api/poll/submit`         | Submit personality quiz                           |
 | POST   | `/api/intake/confess`      | Confessional → vibe vector → Pinecone             |
 | GET    | `/api/intake/vector`       | Current vibe vector (Neon)                        |
-| GET    | `/api/intake/match`        | 3 nearest psychological neighbors (Pinecone ANN)  |
+| GET    | `/api/intake/match`        | 3 nearest neighbors + match reasoning, sonic overlap, mutual status |
+| POST   | `/api/match/interact`      | Accept/reject a match (upsert, detects mutual match, awards karma)  |
+| GET    | `/api/match/mutual`        | List all mutual matches for the current user                        |
 | GET    | `/api/spotify/connect`     | Redirect to Spotify OAuth                         |
 | GET    | `/api/spotify/callback`    | OAuth callback — fetches audio profile, re-embeds |
 | POST   | `/api/llm/proxy`           | Forward LLM request with user's stored key        |
@@ -165,6 +170,7 @@ Migrations run in order on deploy (`python -m app.migrate`):
 | `006_strava_provider.sql` | Strava OAuth + activity data                                       |
 | `007_psychometrics.sql`   | user_psychometrics (Big Five, ECR-R, love language, etc.)          |
 | `008_peripheral_data.sql` | Peripheral data columns on vibe_vectors, Steam/Letterboxd on users |
+| `009_match_interactions.sql` | match_interactions table (accept/reject), mutual_matches view   |
 
 ---
 
@@ -281,6 +287,12 @@ VITE_API_URL=http://localhost:8000
 
 ### Match Presentation
 
+- [x] Wire real Pinecone ANN results into GameView (replaces mock data)
+- [x] Accept/Pass interaction flow with mutual match detection
+- [x] Match reasoning ("Why you matched") derived from similarity score + attachment/defense comparison
+- [x] Spotify sonic overlap display (shared genres, artists, valence/energy deltas)
+- [x] Mutual match celebration UI + karma reward (+10 both users)
+- [x] Discovery flow — physics-canvas onboarding with data bloom + match reveal
 - [ ] Nightly match batch — pre-compute 3 matches per user at 3 AM (cron), cache in a `daily_matches` table with `expires_at = midnight`
 - [ ] Replace live `GET /intake/match` ANN query with pre-computed batch read (required for scale beyond ~10k users)
 - [ ] Radar chart — port `get_matches.py`'s 4-axis spider chart to a Canvas/SVG Vue component; overlay the two users' vibe profiles (valence, danceability, neuroticism, humor darkness)
@@ -315,3 +327,15 @@ VITE_API_URL=http://localhost:8000
 - [ ] Replace `_analyze_local()` keyword NLP with a real LLM call via the proxy (use user's BYOK key if available)
 - [ ] Use Pinecone-retrieved memories as context in the system prompt
 - [ ] Return richer insight with specific journal callbacks
+
+### Mutual Match Messaging (Highest ROI — unlocks the product loop)
+
+> **Why this is next:** Users can now match and accept each other, but mutual matches hit a dead end — there's no way to communicate. Without messaging, the entire matching engine is a spectacle with no payoff. This is the single feature that turns ChannelZero from a profiling demo into a social product with a retention loop.
+
+- [ ] **Migration 010: `messages` table** — `id`, `thread_id` (derived from sorted user pair), `sender_id`, `encrypted_body` (AES-256-GCM, same pattern as shadow_logs), `body_nonce`, `created_at`. Index on `(thread_id, created_at)`. Only mutual matches can message (enforce via FK or check against `match_interactions`).
+- [ ] **`POST /api/messages/send`** — Authenticated. Validates mutual match exists. Encrypts message body. Inserts row. Returns message with timestamp.
+- [ ] **`GET /api/messages/thread/:userId`** — Paginated message history between current user and target. Decrypts on read. 404 if no mutual match.
+- [ ] **`GET /api/messages/threads`** — List all active threads (mutual matches with at least one message). Returns last message preview + unread count.
+- [ ] **Frontend: `ThreadView.vue`** — Minimal chat UI. Accessible from mutual match celebration ("Continue to chat") and from a new `/messages` route. Real-time polling (phase 1) → WebSocket upgrade (phase 2).
+- [ ] **Frontend: unread badge** — NavBar shows unread message count. Pulls from `/api/messages/threads` on mount.
+- [ ] **Oracle-seeded opener** — On first message in a thread, pre-populate a suggested opener generated from the match reasoning + shared Spotify data. "Your frequencies overlap at 91%. The Oracle suggests: _'What song have you had on repeat this week?'_"

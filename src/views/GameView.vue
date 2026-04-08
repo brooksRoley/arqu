@@ -3,46 +3,50 @@ import { ref, computed, nextTick, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '@/composables/useAuthStore'
 import { usePollStore } from '@/composables/usePollStore'
-import { useVibeStore } from '@/composables/useVibeStore'
+import { useVibeStore, type VibeMatch } from '@/composables/useVibeStore'
 
 const router = useRouter()
 const route = useRoute()
 const { isAuthenticated, user } = useAuthStore()
 const { token: pollToken } = usePollStore()
-const { markConnected } = useVibeStore()
+const {
+  matches, matchesLoading, matchesError, mutualMatchUserId,
+  markConnected, fetchMatches, interactWithMatch, clearMutualMatch,
+} = useVibeStore()
 
 if (!isAuthenticated.value) {
   router.replace('/login')
 }
 
 const accent = computed(() => pollToken.value?.palette?.accent || '#a78bfa')
-const theme = computed(() => pollToken.value?.theme || 'liminal')
 const archetype = computed(() => pollToken.value?.archetype || 'the wanderer')
 
 // ── Game State ────────────────────────────────────────────────────
 
-type GamePhase = 'lobby' | 'scanning' | 'matched' | 'deployed'
+type GamePhase = 'lobby' | 'scanning' | 'matched' | 'mutual' | 'deployed'
 
 const phase = ref<GamePhase>('lobby')
 const scanProgress = ref(0)
 const currentStatus = ref('')
+const currentMatchIdx = ref(0)
+const interactLoading = ref(false)
+const scanError = ref<string | null>(null)
 
-const matchProfile = ref<{
-  codename: string
-  compatibility: number
-  venue: string
-  window: string
-  sonicOverlap: string
-  neuroticFootprint: string
-  logistics: string
-} | null>(null)
+const currentMatch = computed<VibeMatch | null>(() =>
+  matches.value[currentMatchIdx.value] ?? null,
+)
+
+const compatPercent = computed(() => {
+  if (!currentMatch.value) return 0
+  return Math.round(currentMatch.value.similarity * 100)
+})
 
 const statusMessages = [
   'Scanning vibe vectors...',
   'Cross-referencing attachment matrices...',
   'Calculating optimal deployment windows...',
   'Identifying compatible signal patterns...',
-  'Triangulating Thursday-Saturday availability...',
+  'Querying Pinecone psychological space...',
   'Locking coordinates...',
 ]
 
@@ -59,18 +63,23 @@ const oracleInput = ref('')
 const oracleEl = ref<HTMLElement | null>(null)
 
 function generateOracleDebrief(): string {
-  if (!matchProfile.value) return ''
-  return `Nightly batch processed. You matched with ${matchProfile.value.codename} at ${matchProfile.value.compatibility}%. What are your initial thoughts on their matrix?`
+  if (!currentMatch.value) return ''
+  const m = currentMatch.value
+  return `Nightly batch processed. You matched with ${m.display_name} at ${compatPercent.value}% alignment. ${m.match_reason} What are your initial thoughts?`
 }
 
 const oracleResponses = [
   () => {
-    const m = matchProfile.value!
-    return `The LLM parsed their signal. They use melancholy audio to self-regulate, but their social interactions are highly assertive. This complements your ${archetype.value} pattern — they pick the venue, you set the tone.`
+    const m = currentMatch.value!
+    const sonic = m.sonic_overlap
+    if (sonic && sonic.shared_genres.length > 0) {
+      return `Sonic overlap detected: you share ${sonic.shared_genres.slice(0, 3).join(', ')}. ${sonic.valence_delta < 0.15 ? 'Your emotional valence is remarkably similar — you feel music the same way.' : 'Different valence signatures — they process emotion through different frequencies than you.'}`
+    }
+    return `No Spotify data overlap yet, but the psychological vectors are aligned. Their ${m.attachment_style || 'unknown'} attachment style complements your ${archetype.value} pattern.`
   },
   () => {
-    const m = matchProfile.value!
-    return `If you look at the calendar overlap, ${m.window} is your only clean window. The algorithm suggests they are emotionally guarded but physically available. Do you want me to draft the opening approach based on your shared frequency profile?`
+    const m = currentMatch.value!
+    return `Their defense mechanism is ${m.defense_mechanism || 'unclassified'}. The algorithm suggests they are emotionally ${m.similarity > 0.88 ? 'remarkably close to your wavelength' : 'a complementary signal to yours'}. Do you want to accept the match?`
   },
   () => `Your hesitation is noted and expected. The vibe vector accounts for approach anxiety — it's already factored into the compatibility score. The question isn't whether you're ready. The question is whether you'll let the data be smarter than your doubt.`,
   () => `I've seen your journal entries. You write about wanting connection while systematically avoiding it. This match is the algorithm calling your bluff. The rest is up to you.`,
@@ -104,6 +113,10 @@ async function scrollOracle() {
 async function startScan() {
   phase.value = 'scanning'
   scanProgress.value = 0
+  scanError.value = null
+
+  // Animate status messages while fetching real matches
+  const fetchPromise = fetchMatches()
 
   for (let i = 0; i < statusMessages.length; i++) {
     currentStatus.value = statusMessages[i]
@@ -111,54 +124,64 @@ async function startScan() {
     await delay(700 + Math.random() * 500)
   }
 
-  matchProfile.value = generateMatch()
+  // Wait for fetch to complete (may already be done)
+  await fetchPromise
+
+  if (matchesError.value || matches.value.length === 0) {
+    scanError.value = matchesError.value || 'No matches found — complete intake first.'
+    phase.value = 'lobby'
+    return
+  }
+
+  currentMatchIdx.value = 0
+  oracleResponseIdx = 0
   oracleLog.value = [{ id: 1, role: 'oracle', text: generateOracleDebrief() }]
   phase.value = 'matched'
 }
 
-function generateMatch() {
-  const codenames = [
-    'Signal Ghost', 'Warm Static', 'Night Architecture',
-    'Soft Collision', 'Parallel Drift', 'Velvet Algorithm',
-    'Midnight Frequency', 'Quiet Voltage',
-  ]
-  const venues = [
-    'a rooftop bar with low amber lighting',
-    'a gallery opening in the warehouse district',
-    'a listening lounge playing ambient sets',
-    'a late-night bookstore with wine',
-    'a speakeasy behind a coffee shop',
-    'a night market under string lights',
-  ]
-  const windows = ['Thursday 8PM', 'Friday 9PM', 'Saturday 7PM', 'Friday 10PM', 'Saturday 9PM']
+// ── Accept / Pass ────────────────────────────────────────────────
 
-  const sonicOverlaps = [
-    'You both hyper-fixate on aggressive 90s shoegaze and high-tempo ambient. Their valence is similarly depressive.',
-    'Shared rotation: slow-burn post-rock and downtempo electronic. Emotional bandwidth overlaps in the 60-80 BPM range.',
-    'Heavy overlap in dark ambient and minimal techno. You both use music as a regulation tool, not entertainment.',
-  ]
-  const neuroticPrints = [
-    'Match shows high linguistic dominance and dark humor. Algorithm suggests they pay for the first round.',
-    'Their social footprint is guarded but consistent — long gaps between posts, then bursts of vulnerability. Mirror pattern to yours.',
-    'High analytical drive, low impulsivity. They will overthink the date too. At least you will overthink it together.',
-  ]
-
-  const v = venues[Math.floor(Math.random() * venues.length)]
-  const w = windows[Math.floor(Math.random() * windows.length)]
-
-  return {
-    codename: codenames[Math.floor(Math.random() * codenames.length)],
-    compatibility: 72 + Math.floor(Math.random() * 26),
-    venue: v,
-    window: w,
-    sonicOverlap: sonicOverlaps[Math.floor(Math.random() * sonicOverlaps.length)],
-    neuroticFootprint: neuroticPrints[Math.floor(Math.random() * neuroticPrints.length)],
-    logistics: `Neon DB queries confirm you both have ${w.split(' ')[0]} open. ${v.charAt(0).toUpperCase() + v.slice(1)} is suggested — 3 miles away.`,
+async function acceptMatch() {
+  if (!currentMatch.value || interactLoading.value) return
+  interactLoading.value = true
+  try {
+    const result = await interactWithMatch(currentMatch.value.user_id, 'accept')
+    if (result.mutual_match) {
+      phase.value = 'mutual'
+    } else {
+      advanceToNext()
+    }
+  } catch {
+    // Still advance — the accept is fire-and-forget UX-wise
+    advanceToNext()
+  } finally {
+    interactLoading.value = false
   }
 }
 
-function initiateContact() {
-  phase.value = 'deployed'
+async function passMatch() {
+  if (!currentMatch.value || interactLoading.value) return
+  interactLoading.value = true
+  try {
+    await interactWithMatch(currentMatch.value.user_id, 'reject')
+  } catch { /* pass is best-effort */ }
+  interactLoading.value = false
+  advanceToNext()
+}
+
+function advanceToNext() {
+  if (currentMatchIdx.value < matches.value.length - 1) {
+    currentMatchIdx.value++
+    oracleResponseIdx = 0
+    oracleLog.value = [{ id: 1, role: 'oracle', text: generateOracleDebrief() }]
+  } else {
+    phase.value = 'deployed'
+  }
+}
+
+function acknowledgeMutual() {
+  clearMutualMatch()
+  advanceToNext()
 }
 
 function goBack() {
@@ -169,8 +192,24 @@ function delay(ms: number) {
   return new Promise((r) => setTimeout(r, ms))
 }
 
+// ── Sonic overlap description ────────────────────────────────────
+
+function sonicDescription(m: VibeMatch): string {
+  const s = m.sonic_overlap
+  if (!s) return 'No Spotify data connected yet — connect accounts for sonic analysis.'
+  const parts: string[] = []
+  if (s.shared_genres.length > 0) parts.push(`Shared genres: ${s.shared_genres.join(', ')}`)
+  if (s.shared_artists.length > 0) parts.push(`Shared artists: ${s.shared_artists.join(', ')}`)
+  if (s.their_top_genres.length > 0 && s.shared_genres.length === 0) {
+    parts.push(`They listen to: ${s.their_top_genres.join(', ')}`)
+  }
+  if (s.valence_delta < 0.1) parts.push('Nearly identical emotional valence')
+  else if (s.valence_delta > 0.3) parts.push('Contrasting emotional frequencies')
+  if (s.energy_delta < 0.1) parts.push('Matched energy profiles')
+  return parts.length > 0 ? parts.join('. ') + '.' : 'Sonic profiles loading...'
+}
+
 onMounted(() => {
-  // Spotify OAuth callback lands here with ?spotify=connected
   if (route.query.spotify === 'connected') {
     markConnected('spotify')
     router.replace({ path: '/game' })
@@ -199,6 +238,7 @@ onMounted(() => {
           Your psychoanalytic profile has been loaded.<br />
           Ready to enter the matching engine?
         </p>
+        <p v-if="scanError" class="scan-error">{{ scanError }}</p>
         <button class="action-btn" :style="{ background: accent }" @click="startScan">
           Initialize Scan
         </button>
@@ -224,34 +264,58 @@ onMounted(() => {
     </div>
 
     <!-- Matched — split panel -->
-    <div v-if="phase === 'matched' && matchProfile" class="split-panel">
+    <div v-if="phase === 'matched' && currentMatch" class="split-panel">
       <!-- Left: Match card -->
       <div class="match-panel">
         <div class="match-card">
           <div class="match-top">
             <div class="match-accent-bar" :style="{ background: accent }" />
             <div class="match-identity">
-              <h2 class="match-codename" :style="{ color: accent }">{{ matchProfile.codename }}</h2>
-              <span class="match-compat">{{ matchProfile.compatibility }}% Vibe Alignment</span>
+              <h2 class="match-codename" :style="{ color: accent }">{{ currentMatch.display_name }}</h2>
+              <span class="match-compat">{{ compatPercent }}% Vibe Alignment</span>
+              <span v-if="currentMatch.they_accepted" class="match-signal">They already accepted you</span>
             </div>
-            <button class="contact-btn" :style="{ background: accent }" @click="initiateContact">
-              Initiate Contact
-            </button>
+            <span class="match-counter">{{ currentMatchIdx + 1 }} / {{ matches.length }}</span>
+          </div>
+
+          <!-- Why we matched you -->
+          <div class="match-reason">
+            <span class="reason-label">Why you matched</span>
+            <p class="reason-text">{{ currentMatch.match_reason }}</p>
           </div>
 
           <div class="match-breakdown">
             <div class="breakdown-item">
               <span class="breakdown-label">Sonic Overlap</span>
-              <p class="breakdown-text">{{ matchProfile.sonicOverlap }}</p>
+              <p class="breakdown-text">{{ sonicDescription(currentMatch) }}</p>
             </div>
             <div class="breakdown-item">
-              <span class="breakdown-label">Neurotic Footprint</span>
-              <p class="breakdown-text">{{ matchProfile.neuroticFootprint }}</p>
+              <span class="breakdown-label">Attachment Style</span>
+              <p class="breakdown-text">{{ currentMatch.attachment_style || 'Unknown' }}</p>
             </div>
             <div class="breakdown-item">
-              <span class="breakdown-label">Logistics</span>
-              <p class="breakdown-text">{{ matchProfile.logistics }}</p>
+              <span class="breakdown-label">Defense Mechanism</span>
+              <p class="breakdown-text">{{ currentMatch.defense_mechanism || 'Unknown' }}</p>
             </div>
+          </div>
+
+          <!-- Accept / Pass buttons -->
+          <div class="match-actions">
+            <button
+              class="pass-btn"
+              :disabled="interactLoading"
+              @click="passMatch"
+            >
+              Pass
+            </button>
+            <button
+              class="accept-btn"
+              :style="{ background: accent }"
+              :disabled="interactLoading"
+              @click="acceptMatch"
+            >
+              {{ interactLoading ? '...' : 'Accept' }}
+            </button>
           </div>
         </div>
       </div>
@@ -261,7 +325,7 @@ onMounted(() => {
         <div class="oracle-header">
           <span class="oracle-dot" />
           <span class="oracle-title">Vibe Oracle</span>
-          <span class="oracle-hint">Process your results before speaking to them.</span>
+          <span class="oracle-hint">Process your results before deciding.</span>
         </div>
 
         <div ref="oracleEl" class="oracle-thread">
@@ -287,18 +351,37 @@ onMounted(() => {
       </div>
     </div>
 
-    <!-- Deployed -->
+    <!-- Mutual Match Celebration -->
+    <div v-if="phase === 'mutual'" class="phase-center">
+      <div class="mutual-display">
+        <div class="mutual-glow" :style="{ background: accent }" />
+        <span class="mutual-icon">&#x2728;</span>
+        <h2 class="mutual-title" :style="{ color: accent }">It's a Match</h2>
+        <p class="mutual-text">
+          Both of you accepted. The vectors aligned.<br />
+          Something rare just happened in 1,536-dimensional space.
+        </p>
+        <p v-if="currentMatch" class="mutual-who">
+          You and <strong>{{ currentMatch.display_name }}</strong> — mutual resonance confirmed.
+        </p>
+        <button class="action-btn" :style="{ background: accent }" @click="acknowledgeMutual">
+          Continue
+        </button>
+      </div>
+    </div>
+
+    <!-- Deployed (all matches reviewed) -->
     <div v-if="phase === 'deployed'" class="phase-center">
       <div class="deployed-display">
         <span class="deployed-icon" :style="{ color: accent }">&#x2714;</span>
-        <h2 class="deployed-title">Deployed</h2>
+        <h2 class="deployed-title">Cycle Complete</h2>
         <p class="deployed-text">
-          Your coordinates have been locked. The vector is live.<br />
-          Show up as yourself — the profile did the rest.
+          You've reviewed all available matches for this cycle.<br />
+          Your decisions are recorded. The vectors will recalibrate.
         </p>
-        <div v-if="matchProfile" class="deployed-meta">
-          {{ matchProfile.window }} &middot; {{ matchProfile.venue }}
-        </div>
+        <button class="action-btn" :style="{ background: accent }" @click="goBack">
+          Return to Check-in
+        </button>
       </div>
     </div>
   </div>
@@ -531,6 +614,142 @@ onMounted(() => {
   line-height: 1.55;
   margin: 0;
 }
+
+/* ── Match reason ── */
+.match-reason {
+  padding: 0 1.25rem;
+  margin-bottom: 0.75rem;
+}
+
+.reason-label {
+  font-size: 0.55rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #22c55e;
+  font-weight: 700;
+}
+
+.reason-text {
+  font-size: 0.8rem;
+  color: #a5b4c8;
+  line-height: 1.55;
+  margin: 0.2rem 0 0;
+  font-style: italic;
+}
+
+/* ── Match signal (they accepted) ── */
+.match-signal {
+  display: inline-block;
+  font-size: 0.6rem;
+  color: #22c55e;
+  background: rgba(34, 197, 94, 0.1);
+  border: 1px solid rgba(34, 197, 94, 0.2);
+  border-radius: 0.25rem;
+  padding: 0.15rem 0.4rem;
+  margin-top: 0.3rem;
+}
+
+.match-counter {
+  font-size: 0.65rem;
+  color: #475569;
+  align-self: flex-start;
+  margin-top: 0.2rem;
+  white-space: nowrap;
+}
+
+/* ── Accept / Pass actions ── */
+.match-actions {
+  display: flex;
+  gap: 0.75rem;
+  padding: 1.25rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.pass-btn, .accept-btn {
+  flex: 1;
+  padding: 0.7rem 1rem;
+  border-radius: 0.4rem;
+  font-size: 0.85rem;
+  font-weight: 700;
+  font-family: inherit;
+  cursor: pointer;
+  transition: opacity 0.15s, transform 0.1s;
+}
+
+.pass-btn {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #64748b;
+}
+.pass-btn:hover { background: rgba(255, 255, 255, 0.08); color: #94a3b8; }
+
+.accept-btn {
+  border: none;
+  color: #0f0f1a;
+}
+.accept-btn:hover { opacity: 0.9; transform: translateY(-1px); }
+.accept-btn:disabled, .pass-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* ── Scan error ── */
+.scan-error {
+  font-size: 0.78rem;
+  color: #f87171;
+  margin: 0;
+  padding: 0.5rem 0.75rem;
+  background: rgba(248, 113, 113, 0.08);
+  border: 1px solid rgba(248, 113, 113, 0.15);
+  border-radius: 0.35rem;
+  width: 100%;
+  text-align: center;
+}
+
+/* ── Mutual match celebration ── */
+.mutual-display {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  padding: 3rem 2rem;
+  text-align: center;
+  max-width: 500px;
+  position: relative;
+}
+
+.mutual-glow {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 300px;
+  height: 300px;
+  border-radius: 50%;
+  opacity: 0.06;
+  filter: blur(80px);
+  pointer-events: none;
+}
+
+.mutual-icon { font-size: 3.5rem; }
+
+.mutual-title {
+  font-size: 1.8rem;
+  font-weight: 800;
+  margin: 0;
+  letter-spacing: 0.02em;
+}
+
+.mutual-text {
+  font-size: 0.88rem;
+  color: #94a3b8;
+  line-height: 1.65;
+  margin: 0;
+}
+
+.mutual-who {
+  font-size: 0.82rem;
+  color: #c4b5fd;
+  margin: 0;
+}
+.mutual-who strong { color: #e2e8f0; }
 
 /* ── Oracle panel ── */
 .oracle-header {

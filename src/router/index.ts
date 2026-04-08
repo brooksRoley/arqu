@@ -139,6 +139,14 @@ const router = createRouter({
       meta: { requiresAuth: true }
     },
 
+    // ── Discovery: physics-driven onboarding flow ─────────────────
+    {
+      path: '/discovery',
+      name: 'discovery',
+      component: () => import('@/views/DiscoveryView.vue'),
+      meta: { requiresAuth: true }
+    },
+
     // ── Intake → Game pipeline (auth required) ──────────────────
     {
       path: '/intake',
@@ -164,7 +172,7 @@ router.beforeEach((to) => {
     // If onboarding isn't done, send to onboarding instead of home
     const ob = localStorage.getItem('channelzero-onboarding')
     const onboarded = ob ? JSON.parse(ob).completed : false
-    return { name: onboarded ? 'home' : 'onboarding' }
+    return { name: onboarded ? 'home' : 'discovery' }
   }
 
   // Redirect unauthenticated users to login for protected pages
