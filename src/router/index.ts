@@ -31,13 +31,13 @@ const router = createRouter({
       component: () => import('@/views/ZeromindView.vue')
     },
     {
-      path: '/glass',
-      name: 'glass',
+      path: '/studio',
+      name: 'studio',
       component: () => import('@/views/GlassView.vue')
     },
     {
       path: '/liquidglass',
-      name: 'Song sandbox',
+      name: 'liquidglass',
       component: () => import('@/views/LiquidGlassView.vue')
     },
     {
@@ -158,6 +158,20 @@ const router = createRouter({
       path: '/game',
       name: 'game',
       component: () => import('@/views/GameView.vue'),
+      meta: { requiresAuth: true }
+    },
+
+    // ── Messaging (mutual matches only) ─────────────────────────────
+    {
+      path: '/messages',
+      name: 'messages',
+      component: () => import('@/views/MessagesView.vue'),
+      meta: { requiresAuth: true }
+    },
+    {
+      path: '/messages/:userId',
+      name: 'thread',
+      component: () => import('@/views/ThreadView.vue'),
       meta: { requiresAuth: true }
     }
   ]

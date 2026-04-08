@@ -5,6 +5,7 @@ import { usePollStore } from '@/composables/usePollStore'
 import { useMeditation } from '@/composables/useMeditation'
 import { useCosmicPhysics } from '@/composables/useCosmicPhysics'
 import type { PollAnswers } from '@/composables/usePollStore'
+import ConnectorPanel from '@/components/ConnectorPanel.vue'
 
 const router = useRouter()
 const { answers, token, setAnswer, submitPoll, resetPoll } = usePollStore()
@@ -304,7 +305,7 @@ const CARD_MASSES: Record<string, number> = {
 const NAV_MASSES: Record<string, number> = {
   '/':               3.0,  // HomeView 37.6KB
   '/reader':         0.8,  // ReaderView 11.8KB
-  '/glass':          0.7,  // GlassView 10.4KB
+  '/studio':         0.7,  // GlassView 10.4KB
   '/audio':          1.7,  // AudioplayerView 21.6KB
   '/journal':        1.2,  // JournalView 16.4KB
   '/checkin':        1.3,  // CheckInView 17.8KB
@@ -488,6 +489,9 @@ onUnmounted(() => {
             </button>
           </div>
 
+          <!-- Connector status panel -->
+          <ConnectorPanel />
+
           <!-- Utility cards grid -->
           <div class="nav-grid">
             <router-link
@@ -566,7 +570,7 @@ onUnmounted(() => {
             </router-link>
 
             <router-link
-              to="/glass"
+              to="/studio"
               ref="glassCardEl"
               class="nav-card"
               :style="cardStyle('glass')"
@@ -574,9 +578,9 @@ onUnmounted(() => {
               @pointerenter="onCardEnter('glass')"
               @pointerleave="onCardLeave('glass')"
             >
-              <span class="card-icon">💧</span>
-              <span class="card-title">Liquid Glass</span>
-              <span class="card-desc">Interactive liquid glass visual playground</span>
+              <span class="card-icon">🎞️</span>
+              <span class="card-title">Glass Studio</span>
+              <span class="card-desc">Upload media, layer binaural tones, add text overlays</span>
               <div class="card-glare"></div>
             </router-link>
           </div>

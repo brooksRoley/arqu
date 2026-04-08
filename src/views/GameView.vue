@@ -364,9 +364,19 @@ onMounted(() => {
         <p v-if="currentMatch" class="mutual-who">
           You and <strong>{{ currentMatch.display_name }}</strong> — mutual resonance confirmed.
         </p>
-        <button class="action-btn" :style="{ background: accent }" @click="acknowledgeMutual">
-          Continue
-        </button>
+        <div class="mutual-actions">
+          <button
+            v-if="currentMatch"
+            class="action-btn action-btn--primary"
+            :style="{ background: accent }"
+            @click="router.push(`/messages/${currentMatch.user_id}`)"
+          >
+            Open Chat
+          </button>
+          <button class="action-btn action-btn--ghost" @click="acknowledgeMutual">
+            Continue
+          </button>
+        </div>
       </div>
     </div>
 
@@ -750,6 +760,22 @@ onMounted(() => {
   margin: 0;
 }
 .mutual-who strong { color: #e2e8f0; }
+
+.mutual-actions {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  justify-content: center;
+  margin-top: 0.25rem;
+}
+
+.action-btn--ghost {
+  background: transparent !important;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: #64748b;
+}
+
+.action-btn--ghost:hover { border-color: rgba(255,255,255,0.3); color: #94a3b8; }
 
 /* ── Oracle panel ── */
 .oracle-header {

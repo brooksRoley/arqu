@@ -4,6 +4,8 @@ import { RouterLink, useRouter, useRoute } from 'vue-router'
 import { useStoryStore } from '@/composables/useStoryStore'
 import { useTranceEngine } from '@/composables/useTranceEngine'
 import { useAuthStore } from '@/composables/useAuthStore'
+import { usePollStore } from '@/composables/usePollStore'
+import { useMessageStore } from '@/composables/useMessageStore'
 
 const router = useRouter()
 const route = useRoute()
@@ -94,6 +96,49 @@ const canWindDown = computed(() =>
 )
 
 const { isAuthenticated, user, logout } = useAuthStore()
+const { token: pollToken } = usePollStore()
+const { unreadCount, fetchUnread } = useMessageStore()
+
+// ── Pipeline progress ─────────────────────────────────────────────
+const ONBOARDING_KEY = 'channelzero-onboarding'
+
+interface OnboardingState {
+  poll: boolean
+  calibrate: boolean
+  psychoanalysis: boolean
+  intake: boolean
+  completed: boolean
+}
+
+function loadOnboarding(): OnboardingState {
+  try {
+    const raw = localStorage.getItem(ONBOARDING_KEY)
+    if (raw) return JSON.parse(raw)
+  } catch { /* ignore */ }
+  return { poll: false, calibrate: false, psychoanalysis: false, intake: false, completed: false }
+}
+
+const onboarding = ref<OnboardingState>(loadOnboarding())
+
+// Keep in sync with poll completion detected from store
+watch(pollToken, (t) => {
+  if (t && !onboarding.value.poll) {
+    onboarding.value.poll = true
+    const s = loadOnboarding()
+    s.poll = true
+    localStorage.setItem(ONBOARDING_KEY, JSON.stringify(s))
+  }
+}, { immediate: true })
+
+const pipelineSteps = computed(() => [
+  { key: 'poll',           label: 'Profile',  route: '/',              done: onboarding.value.poll },
+  { key: 'calibrate',      label: 'Signal',   route: '/calibrate',     done: onboarding.value.calibrate },
+  { key: 'psychoanalysis', label: 'Analysis', route: '/psychoanalysis', done: onboarding.value.psychoanalysis },
+  { key: 'intake',         label: 'Confess',  route: '/intake',        done: onboarding.value.intake },
+])
+
+const pipelineDone = computed(() => pipelineSteps.value.filter(s => s.done).length)
+const pipelineComplete = computed(() => onboarding.value.completed)
 
 function handleLogout() {
   logout()
@@ -106,7 +151,7 @@ const menuOpen = ref(false)
 
 // Fullbleed detection — auto-minimize on immersive routes
 const isFullBleed = computed(() => {
-  return ['reader', 'zeromind', 'glass', 'spiral', 'trance', 'webaudio', 'hypno', 'audio'].includes(
+  return ['reader', 'zeromind', 'studio', 'spiral', 'trance', 'webaudio', 'hypno', 'audio', 'liquidglass'].includes(
     route.name as string
   )
 })
@@ -188,11 +233,14 @@ const fileName = ref('')
 // Background modal state
 const showBgModal = ref(false)
 
-// Routes hidden from the main nav bar
+// Routes hidden from the main nav bar.
+// Pipeline steps (calibrate, psychoanalysis, intake, game) are surfaced via the
+// pipeline progress widget instead of appearing as flat nav links.
 const hiddenRoutes = new Set([
   'zeromind', 'spiral', 'trance', 'webaudio', 'hypno', 'fitting', 'poll',
   'login', 'google-callback', 'x-callback', 'strava-callback',
-  'peripheral', 'intake', 'game', 'onboarding',
+  'peripheral', 'intake', 'game', 'onboarding', 'discovery',
+  'calibrate', 'psychoanalysis', 'liquidglass',
 ])
 
 const navRoutes = computed(() => {
@@ -214,9 +262,8 @@ const navRoutes = computed(() => {
 
 function formatRouteName(name: string): string {
   const labels: Record<string, string> = {
-    glass: 'Liquid Glass',
-    calibrate: 'Calibrate',
-    checkin: 'Check-in'
+    studio: 'Studio',
+    checkin: 'Check-in',
   }
   if (labels[name]) return labels[name]
   return name
@@ -230,7 +277,7 @@ function getRouteIcon(name: string): string {
   const icons: Record<string, string> = {
     home: '<path d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-4 0a1 1 0 01-1-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 01-1 1h-2z"/>',
     reader: '<path d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253z"/>',
-    glass: '<path d="M12 3c-1.5 2-4 4-4 7a4 4 0 008 0c0-3-2.5-5-4-7z"/><path d="M12 14v7m-3 0h6"/>',
+    studio: '<rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/><path d="M7 8h1m4-1v2m4-1h1"/>',
     audio: '<path d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2z"/>',
     journal: '<path d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>',
     checkin: '<path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/>',
@@ -303,6 +350,7 @@ onMounted(() => {
   window.addEventListener('touchstart', showNav, { passive: true })
   document.addEventListener('fullscreenchange', handleFullscreenChange)
   document.addEventListener('webkitfullscreenchange', handleFullscreenChange)
+  if (isAuthenticated.value) fetchUnread()
 })
 
 onUnmounted(() => {
@@ -338,6 +386,25 @@ onUnmounted(() => {
         >
           <svg class="nav-link-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" v-html="r.icon"></svg>
           <span class="nav-link-label">{{ r.label }}</span>
+        </RouterLink>
+
+        <!-- Pipeline progress widget (authenticated, not complete) -->
+        <RouterLink
+          v-if="isAuthenticated && !pipelineComplete"
+          to="/onboarding"
+          class="nav-pipeline"
+          active-class="nav-pipeline--active"
+          :title="`Pipeline: ${pipelineDone} of ${pipelineSteps.length} complete`"
+        >
+          <span class="pipeline-dots">
+            <span
+              v-for="s in pipelineSteps"
+              :key="s.key"
+              class="pipeline-dot"
+              :class="s.done ? 'pipeline-dot--done' : 'pipeline-dot--pending'"
+            ></span>
+          </span>
+          <span class="pipeline-label">Pipeline</span>
         </RouterLink>
       </div>
 
@@ -382,6 +449,20 @@ onUnmounted(() => {
           <line x1="21" y1="3" x2="14" y2="10"></line>
         </svg>
       </button>
+
+      <!-- Messages button (authenticated) -->
+      <RouterLink
+        v-if="isAuthenticated"
+        to="/messages"
+        class="messages-btn"
+        :class="{ 'messages-btn--unread': unreadCount > 0 }"
+        :aria-label="`Messages${unreadCount > 0 ? ` (${unreadCount} unread)` : ''}`"
+      >
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/>
+        </svg>
+        <span v-if="unreadCount > 0" class="messages-badge">{{ unreadCount > 9 ? '9+' : unreadCount }}</span>
+      </RouterLink>
 
       <!-- Auth button -->
       <RouterLink
@@ -698,6 +779,101 @@ onUnmounted(() => {
 
 .nav-link-label {
   font-size: 0.8rem;
+}
+
+/* ── Pipeline widget ── */
+.nav-pipeline {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.35rem 0.6rem;
+  border-radius: 0.4rem;
+  border: 1px solid rgba(99, 102, 241, 0.25);
+  color: #6366f1;
+  text-decoration: none;
+  font-size: 0.75rem;
+  white-space: nowrap;
+  margin-left: 0.25rem;
+  transition: border-color 0.15s, background 0.15s, color 0.15s;
+}
+
+.nav-pipeline:hover {
+  border-color: rgba(99, 102, 241, 0.5);
+  background: rgba(99, 102, 241, 0.08);
+  color: #818cf8;
+}
+
+.nav-pipeline--active {
+  background: rgba(99, 102, 241, 0.12);
+}
+
+.pipeline-dots {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.pipeline-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+}
+
+.pipeline-dot--done {
+  background: #6366f1;
+}
+
+.pipeline-dot--pending {
+  background: rgba(99, 102, 241, 0.25);
+  border: 1px solid rgba(99, 102, 241, 0.4);
+}
+
+.pipeline-label {
+  font-size: 0.72rem;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+}
+
+/* ── Messages button ── */
+.messages-btn {
+  position: relative;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: 0.4rem;
+  color: #64748b;
+  transition: color 0.15s, background 0.15s;
+  text-decoration: none;
+}
+
+.messages-btn svg {
+  width: 18px;
+  height: 18px;
+}
+
+.messages-btn:hover { color: #e2e8f0; background: rgba(255,255,255,0.06); }
+
+.messages-btn--unread { color: #6366f1; }
+
+.messages-badge {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  background: #6366f1;
+  color: #fff;
+  font-size: 0.55rem;
+  font-weight: 700;
+  border-radius: 100px;
+  min-width: 14px;
+  height: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 3px;
+  pointer-events: none;
 }
 
 /* ── Hamburger button ── */

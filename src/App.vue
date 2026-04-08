@@ -7,7 +7,7 @@ const route = useRoute()
 const mainRef = ref<HTMLElement | null>(null)
 
 const isFullBleed = computed(() => {
-  return ['reader', 'zeromind', 'glass', 'liquidglass', 'spiral', 'trance', 'webaudio'].includes(
+  return ['reader', 'zeromind', 'studio', 'liquidglass', 'spiral', 'trance', 'webaudio'].includes(
     route.name as string
   )
 })
