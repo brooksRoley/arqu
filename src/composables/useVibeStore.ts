@@ -31,9 +31,9 @@ export interface OAuthState {
 }
 
 export interface SonicOverlap {
-  shared_genres: string[]
-  shared_artists: string[]
-  their_top_genres: string[]
+  shared_genres: readonly string[]
+  shared_artists: readonly string[]
+  their_top_genres: readonly string[]
   valence_delta: number
   energy_delta: number
 }

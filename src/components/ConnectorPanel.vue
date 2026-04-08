@@ -58,14 +58,7 @@ const loadingKey = ref<string | null>(null)
 
 // ── Connector definitions ────────────────────────────────────────
 
-interface ConnectorDef {
-  key: keyof typeof oauthState.value
-  label: string
-  svg: string
-  connect: () => Promise<void> | void
-}
-
-const connectors = computed<(ConnectorDef & { connected: boolean })[]>(() => [
+const connectors = computed(() => [
   {
     key: 'spotify',
     label: 'Spotify',
@@ -132,7 +125,7 @@ const connectedCount = computed(() => connectors.value.filter((c) => c.connected
 
 // ── Connect handler ──────────────────────────────────────────────
 
-async function handleConnect(c: ConnectorDef & { connected: boolean }) {
+async function handleConnect(c: { connected: boolean; key: string; connect: () => Promise<void> | void }) {
   if (c.connected || loadingKey.value) return
   loadingKey.value = c.key as string
   try {

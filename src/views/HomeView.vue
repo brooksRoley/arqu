@@ -6,6 +6,7 @@ import { useMeditation } from '@/composables/useMeditation'
 import { useCosmicPhysics } from '@/composables/useCosmicPhysics'
 import type { PollAnswers } from '@/composables/usePollStore'
 import ConnectorPanel from '@/components/ConnectorPanel.vue'
+import QuestLog from '@/components/QuestLog.vue'
 
 const router = useRouter()
 const { answers, token, setAnswer, submitPoll, resetPoll } = usePollStore()
@@ -458,6 +459,9 @@ onUnmounted(() => {
             </div>
             <button class="profile-retake" @click="retakePoll">retake</button>
           </div>
+
+          <!-- Quest Log — "you are here" with next action -->
+          <QuestLog @start-poll="stage = 'poll'" />
 
           <!-- Featured card -->
           <div

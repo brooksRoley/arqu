@@ -62,7 +62,7 @@ async function openThread(otherUserId: string) {
     const msgs = await apiFetch<Message[]>(`/api/messages/thread/${otherUserId}`)
     activeThread.value = msgs
     // Mark as read — unread count will drop on next poll
-    unreadCount.value = Math.max(0, unreadCount.value - threads.value.find(t => t.other_user_id === otherUserId)?.unread_count ?? 0)
+    unreadCount.value = Math.max(0, unreadCount.value - (threads.value.find(t => t.other_user_id === otherUserId)?.unread_count ?? 0))
   } catch (e: any) {
     error.value = e.message
   } finally {
