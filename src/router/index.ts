@@ -181,6 +181,14 @@ const router = createRouter({
       name: 'thread',
       component: () => import('@/views/ThreadView.vue'),
       meta: { requiresAuth: true }
+    },
+
+    // ── Admin analytics dashboard ────────────────────────────────────────
+    {
+      path: '/admin',
+      name: 'admin',
+      component: () => import('@/views/AdminView.vue'),
+      meta: { requiresAuth: true }
     }
   ]
 })

@@ -7,6 +7,7 @@ export interface User {
   email: string
   display_name: string | null
   created_at: string
+  is_admin: boolean
 }
 
 export interface AuthState {

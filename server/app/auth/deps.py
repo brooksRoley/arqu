@@ -36,6 +36,22 @@ async def get_current_user_id(
     return UUID(payload["sub"])
 
 
+async def require_admin(
+    user_id: UUID = Depends(get_current_user_id),
+) -> UUID:
+    """Raise 403 if the authenticated user is not an admin."""
+    async with get_conn() as conn:
+        is_admin = await conn.fetchval(
+            "SELECT is_admin FROM users WHERE id = $1", user_id
+        )
+    if not is_admin:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Admin access required",
+        )
+    return user_id
+
+
 async def get_optional_user_id(
     creds: Optional[HTTPAuthorizationCredentials] = Depends(_bearer),
 ) -> Optional[UUID]:

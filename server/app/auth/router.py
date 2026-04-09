@@ -66,7 +66,7 @@ async def login(body: LoginRequest):
 async def me(user_id: UUID = Depends(get_current_user_id)):
     async with get_conn() as conn:
         row = await conn.fetchrow(
-            "SELECT id, email, display_name, created_at FROM users WHERE id = $1",
+            "SELECT id, email, display_name, created_at, is_admin FROM users WHERE id = $1",
             user_id,
         )
 

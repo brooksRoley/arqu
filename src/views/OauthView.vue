@@ -49,14 +49,46 @@
 
       </div>
 
-      <!-- Connected sources summary -->
-      <div v-if="connectedSources.length > 0" class="mt-8 bg-gray-800/50 border border-green-500/20 rounded-2xl p-5">
-        <h3 class="text-sm font-medium text-green-400 uppercase tracking-wider mb-3">Connected</h3>
-        <div class="flex flex-wrap gap-3">
-          <div v-for="src in connectedSources" :key="src.key" class="flex items-center gap-2 text-sm text-gray-400">
-            <span class="w-2 h-2 rounded-full bg-green-500"></span>
-            {{ src.label }}
-            <span v-if="src.lastSync" class="text-gray-600 text-xs">{{ new Date(src.lastSync).toLocaleDateString() }}</span>
+      <!-- Connected sources summary + feedback -->
+      <div v-if="connectedSources.length > 0" class="mt-8 bg-gray-800/50 border border-green-500/20 rounded-2xl p-5 space-y-4">
+        <h3 class="text-sm font-medium text-green-400 uppercase tracking-wider">Connected</h3>
+        <div class="space-y-4">
+          <div v-for="src in connectedSources" :key="src.key">
+            <div class="flex items-center gap-2 text-sm text-gray-400 mb-2">
+              <span class="w-2 h-2 rounded-full bg-green-500"></span>
+              {{ src.label }}
+              <span v-if="src.lastSync" class="text-gray-600 text-xs">{{ new Date(src.lastSync).toLocaleDateString() }}</span>
+            </div>
+
+            <!-- Feedback widget -->
+            <div v-if="!feedbackGiven[src.key]" class="ml-4 flex flex-col gap-2">
+              <p class="text-xs text-gray-500">How useful does this feel for finding your match?</p>
+              <div class="flex items-center gap-1">
+                <button
+                  v-for="n in 5"
+                  :key="n"
+                  @click="setRating(src.key, n)"
+                  class="text-xl transition-transform hover:scale-110"
+                  :class="(pendingRating[src.key] || 0) >= n ? 'text-yellow-400' : 'text-gray-700'"
+                >★</button>
+              </div>
+              <div v-if="pendingRating[src.key]" class="flex flex-wrap gap-2">
+                <button
+                  v-for="tag in FEEDBACK_TAGS"
+                  :key="tag"
+                  @click="toggleTag(src.key, tag)"
+                  class="text-xs px-2.5 py-1 rounded-full border transition-colors"
+                  :class="selectedTags[src.key]?.includes(tag)
+                    ? 'border-purple-500 text-purple-400 bg-purple-900/20'
+                    : 'border-gray-700 text-gray-500 hover:border-gray-500'"
+                >{{ tag.replace(/_/g, ' ') }}</button>
+                <button
+                  @click="submitFeedback(src.key)"
+                  class="text-xs px-3 py-1 rounded-full bg-purple-700 text-white hover:bg-purple-600 transition-colors ml-auto"
+                >Submit</button>
+              </div>
+            </div>
+            <div v-else class="ml-4 text-xs text-gray-600">Thanks for the feedback ✓</div>
           </div>
         </div>
       </div>
@@ -76,17 +108,25 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted } from 'vue'
+import { computed, reactive, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useVibeStore } from '@/composables/useVibeStore'
+import { useAdminStore } from '@/composables/useAdminStore'
 import RadarIcon from '@/components/icons/RadarIcon.vue'
 import SignalIcon from '@/components/icons/SignalIcon.vue'
 import SpotifyConnect from '@/components/SpotifyConnect.vue'
 import TwitterConnect from '@/components/TwitterConnect.vue'
 
+const FEEDBACK_TAGS = ['felt_relevant', 'too_invasive', 'didnt_add_value', 'surprised_me', 'want_more_like_this']
+
 const router = useRouter()
 const route = useRoute()
 const { oauthState, isMatchReady, markConnected } = useVibeStore()
+const { submitConnectorFeedback } = useAdminStore()
+
+const pendingRating = reactive<Record<string, number>>({})
+const selectedTags = reactive<Record<string, string[]>>({})
+const feedbackGiven = reactive<Record<string, boolean>>({})
 
 const connectedSources = computed(() => {
   const sources: Array<{ key: string; label: string; lastSync: string | null }> = []
@@ -95,9 +135,27 @@ const connectedSources = computed(() => {
   return sources
 })
 
-// Handle return from Spotify OAuth callback
-// Backend redirects to /game?spotify=connected — but we land on /calibrate first
-// if the user navigates back, so also handle the param here.
+function setRating(provider: string, n: number) {
+  pendingRating[provider] = n
+  if (!selectedTags[provider]) selectedTags[provider] = []
+}
+
+function toggleTag(provider: string, tag: string) {
+  if (!selectedTags[provider]) selectedTags[provider] = []
+  const idx = selectedTags[provider].indexOf(tag)
+  if (idx === -1) selectedTags[provider].push(tag)
+  else selectedTags[provider].splice(idx, 1)
+}
+
+async function submitFeedback(provider: string) {
+  const rating = pendingRating[provider]
+  if (!rating) return
+  try {
+    await submitConnectorFeedback(provider, rating, selectedTags[provider] || [])
+    feedbackGiven[provider] = true
+  } catch { /* non-blocking */ }
+}
+
 onMounted(() => {
   if (route.query.spotify === 'connected') {
     markConnected('spotify')
