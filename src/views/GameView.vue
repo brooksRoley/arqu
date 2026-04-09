@@ -128,7 +128,7 @@ async function startScan() {
   await fetchPromise
 
   if (matchesError.value || matches.value.length === 0) {
-    scanError.value = matchesError.value || 'No matches found — complete intake first.'
+    scanError.value = matchesError.value || 'No matches yet — connect more sources or deepen your profile to strengthen your signal.'
     phase.value = 'lobby'
     return
   }
@@ -236,11 +236,26 @@ onMounted(() => {
         <span class="hero-icon">&#x2726;</span>
         <p class="hero-text">
           Your psychoanalytic profile has been loaded.<br />
-          Ready to enter the matching engine?
+          Let's see what the data reveals about you.
         </p>
         <p v-if="scanError" class="scan-error">{{ scanError }}</p>
-        <button class="action-btn" :style="{ background: accent }" @click="startScan">
-          Initialize Scan
+
+        <!-- No-match fallback: offer self-analysis paths -->
+        <div v-if="scanError" class="fallback-actions">
+          <p class="fallback-hint">Build a stronger signal to unlock matches.</p>
+          <button class="action-btn action-btn--outline" @click="router.push('/psychoanalysis')">
+            Explore Your Profile
+          </button>
+          <button class="action-btn action-btn--outline" @click="router.push('/intake')">
+            Deepen Intake
+          </button>
+          <button class="action-btn action-btn--outline" @click="router.push('/calibrate')">
+            Connect More Sources
+          </button>
+        </div>
+
+        <button v-if="!scanError" class="action-btn" :style="{ background: accent }" @click="startScan">
+          Analyze Signal
         </button>
       </div>
     </div>
@@ -389,9 +404,14 @@ onMounted(() => {
           You've reviewed all available matches for this cycle.<br />
           Your decisions are recorded. The vectors will recalibrate.
         </p>
-        <button class="action-btn" :style="{ background: accent }" @click="goBack">
-          Return to Check-in
-        </button>
+        <div class="deployed-actions">
+          <button class="action-btn" :style="{ background: accent }" @click="router.push('/psychoanalysis')">
+            Explore Your Profile
+          </button>
+          <button class="action-btn action-btn--ghost" @click="goBack">
+            Return to Check-in
+          </button>
+        </div>
       </div>
     </div>
   </div>
@@ -713,6 +733,35 @@ onMounted(() => {
   text-align: center;
 }
 
+/* ── No-match fallback ── */
+.fallback-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.6rem;
+  width: 100%;
+  margin-top: 0.25rem;
+}
+
+.fallback-hint {
+  font-size: 0.75rem;
+  color: #64748b;
+  margin: 0.25rem 0 0;
+}
+
+.action-btn--outline {
+  background: transparent !important;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #94a3b8;
+  width: 100%;
+}
+
+.action-btn--outline:hover {
+  border-color: rgba(255, 255, 255, 0.25);
+  color: #e2e8f0;
+  background: rgba(255, 255, 255, 0.04) !important;
+}
+
 /* ── Mutual match celebration ── */
 .mutual-display {
   display: flex;
@@ -902,6 +951,14 @@ onMounted(() => {
   color: #94a3b8;
   line-height: 1.65;
   margin: 0;
+}
+
+.deployed-actions {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  justify-content: center;
+  margin-top: 0.25rem;
 }
 
 .deployed-meta {

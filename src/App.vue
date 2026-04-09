@@ -2,6 +2,7 @@
 import { computed, ref, onMounted, onUnmounted } from 'vue'
 import { RouterView, useRoute } from 'vue-router'
 import NavBar from '@/components/NavBar.vue'
+import SideBar from '@/components/SideBar.vue'
 
 const route = useRoute()
 const mainRef = ref<HTMLElement | null>(null)
@@ -10,6 +11,11 @@ const isFullBleed = computed(() => {
   return ['reader', 'zeromind', 'studio', 'liquidglass', 'spiral', 'trance', 'webaudio'].includes(
     route.name as string
   )
+})
+
+// Hide sidebar on immersive/fullbleed routes and login/universe
+const hideSidebar = computed(() => {
+  return isFullBleed.value || ['login', 'universe', 'hypno'].includes(route.name as string)
 })
 
 function toggleFullscreen() {
@@ -39,7 +45,8 @@ onUnmounted(() => document.removeEventListener('keydown', onKeydown))
 </script>
 
 <template>
-  <div class="app-container">
+  <div :class="['app-container', { 'app-container--with-sidebar': !hideSidebar }]">
+    <SideBar v-if="!hideSidebar" />
     <NavBar />
 
     <main ref="mainRef" :class="['app-main', { 'app-main--fullbleed': isFullBleed }]">
@@ -61,6 +68,11 @@ onUnmounted(() => document.removeEventListener('keydown', onKeydown))
   color: #e2e8f0;
 }
 
+/* When sidebar is present, offset all content */
+.app-container--with-sidebar {
+  padding-left: 240px;
+}
+
 .app-main {
   flex: 1;
   padding: 1.5rem 2rem 4rem;
@@ -76,8 +88,12 @@ onUnmounted(() => document.removeEventListener('keydown', onKeydown))
 }
 
 @media (max-width: 768px) {
+  .app-container--with-sidebar {
+    padding-left: 0;
+  }
+
   .app-main {
-    padding: 1rem 1rem 4rem;
+    padding: 3.5rem 1rem 4rem; /* extra top padding for mobile toggle button */
   }
 }
 

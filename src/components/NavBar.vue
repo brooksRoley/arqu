@@ -239,7 +239,7 @@ const showBgModal = ref(false)
 const hiddenRoutes = new Set([
   'zeromind', 'spiral', 'trance', 'webaudio', 'hypno', 'fitting', 'poll',
   'login', 'google-callback', 'x-callback', 'strava-callback',
-  'peripheral', 'intake', 'game', 'onboarding', 'discovery',
+  'peripheral', 'intake', 'game', 'onboarding', 'discovery', 'universe',
   'calibrate', 'psychoanalysis', 'liquidglass',
 ])
 
@@ -374,39 +374,9 @@ onUnmounted(() => {
       }
     ]"
   >
-    <!-- Collapsed: just the hamburger button -->
     <div class="navbar-top">
-      <div v-if="!isFullBleed || menuOpen" class="nav-links">
-        <RouterLink
-          v-for="r in navRoutes"
-          :key="r.name"
-          :to="r.path"
-          class="nav-link"
-          active-class="nav-link--active"
-        >
-          <svg class="nav-link-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" v-html="r.icon"></svg>
-          <span class="nav-link-label">{{ r.label }}</span>
-        </RouterLink>
-
-        <!-- Pipeline progress widget (authenticated, not complete) -->
-        <RouterLink
-          v-if="isAuthenticated && !pipelineComplete"
-          to="/onboarding"
-          class="nav-pipeline"
-          active-class="nav-pipeline--active"
-          :title="`Pipeline: ${pipelineDone} of ${pipelineSteps.length} complete`"
-        >
-          <span class="pipeline-dots">
-            <span
-              v-for="s in pipelineSteps"
-              :key="s.key"
-              class="pipeline-dot"
-              :class="s.done ? 'pipeline-dot--done' : 'pipeline-dot--pending'"
-            ></span>
-          </span>
-          <span class="pipeline-label">Pipeline</span>
-        </RouterLink>
-      </div>
+      <!-- Spacer (nav links moved to sidebar) -->
+      <div class="nav-links-spacer"></div>
 
       <button
         v-if="isFullBleed"
@@ -730,6 +700,9 @@ onUnmounted(() => {
   gap: 0.5rem;
   padding: 0.4rem 0.75rem;
 }
+
+/* ── Nav links spacer (links moved to sidebar) ── */
+.nav-links-spacer { flex: 1; }
 
 /* ── Nav links row ── */
 .nav-links {
@@ -1119,6 +1092,36 @@ onUnmounted(() => {
   padding: 0.3rem 0.5rem;
   font-variant-numeric: tabular-nums;
 }
+
+/* ── Session links ── */
+.session-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.session-link {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.35rem 0.65rem;
+  border-radius: 0.35rem;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.03);
+  color: #94a3b8;
+  font-size: 0.75rem;
+  text-decoration: none;
+  transition: border-color 0.15s, background 0.15s, color 0.15s;
+}
+
+.session-link:hover {
+  border-color: rgba(99, 102, 241, 0.4);
+  background: rgba(99, 102, 241, 0.08);
+  color: #e2e8f0;
+}
+
+.session-link-icon { font-size: 0.85rem; }
+.session-link-label { font-weight: 500; }
 
 /* ── Trance section ── */
 .trance-header {

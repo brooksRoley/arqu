@@ -18,23 +18,50 @@ const password = ref('')
 const displayName = ref('')
 const localError = ref('')
 
+const loadingMessage = ref('')
+let loadingTimer: ReturnType<typeof setTimeout> | null = null
+
 const formValid = computed(() => {
   if (!email.value.trim() || !password.value) return false
   if (mode.value === 'register' && password.value.length < 8) return false
   return true
 })
 
+function startLoadingMessages() {
+  loadingMessage.value = mode.value === 'login' ? 'Signing in...' : 'Creating account...'
+  loadingTimer = setTimeout(() => {
+    loadingMessage.value = 'Waking up the server...'
+    loadingTimer = setTimeout(() => {
+      loadingMessage.value = 'Cold start — hang tight...'
+    }, 5000)
+  }, 3000)
+}
+
+function stopLoadingMessages() {
+  if (loadingTimer) { clearTimeout(loadingTimer); loadingTimer = null }
+  loadingMessage.value = ''
+}
+
 async function submit() {
   localError.value = ''
+  startLoadingMessages()
   try {
     if (mode.value === 'login') {
       await login(email.value.trim(), password.value)
     } else {
       await register(email.value.trim(), password.value, displayName.value.trim() || undefined)
     }
-    router.push((route.query.redirect as string) || '/')
+    stopLoadingMessages()
+    const defaultDest = mode.value === 'register' ? '/universe' : '/'
+    router.push((route.query.redirect as string) || defaultDest)
   } catch (e: any) {
-    localError.value = e.message || 'Something went wrong'
+    stopLoadingMessages()
+    const msg = e.message || 'Something went wrong'
+    if (msg.includes('Failed to fetch') || msg.includes('NetworkError')) {
+      localError.value = 'Could not reach the server. It may be starting up — try again in a moment.'
+    } else {
+      localError.value = msg
+    }
   }
 }
 
@@ -85,7 +112,13 @@ function toggleMode() {
           class="login-btn"
           :disabled="!formValid || loading"
         >
-          {{ loading ? '...' : mode === 'login' ? 'Sign In' : 'Create Account' }}
+          <template v-if="loading">
+            <span class="login-spinner"></span>
+            {{ loadingMessage || 'Connecting...' }}
+          </template>
+          <template v-else>
+            {{ mode === 'login' ? 'Sign In' : 'Create Account' }}
+          </template>
         </button>
       </form>
 
@@ -193,8 +226,24 @@ function toggleMode() {
 }
 
 .login-btn:disabled {
-  opacity: 0.4;
+  opacity: 0.6;
   cursor: default;
+}
+
+.login-spinner {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: login-spin 0.7s linear infinite;
+  vertical-align: middle;
+  margin-right: 0.4rem;
+}
+
+@keyframes login-spin {
+  to { transform: rotate(360deg); }
 }
 
 .toggle-btn {

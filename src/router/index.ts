@@ -139,6 +139,14 @@ const router = createRouter({
       meta: { requiresAuth: true }
     },
 
+    // ── Universe: solar system visualization (post-registration) ───
+    {
+      path: '/universe',
+      name: 'universe',
+      component: () => import('@/views/UniverseView.vue'),
+      meta: { requiresAuth: true }
+    },
+
     // ── Discovery: physics-driven onboarding flow ─────────────────
     {
       path: '/discovery',
