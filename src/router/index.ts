@@ -191,6 +191,14 @@ const router = createRouter({
       meta: { requiresAuth: true }
     },
 
+    // ── X/Twitter signal + imprint ───────────────────────────────────────
+    {
+      path: '/x',
+      name: 'x',
+      component: () => import('@/views/XView.vue'),
+      meta: { requiresAuth: true }
+    },
+
     // ── Admin analytics dashboard ────────────────────────────────────────
     {
       path: '/admin',

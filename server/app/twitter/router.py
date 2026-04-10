@@ -20,6 +20,7 @@ import base64
 import json
 import time
 import hashlib
+from collections import Counter
 from urllib.parse import urlencode
 from uuid import UUID
 
@@ -27,10 +28,11 @@ import secrets
 
 import httpx
 import jwt
-from fastapi import APIRouter, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from fastapi.responses import JSONResponse, RedirectResponse
 
 from ..auth.service import decode_access_token
+from ..auth.deps import get_current_user_id
 from ..config import get_settings
 from ..db import get_conn
 from ..llm.encryption import encrypt_api_key
@@ -253,6 +255,107 @@ async def twitter_callback(code: str, state: str):
     return RedirectResponse(f"{frontend}/calibrate?twitter=connected")
 
 
+# ── Profile read ──────────────────────────────────────────────────────────────
+
+@router.get("/profile")
+async def twitter_profile(user_id: UUID = Depends(get_current_user_id)):
+    """Return the stored Twitter/X distilled profile for the current user."""
+    async with get_conn() as conn:
+        row = await conn.fetchrow(
+            "SELECT twitter_data FROM vibe_vectors WHERE user_id = $1",
+            user_id,
+        )
+    if not row or not row["twitter_data"]:
+        return None
+    data = row["twitter_data"]
+    return json.loads(data) if isinstance(data, str) else data
+
+
+# ── Psychoanalysis ────────────────────────────────────────────────────────────
+
+@router.get("/analyze")
+async def twitter_analyze(user_id: UUID = Depends(get_current_user_id)):
+    """Generate an LLM psychoanalysis of the user's X/Twitter profile."""
+    settings = get_settings()
+
+    async with get_conn() as conn:
+        row = await conn.fetchrow(
+            "SELECT twitter_data FROM vibe_vectors WHERE user_id = $1",
+            user_id,
+        )
+
+    if not row or not row["twitter_data"]:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No Twitter data found")
+
+    data = row["twitter_data"]
+    profile = json.loads(data) if isinstance(data, str) else data
+
+    if not settings.openai_embed_key:
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="LLM not configured")
+
+    narrative = await _analyze_twitter_profile(settings.openai_embed_key, profile)
+    return {"narrative": narrative}
+
+
+async def _analyze_twitter_profile(api_key: str, profile: dict) -> str:
+    followers = profile.get("followers", 0)
+    following = profile.get("following_count", 0)
+    tweet_count = profile.get("tweet_count", 0)
+    listed = profile.get("listed_count", 0)
+    bio = profile.get("bio", "")
+    avg_len = profile.get("avg_tweet_length", 0)
+    likes_given = profile.get("recent_likes_given", 0)
+    high_profile = profile.get("high_profile_follows", 0)
+    samples = profile.get("tweet_samples", [])
+    engagement_avg = profile.get("engagement_avg", {})
+    top_lang = profile.get("language", "en")
+
+    ff_ratio = round(followers / following, 2) if following > 0 else followers
+    sample_text = "\n".join(f'- "{s}"' for s in samples[:5]) if samples else "(unavailable)"
+
+    prompt = f"""You are a perceptive behavioral psychologist analyzing a person's X/Twitter digital footprint.
+Your task: write a sharp, warm, 3-paragraph psychoanalysis of this user's neurotic output patterns.
+Do not be clinical. Be insightful, specific, and draw connections between data points.
+
+SIGNAL DATA:
+- Followers: {followers} | Following: {following} | Follower/Following ratio: {ff_ratio}
+- Total tweets ever: {tweet_count} | Listed by others: {listed}
+- Bio: "{bio}"
+- Recent avg tweet length: {avg_len} chars
+- Likes given (passive engagement): {likes_given} in last 20 loaded
+- High-profile accounts followed (100k+ followers): {high_profile}
+- Avg engagement received per tweet: {engagement_avg.get('likes', 0):.1f} likes, {engagement_avg.get('retweets', 0):.1f} retweets
+- Primary language: {top_lang}
+- Sample tweets:
+{sample_text}
+
+Write 3 paragraphs analyzing:
+1. Communication style and self-presentation — what tweet length, language, and bio reveal
+2. Social positioning — follower/following ratio, high-profile follows, listed count as influence signals
+3. Engagement psychology — passive consumption vs. active expression, what they amplify and why
+
+Be direct, specific, a little poetic. Avoid generic statements. Return only the narrative."""
+
+    headers = {
+        "Authorization": f"Bearer {api_key}",
+        "Content-Type": "application/json",
+    }
+    payload = {
+        "model": "gpt-4o-mini",
+        "max_tokens": 800,
+        "messages": [{"role": "user", "content": prompt}],
+    }
+    async with httpx.AsyncClient(timeout=60) as client:
+        resp = await client.post(
+            "https://api.openai.com/v1/chat/completions",
+            json=payload,
+            headers=headers,
+        )
+        if resp.status_code != 200:
+            raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail="LLM call failed")
+        return resp.json()["choices"][0]["message"]["content"]
+
+
 # ── Profile distillation ─────────────────────────────────────────────────────
 
 def _distill_profile(
@@ -267,6 +370,36 @@ def _distill_profile(
     avg_tweet_len = round(
         sum(len(t) for t in tweet_texts) / len(tweet_texts), 1
     ) if tweet_texts else 0
+
+    # Per-tweet engagement averages
+    likes_per_tweet = [t.get("public_metrics", {}).get("like_count", 0) for t in tweets]
+    rt_per_tweet = [t.get("public_metrics", {}).get("retweet_count", 0) for t in tweets]
+    avg_likes = round(sum(likes_per_tweet) / len(likes_per_tweet), 1) if likes_per_tweet else 0
+    avg_rts = round(sum(rt_per_tweet) / len(rt_per_tweet), 1) if rt_per_tweet else 0
+
+    # Posting hour distribution (UTC)
+    hour_counts: Counter = Counter()
+    for t in tweets:
+        created = t.get("created_at", "")
+        if created and "T" in created:
+            try:
+                hour = int(created.split("T")[1][:2])
+                hour_counts[str(hour)] += 1
+            except (ValueError, IndexError):
+                pass
+
+    # Language distribution
+    lang_counts: Counter = Counter(t.get("lang", "und") for t in tweets if t.get("lang"))
+    top_lang = lang_counts.most_common(1)[0][0] if lang_counts else "en"
+
+    # Tweet samples — clean URLs, keep first 120 chars
+    samples = []
+    for t in tweets[:5]:
+        text = t.get("text", "")
+        # Strip URLs
+        cleaned = " ".join(w for w in text.split() if not w.startswith("http"))
+        if len(cleaned) > 10:
+            samples.append(cleaned[:120])
 
     # Engagement ratios
     total_likes_given = len(likes)
@@ -290,4 +423,8 @@ def _distill_profile(
         "recent_likes_given": total_likes_given,
         "high_profile_follows": high_profile_follows,
         "account_created": me.get("created_at", ""),
+        "engagement_avg": {"likes": avg_likes, "retweets": avg_rts},
+        "posting_hours": dict(hour_counts),
+        "language": top_lang,
+        "tweet_samples": samples,
     }
