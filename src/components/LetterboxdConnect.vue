@@ -119,7 +119,7 @@ onMounted(() => {
       .then((res) => {
         if (!res.ok) throw new Error('Letterboxd ingestion failed')
         markConnected('letterboxd')
-        router.replace({ path: '/peripheral' })
+        router.replace({ path: '/calibrate' })
       })
       .catch((err) => console.error('Failed to ingest Letterboxd data:', err))
       .finally(() => { isConnecting.value = false })

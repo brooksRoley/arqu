@@ -35,7 +35,7 @@ from ..vector.service import upsert_user_vector
 
 router = APIRouter()
 
-_SPOTIFY_AUTH_URL = "https://accounts.spotify.com/authorize"
+_SPOTIFY_AUTH_URL  = "https://accounts.spotify.com/authorize"
 _SPOTIFY_TOKEN_URL = "https://accounts.spotify.com/api/token"
 _SPOTIFY_API_BASE = "https://api.spotify.com/v1"
 _SCOPES = "user-top-read user-read-recently-played"
@@ -82,6 +82,21 @@ async def _verify_state(state: str) -> str:
 
 
 # ── Routes ───────────────────────────────────────────────────────────────────
+
+@router.get("/profile")
+async def get_spotify_profile(user_id: UUID = Depends(get_current_user_id)):
+    """Return the stored Spotify profile for the current user, or null."""
+    async with get_conn() as conn:
+        row = await conn.fetchrow(
+            "SELECT spotify_data FROM vibe_vectors WHERE user_id = $1",
+            user_id,
+        )
+    if not row or not row["spotify_data"]:
+        return None
+    import json as _json
+    data = row["spotify_data"]
+    return _json.loads(data) if isinstance(data, str) else data
+
 
 @router.get("/connect")
 async def spotify_connect(token: str = Query(..., description="Frontend JWT")):

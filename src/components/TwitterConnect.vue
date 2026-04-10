@@ -52,6 +52,7 @@
       </svg>
     </button>
   </div>
+  <p v-if="connectError" class="mt-2 text-xs text-red-400 font-mono text-center">{{ connectError }}</p>
 </template>
 
 <script setup lang="ts">
@@ -60,10 +61,11 @@ import { useAuthStore } from '@/composables/useAuthStore'
 import { useVibeStore } from '@/composables/useVibeStore'
 
 const { token } = useAuthStore()
-const { oauthState, markConnected } = useVibeStore()
+const { oauthState } = useVibeStore()
 
 const API = import.meta.env.VITE_API_URL || ''
 const isConnecting = ref(false)
+const connectError = ref<string | null>(null)
 const isConnected = computed(() => oauthState.value.twitter.connected)
 
 const buttonText = computed(() => {
@@ -75,19 +77,25 @@ const buttonText = computed(() => {
 async function initiateXAuth() {
   if (isConnected.value || !token.value) return
   isConnecting.value = true
+  connectError.value = null
 
   try {
-    // Server-side PKCE — verifier is embedded in the state JWT
     const response = await fetch(`${API}/api/twitter/connect?token=${token.value}`)
     const data = await response.json()
+
+    if (!response.ok) {
+      connectError.value = data.detail || `Error ${response.status}`
+      return
+    }
 
     if (data.auth_url) {
       window.location.href = data.auth_url
     } else {
-      throw new Error('X OAuth failed to initialize')
+      connectError.value = 'No auth URL returned from server'
     }
   } catch (error) {
-    console.error('Neurotic handshake failed:', error)
+    connectError.value = 'Could not reach the server'
+  } finally {
     isConnecting.value = false
   }
 }

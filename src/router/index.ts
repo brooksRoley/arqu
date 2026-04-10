@@ -183,6 +183,14 @@ const router = createRouter({
       meta: { requiresAuth: true }
     },
 
+    // ── Spotify field visualization ──────────────────────────────────────
+    {
+      path: '/spotify',
+      name: 'spotify',
+      component: () => import('@/views/SpotifyView.vue'),
+      meta: { requiresAuth: true }
+    },
+
     // ── Admin analytics dashboard ────────────────────────────────────────
     {
       path: '/admin',

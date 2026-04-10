@@ -99,7 +99,7 @@ onMounted(() => {
   // Steam callback redirects back with ?steam=connected
   if (route.query.steam === 'connected' && !isConnected.value) {
     markConnected('steam')
-    router.replace({ path: '/peripheral' })
+    router.replace({ path: '/calibrate' })
   }
 })
 </script>

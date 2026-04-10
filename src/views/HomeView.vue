@@ -4,6 +4,8 @@ import { useRouter } from 'vue-router'
 import { usePollStore } from '@/composables/usePollStore'
 import { useMeditation } from '@/composables/useMeditation'
 import { useCosmicPhysics } from '@/composables/useCosmicPhysics'
+import { useBinauralEngine } from '@/composables/useBinauralEngine'
+import { useZenMode } from '@/composables/useZenMode'
 import type { PollAnswers } from '@/composables/usePollStore'
 import ConnectorPanel from '@/components/ConnectorPanel.vue'
 import QuestLog from '@/components/QuestLog.vue'
@@ -23,7 +25,7 @@ const readerCardEl = ref<HTMLElement>()
 const audioCardEl = ref<HTMLElement>()
 const glassCardEl = ref<HTMLElement>()
 
-const { init: initCosmic, destroy: destroyCosmic, setTiltGravity, setCardAttractors } = useCosmicPhysics(bgCanvas, {
+const { init: initCosmic, destroy: destroyCosmic, setTiltGravity, setCardAttractors, heatOrb } = useCosmicPhysics(bgCanvas, {
   particleCount: 120,
   starCount: 100,
   enableKeyboard: false,
@@ -409,6 +411,93 @@ function cardStyle(key: string) {
   }
 }
 
+// ── Zen mode ─────────────────────────────────────────────────────
+const { zenMode, setZen } = useZenMode()
+const binaural = useBinauralEngine()
+const zenHintVisible = ref(false)
+
+// Beat presets: alpha (10 Hz) for home field — meditative focus
+const ZEN_BEAT_HZ = 10
+const ZEN_CARRIER_HZ = 220
+
+let zenRaf = 0
+let zenBeatTimer = 0
+let zenOrbIdx = 0
+let zenHintTimer = 0
+
+function enterZen() {
+  setZen(true)
+  // Browser fullscreen
+  const el = document.documentElement
+  if (el.requestFullscreen) el.requestFullscreen().catch(() => {})
+  else if ((el as any).webkitRequestFullscreen) (el as any).webkitRequestFullscreen()
+
+  // Start binaural at alpha
+  binaural.init()
+  binaural.setBeat(ZEN_BEAT_HZ, ZEN_CARRIER_HZ)
+  binaural.setVolume(18)
+
+  // Clear card attractors — let orbs drift freely
+  setCardAttractors([])
+
+  // Show exit hint briefly
+  zenHintVisible.value = true
+  clearTimeout(zenHintTimer)
+  zenHintTimer = window.setTimeout(() => { zenHintVisible.value = false }, 3000)
+
+  // Beat pulse: fire heatOrb at the beat frequency (10 Hz = 100ms interval)
+  const intervalMs = 1000 / ZEN_BEAT_HZ
+  zenBeatTimer = window.setInterval(() => {
+    const waveform = binaural.getWaveformData()
+    // Compute amplitude from waveform (0–1)
+    let amp = 0
+    if (waveform) {
+      let sum = 0
+      for (let i = 0; i < waveform.length; i++) sum += Math.abs(waveform[i] - 128)
+      amp = Math.min(1, (sum / waveform.length) / 64)
+    } else {
+      amp = 0.4 // fallback if waveform not available
+    }
+    // Heat orbs in sequence — each beat lights the next
+    heatOrb(zenOrbIdx % 6, 0.3 + amp * 0.5)
+    zenOrbIdx++
+    // Subtle breathing gravity from amplitude
+    setTiltGravity(Math.sin(zenOrbIdx * 0.7) * amp * 0.008, Math.cos(zenOrbIdx * 0.5) * amp * 0.006)
+  }, intervalMs)
+}
+
+function exitZen() {
+  setZen(false)
+  binaural.destroy()
+  clearInterval(zenBeatTimer)
+  cancelAnimationFrame(zenRaf)
+  setTiltGravity(0, 0)
+  setCardAttractors([])
+  if (document.fullscreenElement || (document as any).webkitFullscreenElement) {
+    if (document.exitFullscreen) document.exitFullscreen().catch(() => {})
+    else if ((document as any).webkitExitFullscreen) (document as any).webkitExitFullscreen()
+  }
+  nextTick(updateCardAttractors)
+}
+
+function onZenKeydown(e: KeyboardEvent) {
+  if (zenMode.value && e.key === 'Escape') exitZen()
+}
+
+function onFullscreenChange() {
+  // If user exits fullscreen via browser UI while in zen mode, also exit zen
+  if (zenMode.value && !document.fullscreenElement && !(document as any).webkitFullscreenElement) {
+    exitZen()
+  }
+}
+
+function onZenHint() {
+  if (!zenMode.value) return
+  zenHintVisible.value = true
+  clearTimeout(zenHintTimer)
+  zenHintTimer = window.setTimeout(() => { zenHintVisible.value = false }, 2000)
+}
+
 // ── Lifecycle ────────────────────────────────────────────────────
 onMounted(async () => {
   window.addEventListener('mousedown', onMouseDown)
@@ -418,6 +507,10 @@ onMounted(async () => {
   window.addEventListener('touchmove', onTouchMove, { passive: true })
   window.addEventListener('touchend', onTouchEnd, { passive: true })
   window.addEventListener('resize', updateCardAttractors)
+  window.addEventListener('keydown', onZenKeydown)
+  window.addEventListener('mousemove', onZenHint)
+  document.addEventListener('fullscreenchange', onFullscreenChange)
+  document.addEventListener('webkitfullscreenchange', onFullscreenChange)
   await initCosmic()
   await nextTick()
   updateCardAttractors()
@@ -433,6 +526,11 @@ onUnmounted(() => {
   window.removeEventListener('touchmove', onTouchMove)
   window.removeEventListener('touchend', onTouchEnd)
   window.removeEventListener('resize', updateCardAttractors)
+  window.removeEventListener('keydown', onZenKeydown)
+  window.removeEventListener('mousemove', onZenHint)
+  document.removeEventListener('fullscreenchange', onFullscreenChange)
+  document.removeEventListener('webkitfullscreenchange', onFullscreenChange)
+  if (zenMode.value) exitZen()
   med.stop()
 })
 </script>
@@ -441,7 +539,22 @@ onUnmounted(() => {
   <div class="home" @dragstart.prevent>
     <canvas ref="bgCanvas" class="home-bg" aria-hidden="true"></canvas>
 
-    <div class="content-scene" :style="sceneStyle">
+    <!-- ── Zen mode toggle (top-right corner) ── -->
+    <button
+      class="zen-btn"
+      :class="{ 'zen-btn--active': zenMode }"
+      @click="zenMode ? exitZen() : enterZen()"
+      :title="zenMode ? 'Exit zen mode (Esc)' : 'Enter zen mode'"
+    >{{ zenMode ? '✕' : '◎' }}</button>
+
+    <!-- ── Zen exit hint (fades after 3s) ── -->
+    <Transition name="zen-hint-fade">
+      <div v-if="zenMode && zenHintVisible" class="zen-hint">
+        move mouse to show · esc to exit
+      </div>
+    </Transition>
+
+    <div class="content-scene" :style="sceneStyle" :class="{ 'content-scene--hidden': zenMode }">
       <h1 class="title" :style="titleStyle">Channel Zero: Dreamer</h1>
 
       <!-- ── Stage: Home ── -->
@@ -721,6 +834,65 @@ onUnmounted(() => {
   background: #08060e;
   min-height: calc(100vh - 3rem);
   padding-bottom: 2rem;
+}
+
+/* ── Zen mode ── */
+.content-scene--hidden {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.8s ease;
+}
+
+.zen-btn {
+  position: fixed;
+  top: 1rem;
+  right: 1rem;
+  z-index: 100;
+  background: none;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 50%;
+  width: 2rem;
+  height: 2rem;
+  color: rgba(148, 163, 184, 0.4);
+  font-size: 0.85rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.2s, border-color 0.2s, opacity 0.2s;
+  opacity: 0.4;
+}
+.zen-btn:hover {
+  color: rgba(148, 163, 184, 0.9);
+  border-color: rgba(255, 255, 255, 0.2);
+  opacity: 1;
+}
+.zen-btn--active {
+  color: rgba(192, 132, 252, 0.7);
+  border-color: rgba(192, 132, 252, 0.3);
+  opacity: 1;
+}
+
+.zen-hint {
+  position: fixed;
+  bottom: 1.5rem;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 100;
+  font-family: monospace;
+  font-size: 0.6rem;
+  letter-spacing: 0.1em;
+  color: rgba(71, 85, 105, 0.8);
+  pointer-events: none;
+}
+
+.zen-hint-fade-enter-active,
+.zen-hint-fade-leave-active {
+  transition: opacity 0.6s ease;
+}
+.zen-hint-fade-enter-from,
+.zen-hint-fade-leave-to {
+  opacity: 0;
 }
 
 .home-bg {

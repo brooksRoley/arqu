@@ -3,9 +3,11 @@ import { computed, ref, onMounted, onUnmounted } from 'vue'
 import { RouterView, useRoute } from 'vue-router'
 import NavBar from '@/components/NavBar.vue'
 import SideBar from '@/components/SideBar.vue'
+import { useZenMode } from '@/composables/useZenMode'
 
 const route = useRoute()
 const mainRef = ref<HTMLElement | null>(null)
+const { zenMode } = useZenMode()
 
 const isFullBleed = computed(() => {
   return ['reader', 'zeromind', 'studio', 'liquidglass', 'spiral', 'trance', 'webaudio'].includes(
@@ -13,9 +15,9 @@ const isFullBleed = computed(() => {
   )
 })
 
-// Hide sidebar on immersive/fullbleed routes and login/universe
+// Hide sidebar on immersive/fullbleed routes, login/universe, or zen mode
 const hideSidebar = computed(() => {
-  return isFullBleed.value || ['login', 'universe', 'hypno'].includes(route.name as string)
+  return zenMode.value || isFullBleed.value || ['login', 'universe', 'hypno'].includes(route.name as string)
 })
 
 function toggleFullscreen() {
@@ -47,7 +49,7 @@ onUnmounted(() => document.removeEventListener('keydown', onKeydown))
 <template>
   <div :class="['app-container', { 'app-container--with-sidebar': !hideSidebar }]">
     <SideBar v-if="!hideSidebar" />
-    <NavBar />
+    <NavBar v-if="!zenMode" />
 
     <main ref="mainRef" :class="['app-main', { 'app-main--fullbleed': isFullBleed }]">
       <RouterView v-slot="{ Component }">

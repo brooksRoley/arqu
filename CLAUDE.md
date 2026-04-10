@@ -1,0 +1,89 @@
+# ChannelZero — Claude Code Guide
+
+## Stack
+- **Frontend**: Vue 3 + Vite + TypeScript + Tailwind — deployed to Vercel (`channelzero.vercel.app`)
+- **Backend**: FastAPI (Python) — deployed to Render (`channelzero-api.onrender.com`)
+- **Database**: Neon PostgreSQL (asyncpg pooled + unpooled connections)
+- **Vector DB**: Pinecone (`channelzero` index) — vibe vectors for user matching
+- **Auth**: JWT HS256, 24hr expiry, stored as `channelzero-jwt` in localStorage
+
+## Project Structure
+```
+/src
+  /views          — Route-level page components
+  /components     — Reusable UI components
+  /composables    — Business logic and state (useAuthStore, useVibeStore, etc.)
+  /router         — index.ts with auth guard
+/server
+  /app
+    /auth         — Login, register, JWT, Google/X OAuth identity
+    /analytics    — Admin funnel + connector metrics
+    /spotify      — Spotify OAuth + sonic profile
+    /twitter      — X OAuth 2.0 PKCE data connector
+    /strava       — Strava connector
+    /vector       — Pinecone upsert/query
+    /llm          — Encryption helpers (AES-256-GCM)
+  /migrations     — SQL files run by migrate.py (tracked in _migrations table)
+```
+
+## Auth Patterns
+- `useAuthStore` — exposes `token`, `user`, `apiFetch` (auto-attaches Bearer token)
+- Backend: `get_current_user_id` dep → returns UUID; `require_admin` dep → checks `is_admin` column
+- Protected routes: `meta: { requiresAuth: true }` in router; guest-only: `meta: { guest: true }`
+- Admin access: set `is_admin = true` in `users` table directly via Neon
+
+## Database Conventions
+- Migrations live in `server/migrations/NNN_name.sql`
+- Run locally: `source server/venv/bin/activate && python -m server.app.migrate`
+- Connections: use pooled `DATABASE_URL` for app, unpooled `DATABASE_URL_UNPOOLED` for migrations and admin queries
+- OAuth tokens encrypted with AES-256-GCM via `encrypt_api_key` / `decrypt_api_key`
+
+## Key Composables
+| Composable | Purpose |
+|---|---|
+| `useAuthStore` | JWT token, user object, `apiFetch` wrapper |
+| `useVibeStore` | Intake/vibe vector state, OAuth connection state |
+| `useCosmicPhysics` | Matter.js physics: orbs, particles, stars, spring attractors |
+| `useSpotifyPhysics` | Wraps cosmic physics with Spotify audio data (genre→color, valence field) |
+| `useAdminStore` | Admin analytics API calls (funnel, connectors, users, events) |
+| `useMessageStore` | Real-time messaging between matched users |
+
+## Canvas / Physics Pattern
+- `useCosmicPhysics(canvasRef, options)` — base physics engine (Matter.js via CDN)
+- Two-canvas pattern: base canvas (physics) + overlay canvas (labels, HUD)
+- `getOrbPositions()` returns current `{x, y, idx}[]` for overlay label placement
+- Custom `rrect()` helper for rounded rects (avoids TypeScript `ctx.roundRect` compat issues)
+
+## Deploy Workflow
+1. `npm run build` locally to verify no TypeScript errors (`vue-tsc --noEmit`)
+2. `git push origin main` → Vercel auto-deploys frontend
+3. Render auto-deploys backend on push (build dir: `server/`, start: `uvicorn server.app.main:app`)
+4. After new migrations: manually trigger `python -m server.app.migrate` or add to Render build command
+
+## Env Vars (Render must have all of these)
+`DATABASE_URL`, `DATABASE_URL_UNPOOLED`, `JWT_SECRET`, `SERVER_ENCRYPTION_KEY`,
+`PINECONE_API_KEY`, `OPENAI_EMBED_KEY`,
+`SPOTIFY_CLIENT_ID`, `SPOTIFY_CLIENT_SECRET`, `SPOTIFY_REDIRECT_URI`,
+`X_CLIENT_ID`, `X_CLIENT_SECRET`, `TWITTER_DATA_REDIRECT_URI`,
+`GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`,
+`STRAVA_CLIENT_ID`, `STRAVA_CLIENT_SECRET`,
+`CORS_ORIGINS`
+
+## Commit Style
+- Short, imperative subject line — no body needed for small changes
+- No `Co-Authored-By` lines
+- Prefer one focused commit per feature/fix
+
+## Route Map (key ones)
+| Route | Auth | Purpose |
+|---|---|---|
+| `/` | no | Home hub |
+| `/login` | guest | Auth |
+| `/discovery` | yes | Physics-driven onboarding |
+| `/intake` | yes | Psychometric intake |
+| `/game` | yes | Oracle matching game |
+| `/calibrate` | yes | All connector OAuth (Spotify, X, Strava, etc.) |
+| `/universe` | yes | Solar system signal visualization |
+| `/spotify` | yes | Spotify sonic field physics |
+| `/admin` | yes+admin | Analytics dashboard |
+| `/messages` | yes | Mutual match messaging |
