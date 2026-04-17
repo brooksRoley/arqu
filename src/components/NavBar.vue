@@ -233,58 +233,13 @@ const fileName = ref('')
 // Background modal state
 const showBgModal = ref(false)
 
-// Routes hidden from the main nav bar.
-// Pipeline steps (calibrate, psychoanalysis, intake, game) are surfaced via the
-// pipeline progress widget instead of appearing as flat nav links.
-const hiddenRoutes = new Set([
-  'zeromind', 'spiral', 'trance', 'webaudio', 'hypno', 'fitting', 'poll',
-  'login', 'google-callback', 'x-callback', 'strava-callback',
-  'peripheral', 'intake', 'game', 'onboarding', 'discovery', 'universe',
-  'calibrate', 'psychoanalysis', 'liquidglass',
-])
-
-const navRoutes = computed(() => {
-  return router
-    .getRoutes()
-    .filter((route) =>
-      route.name &&
-      route.path !== '/:pathMatch(.*)*' &&
-      !hiddenRoutes.has(route.name as string) &&
-      (!route.meta?.requiresAuth || isAuthenticated.value)
-    )
-    .map((route) => ({
-      name: route.name as string,
-      path: route.path,
-      label: formatRouteName(route.name as string),
-      icon: getRouteIcon(route.name as string)
-    }))
-})
-
-function formatRouteName(name: string): string {
-  const labels: Record<string, string> = {
-    studio: 'Studio',
-    checkin: 'Check-in',
-  }
-  if (labels[name]) return labels[name]
-  return name
-    .replace(/([A-Z])/g, ' $1')
-    .replace(/^./, (str) => str.toUpperCase())
-    .trim()
-}
-
-// SVG path data for nav icons (24x24 viewBox)
-function getRouteIcon(name: string): string {
-  const icons: Record<string, string> = {
-    home: '<path d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-4 0a1 1 0 01-1-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 01-1 1h-2z"/>',
-    reader: '<path d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253z"/>',
-    studio: '<rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/><path d="M7 8h1m4-1v2m4-1h1"/>',
-    audio: '<path d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2z"/>',
-    journal: '<path d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>',
-    checkin: '<path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/>',
-    calibrate: '<path d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"/>',
-  }
-  return icons[name] || '<circle cx="12" cy="12" r="3"/>'
-}
+// Primary nav links
+const primaryLinks = [
+  { name: 'home', path: '/', label: 'Home' },
+  { name: 'learn', path: '/learn', label: 'Learn' },
+  { name: 'sessions', path: '/sessions', label: 'Sessions' },
+  { name: 'about', path: '/about', label: 'About' },
+]
 
 function togglePlayback() {
   if (isPlaying.value) {
@@ -375,8 +330,18 @@ onUnmounted(() => {
     ]"
   >
     <div class="navbar-top">
-      <!-- Spacer (nav links moved to sidebar) -->
-      <div class="nav-links-spacer"></div>
+      <div v-if="!isFullBleed || menuOpen" class="nav-links">
+        <RouterLink
+          v-for="link in primaryLinks"
+          :key="link.name"
+          :to="link.path"
+          class="nav-link"
+          active-class="nav-link--active"
+          :exact-active-class="link.path === '/' ? 'nav-link--active' : ''"
+        >
+          {{ link.label }}
+        </RouterLink>
+      </div>
 
       <button
         v-if="isFullBleed"
@@ -710,48 +675,46 @@ onUnmounted(() => {
   align-items: center;
   gap: 0.25rem;
   flex: 1;
-  overflow-x: auto;
-  -webkit-overflow-scrolling: touch;
-  scrollbar-width: none;
-}
-
-.nav-links::-webkit-scrollbar {
-  display: none;
 }
 
 .nav-link {
-  display: flex;
+  position: relative;
+  display: inline-flex;
   align-items: center;
-  gap: 0.3rem;
-  padding: 0.35rem 0.6rem;
-  border-radius: 0.4rem;
+  padding: 0.4rem 0.75rem;
   color: #94a3b8;
   text-decoration: none;
-  font-size: 0.8rem;
+  font-size: 0.85rem;
+  letter-spacing: 0.01em;
   white-space: nowrap;
-  transition:
-    color 0.15s,
-    background-color 0.15s;
+  transition: color 0.15s ease;
+}
+
+.nav-link::after {
+  content: '';
+  position: absolute;
+  left: 0.75rem;
+  right: 0.75rem;
+  bottom: 0.15rem;
+  height: 1px;
+  background: currentColor;
+  opacity: 0;
+  transform: scaleX(0.6);
+  transform-origin: center;
+  transition: opacity 0.15s ease, transform 0.15s ease;
 }
 
 .nav-link:hover {
   color: #e2e8f0;
-  background: rgba(255, 255, 255, 0.08);
 }
 
 .nav-link--active {
   color: #e2e8f0;
-  background: rgba(99, 102, 241, 0.25);
 }
 
-.nav-link-icon {
-  width: 16px;
-  height: 16px;
-  flex-shrink: 0;
-}
-
-.nav-link-label {
-  font-size: 0.8rem;
+.nav-link--active::after {
+  opacity: 1;
+  transform: scaleX(1);
 }
 
 /* ── Pipeline widget ── */
