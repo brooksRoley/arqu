@@ -19,6 +19,28 @@ const router = createRouter({
       component: HomeView
     },
 
+    // ── Primary nav: Learn / Sessions / About ───────────────────
+    {
+      path: '/learn',
+      name: 'learn',
+      component: () => import('@/views/LearnIndexView.vue')
+    },
+    {
+      path: '/learn/:slug',
+      name: 'learn-article',
+      component: () => import('@/views/LearnArticleView.vue')
+    },
+    {
+      path: '/sessions',
+      name: 'sessions',
+      component: () => import('@/views/SessionsView.vue')
+    },
+    {
+      path: '/about',
+      name: 'about',
+      component: () => import('@/views/AboutView.vue')
+    },
+
     // ── Experiences (existing) ───────────────────────────────────
     {
       path: '/reader',
