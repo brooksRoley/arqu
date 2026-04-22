@@ -74,6 +74,76 @@ async def interact(
     )
 
 
+@router.get("/new")
+async def get_new_matches(user_id: UUID = Depends(get_current_user_id)):
+    """Return mutual matches the user hasn't seen yet."""
+    async with get_conn() as conn:
+        rows = await conn.fetch(
+            """
+            SELECT
+                CASE WHEN a.actor_id = $1 THEN a.target_id ELSE a.actor_id END AS matched_user_id,
+                GREATEST(a.created_at, b.created_at) AS matched_at
+            FROM match_interactions a
+            JOIN match_interactions b
+                ON  a.actor_id  = b.target_id
+                AND a.target_id = b.actor_id
+            WHERE a.action = 'accept' AND b.action = 'accept'
+              AND (a.actor_id = $1 OR a.target_id = $1)
+              AND a.actor_id < a.target_id
+              AND NOT EXISTS (
+                  SELECT 1 FROM match_seen ms
+                  WHERE ms.user_id = $1
+                    AND ms.match_id = CASE WHEN a.actor_id = $1 THEN a.target_id ELSE a.actor_id END
+              )
+            """,
+            user_id,
+        )
+
+        # Hydrate display names
+        match_ids = [r["matched_user_id"] for r in rows]
+        if match_ids:
+            user_rows = await conn.fetch(
+                "SELECT id, display_name, avatar_url FROM users WHERE id = ANY($1::uuid[])",
+                match_ids,
+            )
+            user_map = {r["id"]: r for r in user_rows}
+        else:
+            user_map = {}
+
+    return [
+        {
+            "user_id": str(r["matched_user_id"]),
+            "display_name": user_map.get(r["matched_user_id"], {}).get("display_name") or "Someone",
+            "avatar_url": user_map.get(r["matched_user_id"], {}).get("avatar_url"),
+            "matched_at": r["matched_at"].isoformat(),
+        }
+        for r in rows
+    ]
+
+
+@router.post("/seen")
+async def mark_matches_seen(user_id: UUID = Depends(get_current_user_id)):
+    """Mark all current mutual matches as seen."""
+    async with get_conn() as conn:
+        await conn.execute(
+            """
+            INSERT INTO match_seen (user_id, match_id)
+            SELECT $1,
+                   CASE WHEN a.actor_id = $1 THEN a.target_id ELSE a.actor_id END
+            FROM match_interactions a
+            JOIN match_interactions b
+                ON  a.actor_id  = b.target_id
+                AND a.target_id = b.actor_id
+            WHERE a.action = 'accept' AND b.action = 'accept'
+              AND (a.actor_id = $1 OR a.target_id = $1)
+              AND a.actor_id < a.target_id
+            ON CONFLICT DO NOTHING
+            """,
+            user_id,
+        )
+    return {"acknowledged": True}
+
+
 @router.get("/mutual")
 async def get_mutual_matches(user_id: UUID = Depends(get_current_user_id)):
     """Return all mutual matches for the current user."""

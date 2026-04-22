@@ -3,6 +3,7 @@ import { computed, ref, onMounted, onUnmounted } from 'vue'
 import { RouterView, useRoute } from 'vue-router'
 import NavBar from '@/components/NavBar.vue'
 import SideBar from '@/components/SideBar.vue'
+import MatchNotification from '@/components/MatchNotification.vue'
 import { useZenMode } from '@/composables/useZenMode'
 
 const route = useRoute()
@@ -50,6 +51,7 @@ onUnmounted(() => document.removeEventListener('keydown', onKeydown))
   <div :class="['app-container', { 'app-container--with-sidebar': !hideSidebar }]">
     <SideBar v-if="!hideSidebar" />
     <NavBar v-if="!zenMode" />
+    <MatchNotification />
 
     <main ref="mainRef" :class="['app-main', { 'app-main--fullbleed': isFullBleed }]">
       <RouterView v-slot="{ Component }">

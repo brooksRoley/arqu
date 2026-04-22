@@ -19,6 +19,8 @@ import time
 from urllib.parse import urlencode
 from uuid import UUID
 
+from ..oracle.trigger import maybe_trigger_synthesis
+
 import secrets
 
 import httpx
@@ -174,7 +176,10 @@ async def spotify_callback(code: str, state: str):
         if tracks_resp.status_code == 200:
             track_ids = [t["id"] for t in tracks_resp.json().get("items", [])]
 
-        # 4. Fetch audio features for those tracks (may be deprecated/restricted)
+        # 4. Fetch audio features for those tracks.
+        # NOTE: Spotify deprecated GET /audio-features (Nov 2024) for new apps
+        # and is removing access for all apps. We try the call and fall back to
+        # genre-based heuristics if it returns 403/404 or empty data.
         audio_features: list[dict] = []
         if track_ids:
             features_resp = await client.get(
@@ -185,8 +190,13 @@ async def spotify_callback(code: str, state: str):
             if features_resp.status_code == 200:
                 audio_features = [f for f in features_resp.json().get("audio_features", []) if f]
 
+        # 4b. Fetch track objects for popularity-based energy fallback
+        tracks_data: list[dict] = []
+        if tracks_resp.status_code == 200:
+            tracks_data = tracks_resp.json().get("items", [])
+
     # 5. Distill the audio profile
-    spotify_profile = _distill_profile(artists_data, audio_features)
+    spotify_profile = _distill_profile(artists_data, audio_features, tracks_data)
 
     # 6. Encrypt and store tokens
     enc_access, access_nonce = encrypt_api_key(access_token)
@@ -227,6 +237,9 @@ async def spotify_callback(code: str, state: str):
             UUID(user_id), json.dumps(spotify_profile),
         )
 
+        # 7.5 Auto-trigger Oracle synthesis if enough providers connected
+        await maybe_trigger_synthesis(UUID(user_id))
+
         # 8. Fetch full vibe vector to re-embed with Spotify context blended in
         row = await conn.fetchrow(
             "SELECT attachment_style, defense_mechanism, readiness_score FROM vibe_vectors WHERE user_id = $1",
@@ -256,7 +269,37 @@ async def spotify_callback(code: str, state: str):
 
 # ── Profile distillation ─────────────────────────────────────────────────────
 
-def _distill_profile(artists: list[dict], features: list[dict]) -> dict:
+# Genre → estimated valence mapping for audio-features deprecation fallback.
+# When Spotify stops returning audio features, we infer valence from genre strings.
+_GENRE_VALENCE: list[tuple[str, float]] = [
+    (r"sad|emo|doom|dark|goth|funeral|depressive", 0.2),
+    (r"ambient|drone|shoegaze|post.?rock|atmospheric", 0.3),
+    (r"blues|soul|neo.?soul|r&b|rnb", 0.35),
+    (r"indie|alternative|lo.?fi|bedroom", 0.4),
+    (r"rock|metal|punk|grunge|hard", 0.45),
+    (r"folk|country|bluegrass|americana", 0.5),
+    (r"jazz|classical|orchestral", 0.5),
+    (r"hip.?hop|rap|trap", 0.55),
+    (r"pop|teen|mainstream|k.?pop|j.?pop", 0.65),
+    (r"electr|techno|house|edm|synth|drum|dance", 0.7),
+    (r"reggaeton|salsa|cumbia|latin|party|happy", 0.8),
+]
+
+
+def _infer_valence_from_genres(genres: list[str]) -> float:
+    """Estimate valence from genre keywords when audio-features API is unavailable."""
+    import re
+    scores = []
+    for genre in genres:
+        g = genre.lower()
+        for pattern, val in _GENRE_VALENCE:
+            if re.search(pattern, g):
+                scores.append(val)
+                break
+    return round(sum(scores) / len(scores), 3) if scores else 0.5
+
+
+def _distill_profile(artists: list[dict], features: list[dict], tracks: list[dict] | None = None) -> dict:
     """Reduce raw Spotify data to the essentials we care about."""
     top_artist_names = [a["name"] for a in artists[:5]]
     genres: list[str] = []
@@ -272,6 +315,19 @@ def _distill_profile(artists: list[dict], features: list[dict]) -> dict:
         for k in keys:
             vals = [f[k] for f in features if k in f]
             avg[k] = round(sum(vals) / len(vals), 3) if vals else 0.0
+
+    # Fallback: if audio-features returned nothing (deprecated API), infer from genres + track popularity
+    if not avg or not any(avg.get(k) for k in keys):
+        avg["valence"] = _infer_valence_from_genres(unique_genres)
+        # Use average track popularity (0-100) normalized to 0-1 as energy proxy
+        if tracks:
+            pops = [t.get("popularity", 50) for t in tracks]
+            avg["energy"] = round(sum(pops) / len(pops) / 100, 3) if pops else 0.5
+        else:
+            avg["energy"] = 0.5
+        avg["danceability"] = round((avg["valence"] + avg["energy"]) / 2, 3)
+        avg["acousticness"] = round(1 - avg["energy"], 3)
+        avg["tempo"] = 120.0
 
     return {
         "top_artists": top_artist_names,

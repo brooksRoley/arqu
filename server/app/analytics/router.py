@@ -290,6 +290,66 @@ async def admin_connectors(_: UUID = Depends(require_admin)):
     return results
 
 
+# ── Admin: match rate trends ──────────────────────────────────────────────────
+
+@router.get("/match-trends")
+async def admin_match_trends(_: UUID = Depends(require_admin)):
+    """Return match rate trends for the last 7 and 30 days."""
+    async with get_conn() as conn:
+        row = await conn.fetchrow(
+            """
+            SELECT
+                -- Users who played the game (made any interaction)
+                COUNT(DISTINCT mi.actor_id) FILTER (
+                    WHERE mi.created_at >= now() - interval '7 days'
+                ) AS players_7d,
+                COUNT(DISTINCT mi.actor_id) FILTER (
+                    WHERE mi.created_at >= now() - interval '30 days'
+                ) AS players_30d,
+
+                -- Users who got a mutual match
+                COUNT(DISTINCT mm.user_id) FILTER (
+                    WHERE mm.matched_at >= now() - interval '7 days'
+                ) AS matched_7d,
+                COUNT(DISTINCT mm.user_id) FILTER (
+                    WHERE mm.matched_at >= now() - interval '30 days'
+                ) AS matched_30d
+
+            FROM match_interactions mi
+            FULL OUTER JOIN (
+                SELECT
+                    CASE WHEN a.actor_id < a.target_id THEN a.actor_id ELSE a.target_id END AS user_id,
+                    GREATEST(a.created_at, b.created_at) AS matched_at
+                FROM match_interactions a
+                JOIN match_interactions b
+                    ON  a.actor_id  = b.target_id
+                    AND a.target_id = b.actor_id
+                WHERE a.action = 'accept' AND b.action = 'accept'
+                  AND a.actor_id < a.target_id
+            ) mm ON TRUE
+            """
+        )
+
+    data = dict(row)
+    p7 = data["players_7d"] or 0
+    p30 = data["players_30d"] or 0
+    m7 = data["matched_7d"] or 0
+    m30 = data["matched_30d"] or 0
+
+    return {
+        "seven_day": {
+            "players": p7,
+            "matched": m7,
+            "rate_pct": round(m7 / p7 * 100, 1) if p7 > 0 else 0,
+        },
+        "thirty_day": {
+            "players": p30,
+            "matched": m30,
+            "rate_pct": round(m30 / p30 * 100, 1) if p30 > 0 else 0,
+        },
+    }
+
+
 # ── Admin: recent session events ─────────────────────────────────────────────
 
 @router.get("/events")
@@ -325,3 +385,170 @@ async def admin_events(
             )
 
     return [dict(r) for r in rows]
+
+
+# ── Admin: Spotify profiles (paginated) ─────────────────────────────────────
+
+@router.get("/spotify-profiles")
+async def admin_spotify_profiles(
+    page: int = Query(1, ge=1),
+    per_page: int = Query(50, ge=1, le=200),
+    _: UUID = Depends(require_admin),
+):
+    """Return users with Spotify profile data. Admin only."""
+    offset = (page - 1) * per_page
+
+    async with get_conn() as conn:
+        total = await conn.fetchval(
+            "SELECT COUNT(*) FROM vibe_vectors WHERE spotify_data IS NOT NULL"
+        )
+        rows = await conn.fetch(
+            """
+            SELECT
+                u.id, u.email, u.display_name,
+                vv.spotify_data
+            FROM vibe_vectors vv
+            JOIN users u ON u.id = vv.user_id
+            WHERE vv.spotify_data IS NOT NULL
+            ORDER BY u.created_at DESC
+            LIMIT $1 OFFSET $2
+            """,
+            per_page, offset,
+        )
+
+    profiles = []
+    for r in rows:
+        data = r["spotify_data"]
+        parsed = json.loads(data) if isinstance(data, str) else data
+        profiles.append({
+            "user_id": str(r["id"]),
+            "email": r["email"],
+            "display_name": r["display_name"],
+            "top_artists": parsed.get("top_artists", []),
+            "genres": parsed.get("genres", []),
+            "audio_avg": parsed.get("audio_avg", {}),
+        })
+
+    return {"total": total, "page": page, "per_page": per_page, "profiles": profiles}
+
+
+# ── Admin: archetype distribution ────────────────────────────────────────────
+
+@router.get("/archetypes")
+async def admin_archetypes(_: UUID = Depends(require_admin)):
+    """Return archetype distribution across all users."""
+    async with get_conn() as conn:
+        rows = await conn.fetch(
+            """
+            SELECT pt.archetype, COUNT(*) AS count
+            FROM poll_tokens pt
+            WHERE pt.archetype IS NOT NULL
+            GROUP BY pt.archetype
+            ORDER BY count DESC
+            LIMIT 8
+            """
+        )
+        total = await conn.fetchval(
+            "SELECT COUNT(*) FROM poll_tokens WHERE archetype IS NOT NULL"
+        )
+    return {
+        "total": total or 0,
+        "archetypes": [{"archetype": r["archetype"], "count": r["count"]} for r in rows],
+    }
+
+
+# ── Admin: attachment style breakdown ────────────────────────────────────────
+
+@router.get("/attachment-styles")
+async def admin_attachment_styles(_: UUID = Depends(require_admin)):
+    """Return attachment style breakdown across all users."""
+    async with get_conn() as conn:
+        rows = await conn.fetch(
+            """
+            SELECT attachment_style, COUNT(*) AS count
+            FROM vibe_vectors
+            WHERE attachment_style IS NOT NULL
+            GROUP BY attachment_style
+            ORDER BY count DESC
+            """
+        )
+        total = await conn.fetchval(
+            "SELECT COUNT(*) FROM vibe_vectors WHERE attachment_style IS NOT NULL"
+        )
+    return {
+        "total": total or 0,
+        "styles": [{"style": r["attachment_style"], "count": r["count"]} for r in rows],
+    }
+
+
+# ── Admin: connector depth histogram ────────────────────────────────────────
+
+@router.get("/connector-depth")
+async def admin_connector_depth(_: UUID = Depends(require_admin)):
+    """Return histogram of users by number of connected providers."""
+    async with get_conn() as conn:
+        rows = await conn.fetch(
+            """
+            SELECT bucket, COUNT(*) AS count FROM (
+                SELECT u.id,
+                    LEAST((SELECT COUNT(*) FROM oauth_tokens ot WHERE ot.user_id = u.id), 3) AS bucket
+                FROM users u
+            ) sub
+            GROUP BY bucket
+            ORDER BY bucket
+            """
+        )
+    # Ensure all buckets 0-3 present
+    histogram = {0: 0, 1: 0, 2: 0, 3: 0}
+    for r in rows:
+        histogram[r["bucket"]] = r["count"]
+    return {"histogram": [{"connectors": k, "count": v} for k, v in sorted(histogram.items())]}
+
+
+# ── Admin: Psychometric profiles (paginated) ────────────────────────────────
+
+@router.get("/psychometrics")
+async def admin_psychometrics(
+    page: int = Query(1, ge=1),
+    per_page: int = Query(50, ge=1, le=200),
+    _: UUID = Depends(require_admin),
+):
+    """Return users with psychometric data. Admin only."""
+    offset = (page - 1) * per_page
+
+    async with get_conn() as conn:
+        total = await conn.fetchval("SELECT COUNT(*) FROM user_psychometrics")
+        rows = await conn.fetch(
+            """
+            SELECT
+                u.id, u.email, u.display_name,
+                pm.love_language, pm.sociosexual_orientation,
+                pm.values_cluster, pm.narrative,
+                pm.ipip_neo_scores, pm.ecr_r_scores,
+                pm.created_at
+            FROM user_psychometrics pm
+            JOIN users u ON u.id = pm.user_id
+            ORDER BY pm.created_at DESC
+            LIMIT $1 OFFSET $2
+            """,
+            per_page, offset,
+        )
+
+    profiles = []
+    for r in rows:
+        ipip = r["ipip_neo_scores"]
+        ecr = r["ecr_r_scores"]
+        profiles.append({
+            "user_id": str(r["id"]),
+            "email": r["email"],
+            "display_name": r["display_name"],
+            "love_language": r["love_language"],
+            "sociosexual_orientation": r["sociosexual_orientation"],
+            "values_cluster": r["values_cluster"],
+            "narrative": r["narrative"],
+            "ipip_neo_scores": json.loads(ipip) if isinstance(ipip, str) else ipip,
+            "ecr_r_scores": json.loads(ecr) if isinstance(ecr, str) else ecr,
+            "created_at": str(r["created_at"]),
+        })
+
+    return {"total": total, "page": page, "per_page": per_page, "profiles": profiles}

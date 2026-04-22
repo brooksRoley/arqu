@@ -20,6 +20,8 @@ from uuid import UUID
 
 import secrets
 
+from ..oracle.trigger import maybe_trigger_synthesis
+
 import httpx
 import jwt
 from fastapi import APIRouter, HTTPException, Query, status
@@ -207,6 +209,9 @@ async def strava_callback(code: str, state: str):
             """,
             UUID(user_id), json.dumps(strava_profile),
         )
+
+    # Auto-trigger Oracle synthesis if enough providers connected
+    await maybe_trigger_synthesis(UUID(user_id))
 
     # 7. Return success — frontend handles navigation
     return JSONResponse({"status": "connected", "athlete": strava_profile.get("athlete_name", "")})

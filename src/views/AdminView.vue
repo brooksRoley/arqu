@@ -14,18 +14,46 @@
         {{ error }}
       </div>
 
-      <!-- Funnel -->
+      <!-- Funnel with drop-off rates -->
       <section>
         <h2 class="text-xs font-semibold uppercase tracking-widest text-gray-500 mb-4">Conversion Funnel</h2>
-        <div class="grid grid-cols-3 sm:grid-cols-5 lg:grid-cols-9 gap-3">
-          <div
-            v-for="step in funnel"
-            :key="step.step"
-            class="bg-gray-900 border border-gray-800 rounded-xl p-4 text-center"
-          >
-            <div class="text-2xl font-bold text-white">{{ step.count }}</div>
-            <div class="text-xs text-purple-400 font-semibold mt-0.5">{{ step.pct }}%</div>
-            <div class="text-xs text-gray-500 mt-1 leading-tight">{{ funnelLabel(step.step) }}</div>
+        <div class="flex flex-wrap items-center gap-2">
+          <template v-for="(step, i) in funnel" :key="step.step">
+            <div class="bg-gray-900 border border-gray-800 rounded-xl p-4 text-center min-w-[100px]">
+              <div class="text-2xl font-bold text-white">{{ step.count }}</div>
+              <div class="text-xs text-purple-400 font-semibold mt-0.5">{{ step.pct }}%</div>
+              <div class="text-xs text-gray-500 mt-1 leading-tight">{{ funnelLabel(step.step) }}</div>
+            </div>
+            <div v-if="i < funnel.length - 1" class="text-center px-1">
+              <div class="text-gray-600 text-sm">→</div>
+              <div
+                class="text-xs font-medium"
+                :class="dropOff(i) > 50 ? 'text-red-400' : dropOff(i) > 25 ? 'text-yellow-400' : 'text-green-400'"
+              >-{{ dropOff(i) }}%</div>
+            </div>
+          </template>
+        </div>
+      </section>
+
+      <!-- Match Rate Trends -->
+      <section v-if="matchTrends">
+        <h2 class="text-xs font-semibold uppercase tracking-widest text-gray-500 mb-4">Match Rate Trends</h2>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div class="bg-gray-900 border border-gray-800 rounded-xl p-5">
+            <div class="text-xs text-gray-500 mb-2">Last 7 Days</div>
+            <div class="text-3xl font-bold text-white">{{ matchTrends.seven_day.rate_pct }}%</div>
+            <div class="h-1.5 bg-gray-800 rounded-full mt-3 mb-2">
+              <div class="h-1.5 bg-purple-500 rounded-full transition-all" :style="{ width: `${Math.min(matchTrends.seven_day.rate_pct, 100)}%` }"></div>
+            </div>
+            <div class="text-xs text-gray-500">{{ matchTrends.seven_day.matched }} matched / {{ matchTrends.seven_day.players }} played</div>
+          </div>
+          <div class="bg-gray-900 border border-gray-800 rounded-xl p-5">
+            <div class="text-xs text-gray-500 mb-2">Last 30 Days</div>
+            <div class="text-3xl font-bold text-white">{{ matchTrends.thirty_day.rate_pct }}%</div>
+            <div class="h-1.5 bg-gray-800 rounded-full mt-3 mb-2">
+              <div class="h-1.5 bg-indigo-500 rounded-full transition-all" :style="{ width: `${Math.min(matchTrends.thirty_day.rate_pct, 100)}%` }"></div>
+            </div>
+            <div class="text-xs text-gray-500">{{ matchTrends.thirty_day.matched }} matched / {{ matchTrends.thirty_day.players }} played</div>
           </div>
         </div>
       </section>
@@ -70,6 +98,181 @@
               >{{ tag.replace(/_/g, ' ') }}</span>
             </div>
           </div>
+        </div>
+      </section>
+
+      <!-- Insights -->
+      <section>
+        <h2 class="text-xs font-semibold uppercase tracking-widest text-gray-500 mb-4">Insights</h2>
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+
+          <!-- Archetype Distribution -->
+          <div class="bg-gray-900 border border-gray-800 rounded-xl p-5">
+            <div class="text-xs text-gray-500 mb-3">Archetype Distribution</div>
+            <div v-if="archetypes.length" class="space-y-2">
+              <div v-for="a in archetypes" :key="a.archetype" class="flex items-center gap-2">
+                <span class="text-xs text-purple-400 w-28 truncate font-medium">{{ a.archetype }}</span>
+                <div class="flex-1 h-1.5 bg-gray-800 rounded-full">
+                  <div
+                    class="h-1.5 bg-purple-500 rounded-full"
+                    :style="{ width: `${archetypesTotal ? (a.count / archetypesTotal * 100) : 0}%` }"
+                  ></div>
+                </div>
+                <span class="text-xs text-gray-500 w-8 text-right">{{ a.count }}</span>
+              </div>
+            </div>
+            <div v-else class="text-xs text-gray-600">No data yet</div>
+          </div>
+
+          <!-- Attachment Styles -->
+          <div class="bg-gray-900 border border-gray-800 rounded-xl p-5">
+            <div class="text-xs text-gray-500 mb-3">Attachment Styles</div>
+            <div v-if="attachmentStyles.length" class="flex flex-wrap gap-2">
+              <div
+                v-for="s in attachmentStyles"
+                :key="s.style"
+                class="px-3 py-1.5 rounded-full text-xs font-medium"
+                :class="{
+                  'bg-green-900/40 text-green-400': s.style === 'secure',
+                  'bg-yellow-900/40 text-yellow-400': s.style === 'anxious-preoccupied',
+                  'bg-blue-900/40 text-blue-400': s.style === 'dismissive-avoidant',
+                  'bg-red-900/40 text-red-400': s.style === 'fearful-avoidant',
+                }"
+              >
+                {{ s.style }} · {{ attachmentTotal ? Math.round(s.count / attachmentTotal * 100) : 0 }}%
+              </div>
+            </div>
+            <div v-else class="text-xs text-gray-600">No data yet</div>
+          </div>
+
+          <!-- Connector Depth -->
+          <div class="bg-gray-900 border border-gray-800 rounded-xl p-5">
+            <div class="text-xs text-gray-500 mb-3">Connector Depth</div>
+            <div v-if="connectorDepth.length" class="space-y-2">
+              <div v-for="b in connectorDepth" :key="b.connectors" class="flex items-center gap-2">
+                <span class="text-xs text-gray-400 w-16">{{ b.connectors === 3 ? '3+' : b.connectors }} {{ b.connectors === 1 ? 'source' : 'sources' }}</span>
+                <div class="flex-1 h-1.5 bg-gray-800 rounded-full">
+                  <div
+                    class="h-1.5 rounded-full"
+                    :class="{
+                      'bg-gray-600': b.connectors === 0,
+                      'bg-yellow-500': b.connectors === 1,
+                      'bg-green-500': b.connectors === 2,
+                      'bg-purple-500': b.connectors === 3,
+                    }"
+                    :style="{ width: `${Math.max(5, b.count / Math.max(...connectorDepth.map(d => d.count)) * 100)}%` }"
+                  ></div>
+                </div>
+                <span class="text-xs text-gray-500 w-8 text-right">{{ b.count }}</span>
+              </div>
+            </div>
+            <div v-else class="text-xs text-gray-600">No data yet</div>
+          </div>
+
+        </div>
+      </section>
+
+      <!-- Spotify Profiles -->
+      <section v-if="spotifyProfiles.length">
+        <h2 class="text-xs font-semibold uppercase tracking-widest text-gray-500 mb-4">
+          Spotify Profiles
+          <span class="ml-2 text-gray-600 normal-case text-xs font-normal">{{ spotifyTotal }} total</span>
+        </h2>
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div
+            v-for="sp in spotifyProfiles"
+            :key="sp.user_id"
+            class="bg-gray-900 border border-gray-800 rounded-xl p-5"
+          >
+            <div class="font-medium text-white text-sm mb-1">{{ sp.display_name || sp.email }}</div>
+            <div class="flex flex-wrap gap-1 mb-3">
+              <span
+                v-for="a in sp.top_artists.slice(0, 3)"
+                :key="a"
+                class="text-xs px-2 py-0.5 bg-green-900/30 text-green-400 rounded-full"
+              >{{ a }}</span>
+            </div>
+            <div class="flex flex-wrap gap-1 mb-3">
+              <span
+                v-for="g in sp.genres.slice(0, 4)"
+                :key="g"
+                class="text-xs px-2 py-0.5 bg-gray-800 text-gray-400 rounded-full"
+              >{{ g }}</span>
+            </div>
+            <div class="space-y-1">
+              <div v-for="(val, key) in sp.audio_avg" :key="key" class="flex items-center gap-2">
+                <span class="text-xs text-gray-500 w-24 truncate capitalize">{{ key }}</span>
+                <div class="flex-1 h-1.5 bg-gray-800 rounded-full">
+                  <div
+                    class="h-1.5 bg-green-500 rounded-full"
+                    :style="{ width: `${Math.min(key === 'tempo' ? val / 200 * 100 : val * 100, 100)}%` }"
+                  ></div>
+                </div>
+                <span class="text-xs text-gray-500 w-10 text-right">{{ typeof val === 'number' ? val.toFixed(2) : val }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div v-if="spotifyTotal > spotifyPerPage" class="flex justify-center gap-2 mt-4">
+          <button
+            :disabled="spotifyPage <= 1"
+            @click="goSpotifyPage(spotifyPage - 1)"
+            class="px-3 py-1.5 rounded-lg border border-gray-800 text-sm text-gray-400 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed"
+          >Prev</button>
+          <span class="px-3 py-1.5 text-sm text-gray-500">{{ spotifyPage }} / {{ Math.ceil(spotifyTotal / spotifyPerPage) }}</span>
+          <button
+            :disabled="spotifyPage >= Math.ceil(spotifyTotal / spotifyPerPage)"
+            @click="goSpotifyPage(spotifyPage + 1)"
+            class="px-3 py-1.5 rounded-lg border border-gray-800 text-sm text-gray-400 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed"
+          >Next</button>
+        </div>
+      </section>
+
+      <!-- Psychometric Profiles -->
+      <section v-if="psychProfiles.length">
+        <h2 class="text-xs font-semibold uppercase tracking-widest text-gray-500 mb-4">
+          Psychometrics
+          <span class="ml-2 text-gray-600 normal-case text-xs font-normal">{{ psychTotal }} total</span>
+        </h2>
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div
+            v-for="pm in psychProfiles"
+            :key="pm.user_id"
+            class="bg-gray-900 border border-gray-800 rounded-xl p-5"
+          >
+            <div class="font-medium text-white text-sm mb-2">{{ pm.display_name || pm.email }}</div>
+            <div class="flex flex-wrap gap-1 mb-3">
+              <span v-if="pm.love_language" class="text-xs px-2 py-0.5 bg-pink-900/30 text-pink-400 rounded-full">{{ pm.love_language }}</span>
+              <span v-if="pm.values_cluster" class="text-xs px-2 py-0.5 bg-blue-900/30 text-blue-400 rounded-full">{{ pm.values_cluster }}</span>
+              <span v-if="pm.sociosexual_orientation" class="text-xs px-2 py-0.5 bg-purple-900/30 text-purple-400 rounded-full">{{ pm.sociosexual_orientation }}</span>
+            </div>
+            <div v-if="pm.ipip_neo_scores" class="space-y-1 mb-2">
+              <div v-for="(val, trait) in pm.ipip_neo_scores" :key="trait" class="flex items-center gap-2">
+                <span class="text-xs text-gray-500 w-24 truncate capitalize">{{ trait }}</span>
+                <div class="flex-1 h-1.5 bg-gray-800 rounded-full">
+                  <div
+                    class="h-1.5 bg-purple-500 rounded-full"
+                    :style="{ width: `${Math.min(Number(val) * 100, 100)}%` }"
+                  ></div>
+                </div>
+                <span class="text-xs text-gray-500 w-10 text-right">{{ Number(val).toFixed(2) }}</span>
+              </div>
+            </div>
+            <p v-if="pm.narrative" class="text-xs text-gray-500 leading-relaxed line-clamp-3">{{ pm.narrative }}</p>
+          </div>
+        </div>
+        <div v-if="psychTotal > psychPerPage" class="flex justify-center gap-2 mt-4">
+          <button
+            :disabled="psychPage <= 1"
+            @click="goPsychPage(psychPage - 1)"
+            class="px-3 py-1.5 rounded-lg border border-gray-800 text-sm text-gray-400 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed"
+          >Prev</button>
+          <span class="px-3 py-1.5 text-sm text-gray-500">{{ psychPage }} / {{ Math.ceil(psychTotal / psychPerPage) }}</span>
+          <button
+            :disabled="psychPage >= Math.ceil(psychTotal / psychPerPage)"
+            @click="goPsychPage(psychPage + 1)"
+            class="px-3 py-1.5 rounded-lg border border-gray-800 text-sm text-gray-400 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed"
+          >Next</button>
         </div>
       </section>
 
@@ -189,8 +392,14 @@ import { useAdminStore } from '@/composables/useAdminStore'
 
 const router = useRouter()
 const { user } = useAuthStore()
-const { users, usersTotal, usersPage, funnel, connectors, loading, error,
-        fetchUsers, fetchFunnel, fetchConnectors } = useAdminStore()
+const { users, usersTotal, usersPage, funnel, connectors, matchTrends,
+        spotifyProfiles, spotifyTotal, spotifyPage,
+        psychProfiles, psychTotal, psychPage,
+        archetypes, archetypesTotal, attachmentStyles, attachmentTotal, connectorDepth,
+        loading, error,
+        fetchUsers, fetchFunnel, fetchConnectors, fetchMatchTrends,
+        fetchSpotifyProfiles, fetchPsychProfiles,
+        fetchArchetypes, fetchAttachmentStyles, fetchConnectorDepth } = useAdminStore()
 
 const search = ref('')
 const perPage = 50
@@ -205,8 +414,14 @@ onMounted(async () => {
 })
 
 async function refresh() {
-  await Promise.all([fetchFunnel(), fetchConnectors(), fetchUsers(1, perPage)])
+  await Promise.all([fetchFunnel(), fetchConnectors(), fetchMatchTrends(), fetchUsers(1, perPage), fetchSpotifyProfiles(1, 12), fetchPsychProfiles(1, 12), fetchArchetypes(), fetchAttachmentStyles(), fetchConnectorDepth()])
 }
+
+const spotifyPerPage = 12
+const psychPerPage = 12
+
+async function goSpotifyPage(page: number) { await fetchSpotifyProfiles(page, spotifyPerPage) }
+async function goPsychPage(page: number) { await fetchPsychProfiles(page, psychPerPage) }
 
 async function goPage(page: number) {
   await fetchUsers(page, perPage)
@@ -229,6 +444,13 @@ function connectorColor(count: number) {
   if (count === 1) return 'bg-yellow-900/50 text-yellow-400'
   if (count >= 2) return 'bg-green-900/50 text-green-400'
   return 'bg-gray-800 text-gray-500'
+}
+
+function dropOff(i: number): number {
+  const curr = funnel.value[i]?.count || 0
+  const next = funnel.value[i + 1]?.count || 0
+  if (curr === 0) return 0
+  return Math.round((1 - next / curr) * 100)
 }
 
 function funnelLabel(step: string) {

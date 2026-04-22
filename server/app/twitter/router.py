@@ -24,6 +24,8 @@ from collections import Counter
 from urllib.parse import urlencode
 from uuid import UUID
 
+from ..oracle.trigger import maybe_trigger_synthesis
+
 import secrets
 
 import httpx
@@ -250,6 +252,9 @@ async def twitter_callback(code: str, state: str):
             """,
             UUID(user_id), json.dumps(twitter_profile),
         )
+
+    # Auto-trigger Oracle synthesis if enough providers connected
+    await maybe_trigger_synthesis(UUID(user_id))
 
     frontend = settings.cors_origin_list[0] if settings.cors_origin_list else "http://localhost:5173"
     return RedirectResponse(f"{frontend}/calibrate?twitter=connected")

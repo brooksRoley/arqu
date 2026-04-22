@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/composables/useAuthStore'
 import { useMessageStore } from '@/composables/useMessageStore'
@@ -11,6 +11,15 @@ const { threads, fetchThreads } = useMessageStore()
 if (!isAuthenticated.value) router.replace('/login')
 
 onMounted(fetchThreads)
+
+// ── Bridge card (dismissible learn prompt) ─────────────────────
+const BRIDGE_DISMISSED_KEY = 'channelzero-bridge-dismissed'
+const bridgeDismissed = ref(localStorage.getItem(BRIDGE_DISMISSED_KEY) === '1')
+
+function dismissBridge() {
+  bridgeDismissed.value = true
+  localStorage.setItem(BRIDGE_DISMISSED_KEY, '1')
+}
 
 function formatTime(iso: string | null): string {
   if (!iso) return ''
@@ -29,6 +38,17 @@ function formatTime(iso: string | null): string {
     <div class="inbox-header">
       <h1 class="inbox-title">Messages</h1>
       <p class="inbox-sub">Mutual matches only</p>
+    </div>
+
+    <!-- Bridge card: learn about your match signals -->
+    <div v-if="threads.length > 0 && !bridgeDismissed" class="bridge-card">
+      <button class="bridge-dismiss" @click="dismissBridge">&times;</button>
+      <span class="bridge-icon">&#x2726;</span>
+      <div class="bridge-text">
+        <span class="bridge-title">Understand your signal overlap</span>
+        <span class="bridge-desc">Learn how the Oracle matched you — attachment styles, sonic fingerprints, and behavioral vectors.</span>
+      </div>
+      <router-link to="/learn/how-matching-works" class="bridge-link">Read more &rarr;</router-link>
     </div>
 
     <div v-if="threads.length === 0" class="inbox-empty">
@@ -219,4 +239,70 @@ function formatTime(iso: string | null): string {
   justify-content: center;
   padding: 0 0.25rem;
 }
+
+/* ── Bridge card ── */
+.bridge-card {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 1rem 1.25rem;
+  margin-bottom: 1.5rem;
+  background: rgba(99, 102, 241, 0.06);
+  border: 1px solid rgba(99, 102, 241, 0.2);
+  border-radius: 0.75rem;
+}
+
+.bridge-dismiss {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.6rem;
+  background: none;
+  border: none;
+  color: #475569;
+  font-size: 1rem;
+  cursor: pointer;
+  line-height: 1;
+  padding: 0;
+}
+
+.bridge-dismiss:hover { color: #94a3b8; }
+
+.bridge-icon {
+  font-size: 1.2rem;
+  color: #6366f1;
+  flex-shrink: 0;
+  margin-top: 0.1rem;
+}
+
+.bridge-text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  flex: 1;
+}
+
+.bridge-title {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #c4b5fd;
+}
+
+.bridge-desc {
+  font-size: 0.75rem;
+  color: #64748b;
+  line-height: 1.5;
+}
+
+.bridge-link {
+  flex-shrink: 0;
+  align-self: center;
+  font-size: 0.75rem;
+  color: #6366f1;
+  text-decoration: none;
+  white-space: nowrap;
+  transition: color 0.15s;
+}
+
+.bridge-link:hover { color: #818cf8; }
 </style>

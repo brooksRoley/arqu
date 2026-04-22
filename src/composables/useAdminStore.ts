@@ -54,6 +54,48 @@ export interface UsersPage {
   users: AdminUser[]
 }
 
+export interface SpotifyProfile {
+  user_id: string
+  email: string
+  display_name: string | null
+  top_artists: string[]
+  genres: string[]
+  audio_avg: Record<string, number>
+}
+
+export interface PsychometricProfile {
+  user_id: string
+  email: string
+  display_name: string | null
+  love_language: string | null
+  sociosexual_orientation: string | null
+  values_cluster: string | null
+  narrative: string | null
+  ipip_neo_scores: Record<string, number> | null
+  ecr_r_scores: Record<string, number> | null
+  created_at: string
+}
+
+export interface MatchTrends {
+  seven_day: { players: number; matched: number; rate_pct: number }
+  thirty_day: { players: number; matched: number; rate_pct: number }
+}
+
+export interface ArchetypeCount {
+  archetype: string
+  count: number
+}
+
+export interface AttachmentCount {
+  style: string
+  count: number
+}
+
+export interface ConnectorDepthBucket {
+  connectors: number
+  count: number
+}
+
 // ── State ────────────────────────────────────────────────────────────────────
 
 const users = ref<AdminUser[]>([])
@@ -61,6 +103,18 @@ const usersTotal = ref(0)
 const usersPage = ref(1)
 const funnel = ref<FunnelStep[]>([])
 const connectors = ref<ConnectorStat[]>([])
+const matchTrends = ref<MatchTrends | null>(null)
+const spotifyProfiles = ref<SpotifyProfile[]>([])
+const spotifyTotal = ref(0)
+const spotifyPage = ref(1)
+const psychProfiles = ref<PsychometricProfile[]>([])
+const psychTotal = ref(0)
+const psychPage = ref(1)
+const archetypes = ref<ArchetypeCount[]>([])
+const archetypesTotal = ref(0)
+const attachmentStyles = ref<AttachmentCount[]>([])
+const attachmentTotal = ref(0)
+const connectorDepth = ref<ConnectorDepthBucket[]>([])
 const loading = ref(false)
 const error = ref<string | null>(null)
 
@@ -102,6 +156,69 @@ async function fetchConnectors() {
   }
 }
 
+async function fetchMatchTrends() {
+  const { apiFetch } = useAuthStore()
+  try {
+    matchTrends.value = await apiFetch<MatchTrends>('/api/analytics/match-trends')
+  } catch (e: any) {
+    error.value = e.message
+  }
+}
+
+async function fetchSpotifyProfiles(page = 1, perPage = 50) {
+  const { apiFetch } = useAuthStore()
+  try {
+    const data = await apiFetch<{ total: number; page: number; profiles: SpotifyProfile[] }>(
+      `/api/analytics/spotify-profiles?page=${page}&per_page=${perPage}`
+    )
+    spotifyProfiles.value = data.profiles
+    spotifyTotal.value = data.total
+    spotifyPage.value = data.page
+  } catch (e: any) {
+    error.value = e.message
+  }
+}
+
+async function fetchPsychProfiles(page = 1, perPage = 50) {
+  const { apiFetch } = useAuthStore()
+  try {
+    const data = await apiFetch<{ total: number; page: number; profiles: PsychometricProfile[] }>(
+      `/api/analytics/psychometrics?page=${page}&per_page=${perPage}`
+    )
+    psychProfiles.value = data.profiles
+    psychTotal.value = data.total
+    psychPage.value = data.page
+  } catch (e: any) {
+    error.value = e.message
+  }
+}
+
+async function fetchArchetypes() {
+  const { apiFetch } = useAuthStore()
+  try {
+    const data = await apiFetch<{ total: number; archetypes: ArchetypeCount[] }>('/api/analytics/archetypes')
+    archetypes.value = data.archetypes
+    archetypesTotal.value = data.total
+  } catch (e: any) { error.value = e.message }
+}
+
+async function fetchAttachmentStyles() {
+  const { apiFetch } = useAuthStore()
+  try {
+    const data = await apiFetch<{ total: number; styles: AttachmentCount[] }>('/api/analytics/attachment-styles')
+    attachmentStyles.value = data.styles
+    attachmentTotal.value = data.total
+  } catch (e: any) { error.value = e.message }
+}
+
+async function fetchConnectorDepth() {
+  const { apiFetch } = useAuthStore()
+  try {
+    const data = await apiFetch<{ histogram: ConnectorDepthBucket[] }>('/api/analytics/connector-depth')
+    connectorDepth.value = data.histogram
+  } catch (e: any) { error.value = e.message }
+}
+
 async function submitConnectorFeedback(provider: string, rating: number, tags: string[]) {
   const { apiFetch } = useAuthStore()
   await apiFetch('/api/analytics/feedback/connector', {
@@ -129,12 +246,30 @@ export function useAdminStore() {
     usersPage: readonly(usersPage),
     funnel: readonly(funnel),
     connectors: readonly(connectors),
+    matchTrends: readonly(matchTrends),
+    spotifyProfiles: readonly(spotifyProfiles),
+    spotifyTotal: readonly(spotifyTotal),
+    spotifyPage: readonly(spotifyPage),
+    psychProfiles: readonly(psychProfiles),
+    psychTotal: readonly(psychTotal),
+    psychPage: readonly(psychPage),
+    archetypes: readonly(archetypes),
+    archetypesTotal: readonly(archetypesTotal),
+    attachmentStyles: readonly(attachmentStyles),
+    attachmentTotal: readonly(attachmentTotal),
+    connectorDepth: readonly(connectorDepth),
     loading: readonly(loading),
     error: readonly(error),
 
     fetchUsers,
     fetchFunnel,
     fetchConnectors,
+    fetchMatchTrends,
+    fetchSpotifyProfiles,
+    fetchPsychProfiles,
+    fetchArchetypes,
+    fetchAttachmentStyles,
+    fetchConnectorDepth,
     submitConnectorFeedback,
     logEvent,
   }

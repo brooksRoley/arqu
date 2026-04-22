@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import re
 from uuid import UUID
 
@@ -170,7 +171,9 @@ async def find_matches(user_id: UUID = Depends(get_current_user_id)):
 
         # Fetch vibe vectors for matched users (spotify_data, attachment, etc.)
         vibe_rows = await conn.fetch(
-            "SELECT user_id, spotify_data, attachment_style, defense_mechanism, readiness_score "
+            "SELECT user_id, spotify_data, twitter_data, strava_data, "
+            "attachment_style, defense_mechanism, readiness_score, "
+            "oracle_coordinate, oracle_synthesized_at "
             "FROM vibe_vectors WHERE user_id = ANY($1::uuid[])",
             match_ids,
         )
@@ -178,7 +181,8 @@ async def find_matches(user_id: UUID = Depends(get_current_user_id)):
 
         # Fetch current user's vibe vector for comparison
         my_vibe = await conn.fetchrow(
-            "SELECT spotify_data, attachment_style, defense_mechanism "
+            "SELECT spotify_data, twitter_data, strava_data, "
+            "attachment_style, defense_mechanism, oracle_coordinate "
             "FROM vibe_vectors WHERE user_id = $1",
             user_id,
         )
@@ -216,6 +220,9 @@ async def find_matches(user_id: UUID = Depends(get_current_user_id)):
             "similarity": m["score"],
             "match_reason": reason,
             "sonic_overlap": spotify,
+            "twitter_overlap": _extract_twitter_overlap(my_vibe, v) if my_vibe and v else None,
+            "strava_overlap": _extract_strava_overlap(my_vibe, v) if my_vibe and v else None,
+            "oracle_insight": _extract_oracle_insight(v),
             "they_accepted": mid in accepted_by,
             "my_action": my_action_map.get(mid),
         })
@@ -250,7 +257,85 @@ def _build_match_reason(
     if my_defense and their_defense and my_defense != their_defense:
         reasons.append(f"Different defense patterns ({my_defense} / {their_defense}) — growth potential")
 
+    # Oracle coordinate insights
+    my_oracle = my_vibe.get("oracle_coordinate") if my_vibe else None
+    their_oracle = their_vibe.get("oracle_coordinate") if their_vibe else None
+    if my_oracle and their_oracle:
+        if isinstance(my_oracle, str):
+            my_oracle = json.loads(my_oracle)
+        if isinstance(their_oracle, str):
+            their_oracle = json.loads(their_oracle)
+        empathy_diff = abs((my_oracle.get("empathy_index") or 0) - (their_oracle.get("empathy_index") or 0))
+        if empathy_diff < 0.15:
+            reasons.append("Closely aligned empathy signatures")
+
     return ". ".join(reasons) + "."
+
+
+def _extract_twitter_overlap(my_vibe: object | None, their_vibe: object | None) -> dict | None:
+    """Compare Twitter behavioral signals between two users."""
+    my_twitter = my_vibe.get("twitter_data") if my_vibe else None
+    their_twitter = their_vibe.get("twitter_data") if their_vibe else None
+    if not my_twitter or not their_twitter:
+        return None
+
+    if isinstance(my_twitter, str):
+        my_twitter = json.loads(my_twitter)
+    if isinstance(their_twitter, str):
+        their_twitter = json.loads(their_twitter)
+
+    my_avg_len = my_twitter.get("avg_tweet_length", 0)
+    their_avg_len = their_twitter.get("avg_tweet_length", 0)
+    my_lang = my_twitter.get("language", "")
+    their_lang = their_twitter.get("language", "")
+
+    return {
+        "both_connected": True,
+        "communication_style_match": abs(my_avg_len - their_avg_len) < 50,
+        "shared_language": my_lang == their_lang if my_lang and their_lang else None,
+        "their_username": their_twitter.get("username"),
+    }
+
+
+def _extract_strava_overlap(my_vibe: object | None, their_vibe: object | None) -> dict | None:
+    """Compare physical activity patterns between two users."""
+    my_strava = my_vibe.get("strava_data") if my_vibe else None
+    their_strava = their_vibe.get("strava_data") if their_vibe else None
+    if not my_strava or not their_strava:
+        return None
+
+    if isinstance(my_strava, str):
+        my_strava = json.loads(my_strava)
+    if isinstance(their_strava, str):
+        their_strava = json.loads(their_strava)
+
+    my_types = set(my_strava.get("activity_types", []))
+    their_types = set(their_strava.get("activity_types", []))
+    shared_activities = sorted(my_types & their_types)
+
+    return {
+        "both_connected": True,
+        "shared_activities": shared_activities,
+        "their_activity_types": sorted(their_types)[:5],
+    }
+
+
+def _extract_oracle_insight(their_vibe: object | None) -> dict | None:
+    """Extract Oracle coordinate metrics if synthesized."""
+    if not their_vibe:
+        return None
+    coord = their_vibe.get("oracle_coordinate")
+    if not coord:
+        return None
+    if isinstance(coord, str):
+        coord = json.loads(coord)
+    return {
+        "empathy_index": coord.get("empathy_index"),
+        "isolation_metric": coord.get("isolation_metric"),
+        "fatalism_score": coord.get("fatalism_score"),
+        "masochism_curve": coord.get("masochism_curve"),
+        "oracle_rationale": coord.get("oracle_rationale"),
+    }
 
 
 def _extract_spotify_overlap(my_vibe: object | None, their_vibe: object | None) -> dict | None:

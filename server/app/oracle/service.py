@@ -14,6 +14,7 @@ import json
 import logging
 
 from ..config import get_settings
+from ..db import get_conn
 from ..llm.encryption import get_user_llm_key
 from ..vector.service import _embed, _get_index_sync, NAMESPACE_USERS
 from .models import SynthesisRequest, PsychCoordinate
@@ -211,6 +212,21 @@ async def synthesize_and_upsert(user_id: str, data: SynthesisRequest) -> None:
     # 2. LLM synthesis
     prompt = _build_oracle_prompt(user_id, data)
     coordinate = await _llm_synthesize(prompt, provider, api_key)
+
+    # 2.5 Persist coordinate to Postgres
+    async with get_conn() as conn:
+        await conn.execute(
+            """
+            UPDATE vibe_vectors
+            SET oracle_coordinate = $1::jsonb,
+                oracle_synthesized_at = now(),
+                updated_at = now()
+            WHERE user_id = $2::uuid
+            """,
+            json.dumps(coordinate.model_dump()),
+            user_id,
+        )
+    logger.info("Oracle coordinate persisted to DB for %s", user_id)
 
     # 3. Embed the synthesized coordinate (not the raw data)
     synthesis_text = json.dumps(coordinate.model_dump())

@@ -29,6 +29,8 @@ from .costar.router import router as costar_router
 from .match.router import router as match_router
 from .messages.router import router as messages_router
 from .analytics.router import router as analytics_router
+from .brain.router import router as brain_router
+from .vector.router import router as vector_router
 
 
 @asynccontextmanager
@@ -90,6 +92,8 @@ def create_app() -> FastAPI:
     app.include_router(match_router, prefix=f"{prefix}/match", tags=["match"])
     app.include_router(messages_router, prefix=f"{prefix}/messages", tags=["messages"])
     app.include_router(analytics_router, prefix=f"{prefix}/analytics", tags=["analytics"])
+    app.include_router(brain_router, prefix=f"{prefix}/brain", tags=["brain"])
+    app.include_router(vector_router, prefix=f"{prefix}/vector", tags=["vector"])
 
     # ── Health ──────────────────────────────────────────────────
     @app.get("/health")

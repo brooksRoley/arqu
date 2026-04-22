@@ -137,12 +137,10 @@ const router = createRouter({
       meta: { requiresAuth: true }
     },
 
-    // ── Peripheral data sync (auth required) ────────────────────
+    // ── Peripheral → calibrate redirect ──────────────────────────
     {
       path: '/peripheral',
-      name: 'peripheral',
-      component: () => import('@/views/PeripheralSync.vue'),
-      meta: { requiresAuth: true }
+      redirect: '/calibrate',
     },
 
     // ── Psychometrics / Psychoanalysis (auth required) ───────────

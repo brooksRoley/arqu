@@ -1,14 +1,5 @@
 import { ref, reactive, type Ref } from 'vue'
-
-// ── CDN loader ────────────────────────────────────────────────────
-function loadScript(src: string): Promise<void> {
-  return new Promise((resolve, reject) => {
-    if (document.querySelector(`script[src="${src}"]`)) return resolve()
-    const el = document.createElement('script')
-    el.src = src; el.onload = () => resolve(); el.onerror = reject
-    document.head.appendChild(el)
-  })
-}
+import Matter from 'matter-js'
 
 // ── Default orb palette ───────────────────────────────────────────
 export const DEFAULT_ORB_DEFS = [
@@ -69,7 +60,7 @@ export function useCosmicPhysics(canvasRef: Ref<HTMLCanvasElement | undefined>, 
   const adapt = reactive({ focus: 0, engage: 0, depth: 0, mVel: 0 })
 
   // ── Non-reactive internals ──────────────────────────────────────
-  let M: any = null
+  const M = Matter
   let engine: any = null
   let ctx: CanvasRenderingContext2D
   let W = 0, H = 0, dpr = 1
@@ -562,14 +553,8 @@ export function useCosmicPhysics(canvasRef: Ref<HTMLCanvasElement | undefined>, 
   }
 
   // ── Lifecycle ───────────────────────────────────────────────────
-  /** Call from onMounted. Loads Matter.js CDN, sets up canvas, starts RAF loop. */
+  /** Call from onMounted. Sets up canvas, starts RAF loop. */
   async function init(): Promise<boolean> {
-    try {
-      await loadScript('https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.19.0/matter.min.js')
-    } catch { return false }
-
-    M = (window as any).Matter
-
     resize()
     initStars()
     initParticles()
@@ -592,7 +577,7 @@ export function useCosmicPhysics(canvasRef: Ref<HTMLCanvasElement | undefined>, 
   /** Call from onUnmounted. Stops loop, removes listeners, cleans up physics. */
   function destroy() {
     if (raf) cancelAnimationFrame(raf)
-    try { if (engine) { M.Composite.clear(engine.world); M.Engine.clear(engine) } } catch { /* noop */ }
+    try { if (engine) { M.Composite.clear(engine.world, false); M.Engine.clear(engine) } } catch { /* noop */ }
     window.removeEventListener('resize', resize)
     window.removeEventListener('mousemove', _onMouse)
     window.removeEventListener('touchmove', _onTouch)

@@ -69,11 +69,13 @@ import { useRouter } from 'vue-router'
 import { usePollStore } from '@/composables/usePollStore'
 import { useVibeStore } from '@/composables/useVibeStore'
 import { useAuthStore } from '@/composables/useAuthStore'
+import { useMessageStore } from '@/composables/useMessageStore'
 
 const router = useRouter()
 const { token: pollToken } = usePollStore()
 const { oauthState } = useVibeStore()
 const { isAuthenticated } = useAuthStore()
+const { threads } = useMessageStore()
 
 // ── Onboarding state (mirrors NavBar / OnboardingView) ───────────────────────
 
@@ -118,8 +120,10 @@ interface Step {
   done:   boolean
 }
 
+const hasSentMessage = computed(() => threads.value.length > 0)
+
 const steps = computed<Step[]>(() => {
-  const anyConnected = Object.values(oauthState.value).some((p) => p.connected)
+  const oauth = oauthState.value
   return [
     {
       key:    'attune',
@@ -129,19 +133,41 @@ const steps = computed<Step[]>(() => {
       action: 'Take the poll',
       icon:   '✦',
       color:  '#a78bfa',
-      route:  '/',   // poll is inline on home
+      route:  '/',
       done:   !!pollToken.value,
     },
     {
-      key:    'signal',
+      key:    'spotify',
       phase:  'Phase 2 — Signal Collection',
-      label:  'Signal',
-      desc:   'Connect at least one data source. Your listening history, social graph, and calendar become coordinates.',
-      action: 'Connect sources',
-      icon:   '◉',
-      color:  '#22c55e',
+      label:  'Connect Spotify',
+      desc:   'Your listening history becomes a sonic coordinate — valence, energy, genre fingerprint.',
+      action: 'Connect Spotify',
+      icon:   '♫',
+      color:  '#1db954',
       route:  '/calibrate',
-      done:   anyConnected,
+      done:   oauth.spotify.connected,
+    },
+    {
+      key:    'twitter',
+      phase:  'Phase 2 — Signal Collection',
+      label:  'Connect X',
+      desc:   'Your public signal reveals neurotic output patterns — what you say and when you say it.',
+      action: 'Connect X',
+      icon:   '✕',
+      color:  '#1d9bf0',
+      route:  '/calibrate',
+      done:   oauth.twitter.connected,
+    },
+    {
+      key:    'strava',
+      phase:  'Phase 2 — Signal Collection',
+      label:  'Connect Strava',
+      desc:   'Your movement data becomes a somatic ledger — rhythm, distance, consistency.',
+      action: 'Connect Strava',
+      icon:   '◎',
+      color:  '#fc4c02',
+      route:  '/calibrate',
+      done:   oauth.strava.connected,
     },
     {
       key:    'confess',
@@ -164,6 +190,17 @@ const steps = computed<Step[]>(() => {
       color:  '#f59e0b',
       route:  '/game',
       done:   onboarding.value.completed,
+    },
+    {
+      key:    'message',
+      phase:  'Phase 5 — Contact',
+      label:  'First Message',
+      desc:   'Reach out to your match. The algorithm found them — now the human part begins.',
+      action: 'Open messages',
+      icon:   '✉',
+      color:  '#c084fc',
+      route:  '/messages',
+      done:   hasSentMessage.value,
     },
   ]
 })

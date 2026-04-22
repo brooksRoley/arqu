@@ -38,6 +38,40 @@ export interface SonicOverlap {
   energy_delta: number
 }
 
+export interface TwitterOverlap {
+  both_connected: boolean
+  communication_style_match: boolean
+  shared_language: boolean | null
+  their_username: string | null
+}
+
+export interface StravaOverlap {
+  both_connected: boolean
+  shared_activities: readonly string[]
+  their_activity_types: readonly string[]
+}
+
+export interface OracleInsight {
+  empathy_index: number | null
+  isolation_metric: number | null
+  fatalism_score: number | null
+  masochism_curve: number | null
+  oracle_rationale: string | null
+}
+
+export interface OracleCoordinate {
+  synthesized: boolean
+  coordinate?: {
+    empathy_index: number
+    isolation_metric: number
+    fatalism_score: number
+    masochism_curve: number
+    oracle_rationale: string
+    suggested_community_action: string
+  }
+  synthesized_at?: string
+}
+
 export interface VibeMatch {
   user_id: string
   display_name: string
@@ -47,6 +81,9 @@ export interface VibeMatch {
   similarity: number
   match_reason: string
   sonic_overlap: SonicOverlap | null
+  twitter_overlap: TwitterOverlap | null
+  strava_overlap: StravaOverlap | null
+  oracle_insight: OracleInsight | null
   they_accepted: boolean
   my_action: 'accept' | 'reject' | null
 }
@@ -90,6 +127,7 @@ const matches = ref<VibeMatch[]>([])
 const matchesLoading = ref(false)
 const matchesError = ref<string | null>(null)
 const mutualMatchUserId = ref<string | null>(null)
+const oracleCoordinate = ref<OracleCoordinate | null>(null)
 
 // ── Derived ──────────────────────────────────────────────────────────────────
 
@@ -139,6 +177,16 @@ async function fetchMatches() {
   } finally {
     matchesLoading.value = false
   }
+}
+
+/**
+ * Fetch the user's Oracle coordinate (if synthesized).
+ */
+async function fetchOracleCoordinate() {
+  const { apiFetch } = useAuthStore()
+  try {
+    oracleCoordinate.value = await apiFetch<OracleCoordinate>('/api/oracle/coordinate')
+  } catch { /* non-blocking */ }
 }
 
 /**
@@ -209,8 +257,10 @@ export function useVibeStore() {
     isMatchReady,
 
     mutualMatchUserId: readonly(mutualMatchUserId),
+    oracleCoordinate: readonly(oracleCoordinate),
 
     markConnected,
+    fetchOracleCoordinate,
     connectSpotify,
     triggerSynthesis,
     fetchMatches,

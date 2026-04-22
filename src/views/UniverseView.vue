@@ -6,9 +6,29 @@ import { usePollStore } from '@/composables/usePollStore'
 import { useVibeStore } from '@/composables/useVibeStore'
 
 const router = useRouter()
-const { user, isAuthenticated } = useAuthStore()
+const { user, isAuthenticated, apiFetch } = useAuthStore()
 const { token: pollToken } = usePollStore()
-const { oauthState } = useVibeStore()
+const { oauthState, oracleCoordinate, fetchOracleCoordinate } = useVibeStore()
+
+// ── X/Twitter analysis data ──────────────────────────────────────
+interface TwitterProfile {
+  username?: string
+  bio?: string
+  followers?: number
+  tweet_count?: number
+  avg_tweet_length?: number
+  language?: string
+  tweet_samples?: string[]
+}
+const twitterData = ref<TwitterProfile | null>(null)
+
+async function loadTwitterData() {
+  if (!oauthState.value.twitter.connected) return
+  try {
+    const data = await apiFetch<TwitterProfile | null>('/api/twitter/profile')
+    if (data) twitterData.value = data
+  } catch { /* non-blocking */ }
+}
 
 if (!isAuthenticated.value) router.replace('/login')
 
@@ -37,8 +57,11 @@ const accent = computed(() => pollToken.value?.palette?.accent || '#a78bfa')
 function buildPlanets(): Planet[] {
   const hasSpotify = oauthState.value.spotify.connected
   const hasTwitter = oauthState.value.twitter.connected
+  const hasStrava = oauthState.value.strava.connected
   const hasPoll = !!pollToken.value
-  const connectedCount = [hasSpotify, hasTwitter].filter(Boolean).length
+  const hasOracle = !!oracleCoordinate.value?.synthesized
+  const oCoord = oracleCoordinate.value?.coordinate
+  const connectedCount = [hasSpotify, hasTwitter, hasStrava].filter(Boolean).length
 
   return [
     {
@@ -72,7 +95,9 @@ function buildPlanets(): Planet[] {
     {
       key: 'social',
       label: 'Social Imprint',
-      sublabel: hasTwitter ? 'Synced' : 'Connect X',
+      sublabel: hasTwitter
+        ? (twitterData.value?.username ? `@${twitterData.value.username}` : 'Synced')
+        : 'Connect X',
       radius: 15,
       orbitRadius: 155,
       speed: 0.003,
@@ -86,42 +111,46 @@ function buildPlanets(): Planet[] {
     {
       key: 'psyche',
       label: 'Psyche',
-      sublabel: 'Analysis engine',
+      sublabel: hasOracle && oCoord?.oracle_rationale
+        ? oCoord.oracle_rationale.slice(0, 40) + (oCoord.oracle_rationale.length > 40 ? '...' : '')
+        : twitterData.value?.bio ? twitterData.value.bio.slice(0, 30) : 'Analysis engine',
       radius: 20,
       orbitRadius: 210,
       speed: 0.002,
       angle: Math.random() * Math.PI * 2,
       color: '#c084fc',
       glowColor: '#a855f7',
-      importance: hasPoll ? 0.7 : 0.15,
-      warning: hasPoll ? null : 'Dormant',
+      importance: hasOracle ? 0.85 : hasPoll ? 0.7 : 0.15,
+      warning: hasOracle ? null : hasPoll ? null : 'Dormant',
       pulse: 0,
     },
     {
       key: 'shadow',
       label: 'Shadow',
-      sublabel: 'Unconscious patterns',
+      sublabel: hasOracle && oCoord
+        ? `Empathy: ${(oCoord.empathy_index * 100).toFixed(0)}% | Isolation: ${(oCoord.isolation_metric * 100).toFixed(0)}%`
+        : 'Unconscious patterns',
       radius: 14,
       orbitRadius: 265,
       speed: 0.0015,
       angle: Math.random() * Math.PI * 2,
       color: '#475569',
       glowColor: '#64748b',
-      importance: 0.5,
-      warning: connectedCount < 2 ? 'Insufficient data' : null,
+      importance: hasOracle ? 0.8 : 0.5,
+      warning: hasOracle ? null : connectedCount < 2 ? 'Insufficient data' : null,
       pulse: 0,
     },
     {
       key: 'connections',
       label: 'Connections',
-      sublabel: 'Match readiness',
+      sublabel: hasOracle ? 'Oracle active' : 'Match readiness',
       radius: 12,
       orbitRadius: 315,
       speed: 0.001,
       angle: Math.random() * Math.PI * 2,
       color: '#f59e0b',
       glowColor: '#fbbf24',
-      importance: connectedCount >= 1 ? 0.6 : 0.1,
+      importance: hasOracle ? 0.8 : connectedCount >= 1 ? 0.6 : 0.1,
       warning: connectedCount === 0 ? 'Offline' : null,
       pulse: 0,
     },
@@ -401,12 +430,14 @@ function resize() {
 
 // ── Lifecycle ───────────────────────────────────────────────────────
 
-onMounted(() => {
+onMounted(async () => {
   resize()
   window.addEventListener('resize', resize)
   canvas.value?.addEventListener('mousemove', onMouseMove)
   canvas.value?.addEventListener('click', onClick)
   render()
+  await Promise.all([loadTwitterData(), fetchOracleCoordinate()])
+  planets.value = buildPlanets()
 })
 
 onUnmounted(() => {

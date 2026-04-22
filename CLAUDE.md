@@ -74,16 +74,37 @@
 - No `Co-Authored-By` lines
 - Prefer one focused commit per feature/fix
 
-## Route Map (key ones)
+## Route Map
 | Route | Auth | Purpose |
 |---|---|---|
 | `/` | no | Home hub |
 | `/login` | guest | Auth |
+| `/learn` | no | Learn index |
+| `/learn/:slug` | no | Learn article |
+| `/sessions` | no | Sessions listing |
+| `/about` | no | About page |
 | `/discovery` | yes | Physics-driven onboarding |
-| `/intake` | yes | Psychometric intake |
+| `/onboarding` | yes | Onboarding flow |
+| `/calibrate` | yes | All connector OAuth (Spotify, X, Strava, CoStar, Letterboxd, Steam) |
+| `/intake` | yes | Psychometric confessional intake |
+| `/psychoanalysis` | yes | Psychometric assessment + narrative |
 | `/game` | yes | Oracle matching game |
-| `/calibrate` | yes | All connector OAuth (Spotify, X, Strava, etc.) |
 | `/universe` | yes | Solar system signal visualization |
 | `/spotify` | yes | Spotify sonic field physics |
-| `/admin` | yes+admin | Analytics dashboard |
+| `/x` | yes | X/Twitter signal visualization |
 | `/messages` | yes | Mutual match messaging |
+| `/messages/:userId` | yes | Thread view |
+| `/journal` | yes | Journal editor (text, drawing, audio, mood) |
+| `/checkin` | yes | Daily check-in + mood arc |
+| `/admin` | yes+admin | Analytics dashboard |
+| `/zeromind` | no | Trance entrainment (Tone.js) |
+| `/audio` | no | Adaptive entrainment audio player |
+| `/trance` | no | Trance visualization |
+| `/hypno` | no | Hypno visualization |
+| `/spiral` | no | Spiral visualization |
+| `/studio` | no | Glass studio |
+| `/liquidglass` | no | Liquid glass experiment |
+| `/fitting` | no | Body/swimsuit configurator (standalone) |
+| `/poll` | no | Archetype poll |
+| `/reader` | no | Reader view |
+| `/webaudio` | no | WebAudio experiment |

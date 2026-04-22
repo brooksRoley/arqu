@@ -7,6 +7,7 @@ from uuid import UUID
 from fastapi import APIRouter, BackgroundTasks, Depends
 
 from ..auth.deps import get_current_user_id
+from ..db import get_conn
 from .models import SynthesisRequest, SynthesisResponse
 from .service import synthesize_and_upsert
 
@@ -29,3 +30,26 @@ async def trigger_synthesis(
         status="initiated",
         message="The Oracle is plotting your coordinate.",
     )
+
+
+@router.get("/coordinate")
+async def get_coordinate(user_id: UUID = Depends(get_current_user_id)):
+    """Return the user's Oracle coordinate if synthesized."""
+    async with get_conn() as conn:
+        row = await conn.fetchrow(
+            "SELECT oracle_coordinate, oracle_synthesized_at FROM vibe_vectors WHERE user_id = $1",
+            user_id,
+        )
+    if not row or not row["oracle_coordinate"]:
+        return {"synthesized": False}
+
+    import json as _json
+    coord = row["oracle_coordinate"]
+    if isinstance(coord, str):
+        coord = _json.loads(coord)
+
+    return {
+        "synthesized": True,
+        "coordinate": coord,
+        "synthesized_at": row["oracle_synthesized_at"].isoformat() if row["oracle_synthesized_at"] else None,
+    }

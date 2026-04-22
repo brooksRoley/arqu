@@ -1,5 +1,6 @@
 import { ref, computed, readonly } from 'vue'
 import * as Tone from 'tone'
+import { useAuthStore } from './useAuthStore'
 
 export type TrancePhase = 'idle' | 'induction' | 'coherence' | 'deepen' | 'joy' | 'wake'
 
@@ -37,6 +38,7 @@ let swellOsc: Tone.Oscillator | null = null
 let swellGain: Tone.Gain | null = null
 let coherenceLoopId: number | undefined
 let syncStartTime = 0
+let sessionStartTime = 0
 let phaseTimer: ReturnType<typeof setTimeout> | null = null
 let phraseTimers: ReturnType<typeof setTimeout>[] = []
 
@@ -468,7 +470,7 @@ function runWake() {
   applyPhaseLayerBalance('wake', 18)
   // Wake countdown phrases every ~3s, then end session
   schedulePhrases(WAKE_PHRASES, 3000, () => {
-    setTimeout(() => stopSession(), 2000)
+    setTimeout(() => completeSession(), 2000)
   })
 }
 
@@ -477,6 +479,7 @@ async function startSession() {
   await Tone.start()
   initCoreAudio()
   sessionActive.value = true
+  sessionStartTime = Date.now()
   syncCount.value = 0
   coherenceScore.value = 0
   progress.value = 0
@@ -486,6 +489,36 @@ async function startSession() {
 function windDown() {
   if (phase.value === 'deepen') runJoy()
   else if (phase.value === 'joy') runWake()
+}
+
+async function completeSession() {
+  // Capture data before stopSession clears everything
+  const sessionData = {
+    dominant_phase: phase.value,
+    session_duration_ms: Date.now() - sessionStartTime,
+    sync_count: syncCount.value,
+    coherence_peak: coherenceScore.value,
+    modules_used: [
+      baselineModulatorActive.value && 'baseline_modulator',
+      ptosisInducerActive.value && 'ptosis_inducer',
+      avSyncActive.value && 'av_sync',
+      alphaWaveActive.value && 'alpha_wave',
+      thetaDreamActive.value && 'theta_dream',
+      schumannActive.value && 'schumann',
+      solfeggioActive.value && 'solfeggio',
+    ].filter(Boolean) as string[],
+  }
+
+  // Fire-and-forget to backend
+  try {
+    const { apiFetch } = useAuthStore()
+    await apiFetch('/api/vector/zeromind', {
+      method: 'POST',
+      body: JSON.stringify(sessionData),
+    })
+  } catch { /* non-blocking */ }
+
+  stopSession()
 }
 
 function stopSession() {
@@ -660,6 +693,7 @@ export function useTranceEngine() {
     // Session control
     startSession,
     stopSession,
+    completeSession,
     windDown,
     startSync,
     stopSync,

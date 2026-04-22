@@ -3,14 +3,15 @@ import { ref, computed, nextTick, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '@/composables/useAuthStore'
 import { usePollStore } from '@/composables/usePollStore'
-import { useVibeStore, type VibeMatch } from '@/composables/useVibeStore'
+import { useVibeStore } from '@/composables/useVibeStore'
+import type { VibeMatch } from '@/composables/useVibeStore'
 
 const router = useRouter()
 const route = useRoute()
 const { isAuthenticated, user } = useAuthStore()
 const { token: pollToken } = usePollStore()
 const {
-  matches, matchesLoading, matchesError, mutualMatchUserId,
+  matches, matchesLoading, matchesError, mutualMatchUserId, oauthState,
   markConnected, fetchMatches, interactWithMatch, clearMutualMatch,
 } = useVibeStore()
 
@@ -65,7 +66,12 @@ const oracleEl = ref<HTMLElement | null>(null)
 function generateOracleDebrief(): string {
   if (!currentMatch.value) return ''
   const m = currentMatch.value
-  return `Nightly batch processed. You matched with ${m.display_name} at ${compatPercent.value}% alignment. ${m.match_reason} What are your initial thoughts?`
+  let debrief = `Nightly batch processed. You matched with ${m.display_name} at ${compatPercent.value}% alignment. ${m.match_reason}`
+  if (m.oracle_insight?.oracle_rationale) {
+    debrief += ` Oracle analysis: ${m.oracle_insight.oracle_rationale}`
+  }
+  debrief += ' What are your initial thoughts?'
+  return debrief
 }
 
 const oracleResponses = [
@@ -184,6 +190,26 @@ function acknowledgeMutual() {
   advanceToNext()
 }
 
+// ── Post-game signal summary ─────────────────────────────────────
+
+const signalSummary = computed(() => {
+  const signals: string[] = []
+  const oauth = oauthState.value
+  if (oauth.spotify.connected) signals.push('Spotify: sonic baseline mapped')
+  if (oauth.twitter.connected) signals.push('X: neurotic output analyzed')
+  if (oauth.strava.connected) signals.push('Strava: somatic ledger logged')
+  if (oauth.google.connected) signals.push('Calendar: temporal patterns read')
+  return signals.length > 0 ? signals : ['No connectors active — connect sources to strengthen your signal']
+})
+
+const bestMatch = computed<VibeMatch | null>(() => {
+  // Find the highest-similarity accepted match, or the highest overall
+  const accepted = matches.value.filter(m => m.my_action === 'accept')
+  const pool = accepted.length > 0 ? accepted : [...matches.value]
+  if (pool.length === 0) return null
+  return pool.reduce((a, b) => a.similarity > b.similarity ? a : b)
+})
+
 function goBack() {
   router.push('/checkin')
 }
@@ -207,6 +233,34 @@ function sonicDescription(m: VibeMatch): string {
   else if (s.valence_delta > 0.3) parts.push('Contrasting emotional frequencies')
   if (s.energy_delta < 0.1) parts.push('Matched energy profiles')
   return parts.length > 0 ? parts.join('. ') + '.' : 'Sonic profiles loading...'
+}
+
+function twitterDescription(m: VibeMatch): string {
+  const t = m.twitter_overlap
+  if (!t) return ''
+  const parts: string[] = []
+  if (t.their_username) parts.push(`@${t.their_username}`)
+  if (t.communication_style_match) parts.push('Similar communication patterns')
+  if (t.shared_language === true) parts.push('Same primary language')
+  return parts.length > 0 ? parts.join(' \u00b7 ') : ''
+}
+
+function stravaDescription(m: VibeMatch): string {
+  const s = m.strava_overlap
+  if (!s) return ''
+  if (s.shared_activities.length > 0) return `Shared activities: ${s.shared_activities.join(', ')}`
+  if (s.their_activity_types.length > 0) return `They do: ${s.their_activity_types.join(', ')}`
+  return ''
+}
+
+function oracleDescription(m: VibeMatch): string {
+  if (!m.oracle_insight) return ''
+  const o = m.oracle_insight
+  if (o.oracle_rationale) return o.oracle_rationale
+  const parts: string[] = []
+  if (o.empathy_index != null) parts.push(`Empathy: ${(o.empathy_index * 100).toFixed(0)}%`)
+  if (o.isolation_metric != null) parts.push(`Isolation: ${(o.isolation_metric * 100).toFixed(0)}%`)
+  return parts.join(' \u00b7 ')
 }
 
 onMounted(() => {
@@ -304,6 +358,18 @@ onMounted(() => {
               <span class="breakdown-label">Sonic Overlap</span>
               <p class="breakdown-text">{{ sonicDescription(currentMatch) }}</p>
             </div>
+            <div v-if="twitterDescription(currentMatch)" class="breakdown-item">
+              <span class="breakdown-label signal-twitter">Social Imprint</span>
+              <p class="breakdown-text">{{ twitterDescription(currentMatch) }}</p>
+            </div>
+            <div v-if="stravaDescription(currentMatch)" class="breakdown-item">
+              <span class="breakdown-label signal-strava">Somatic Ledger</span>
+              <p class="breakdown-text">{{ stravaDescription(currentMatch) }}</p>
+            </div>
+            <div v-if="oracleDescription(currentMatch)" class="breakdown-item">
+              <span class="breakdown-label signal-oracle">Oracle</span>
+              <p class="breakdown-text">{{ oracleDescription(currentMatch) }}</p>
+            </div>
             <div class="breakdown-item">
               <span class="breakdown-label">Attachment Style</span>
               <p class="breakdown-text">{{ currentMatch.attachment_style || 'Unknown' }}</p>
@@ -395,17 +461,53 @@ onMounted(() => {
       </div>
     </div>
 
-    <!-- Deployed (all matches reviewed) -->
+    <!-- Deployed (all matches reviewed) — signal summary + top match -->
     <div v-if="phase === 'deployed'" class="phase-center">
       <div class="deployed-display">
         <span class="deployed-icon" :style="{ color: accent }">&#x2714;</span>
         <h2 class="deployed-title">Cycle Complete</h2>
-        <p class="deployed-text">
-          You've reviewed all available matches for this cycle.<br />
-          Your decisions are recorded. The vectors will recalibrate.
-        </p>
+
+        <!-- Your Signal summary -->
+        <div class="signal-card">
+          <span class="signal-card-label">Your Signal</span>
+          <ul class="signal-list">
+            <li v-for="s in signalSummary" :key="s" class="signal-item">{{ s }}</li>
+          </ul>
+        </div>
+
+        <!-- Top match card -->
+        <div v-if="bestMatch" class="signal-card">
+          <span class="signal-card-label">Top Match</span>
+          <div class="top-match-row">
+            <div class="top-match-avatar">{{ bestMatch.display_name.charAt(0).toUpperCase() }}</div>
+            <div class="top-match-info">
+              <span class="top-match-name" :style="{ color: accent }">{{ bestMatch.display_name }}</span>
+              <span class="top-match-score">{{ Math.round(bestMatch.similarity * 100) }}% alignment</span>
+            </div>
+          </div>
+          <p v-if="bestMatch.sonic_overlap?.shared_genres?.length" class="top-match-detail">
+            Shared genres: {{ bestMatch.sonic_overlap.shared_genres.slice(0, 4).join(', ') }}
+          </p>
+          <p class="top-match-reason">{{ bestMatch.match_reason }}</p>
+          <button
+            v-if="bestMatch.my_action === 'accept'"
+            class="action-btn action-btn--primary"
+            :style="{ background: accent }"
+            @click="router.push(`/messages/${bestMatch.user_id}`)"
+          >
+            Send a message
+          </button>
+        </div>
+
+        <div v-else class="signal-card">
+          <span class="signal-card-label">Calibrating</span>
+          <p class="deployed-text">
+            Your signal is calibrating — check back as more connectors are added.
+          </p>
+        </div>
+
         <div class="deployed-actions">
-          <button class="action-btn" :style="{ background: accent }" @click="router.push('/psychoanalysis')">
+          <button class="action-btn action-btn--ghost" @click="router.push('/psychoanalysis')">
             Explore Your Profile
           </button>
           <button class="action-btn action-btn--ghost" @click="goBack">
@@ -644,6 +746,10 @@ onMounted(() => {
   line-height: 1.55;
   margin: 0;
 }
+
+.signal-twitter { color: #3b82f6; }
+.signal-strava { color: #f97316; }
+.signal-oracle { color: #c084fc; }
 
 /* ── Match reason ── */
 .match-reason {
@@ -965,6 +1071,101 @@ onMounted(() => {
   font-size: 0.78rem;
   color: #64748b;
   margin-top: 0.5rem;
+}
+
+/* ── Signal card (post-game) ── */
+.signal-card {
+  width: 100%;
+  background: rgba(20, 20, 40, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 0.6rem;
+  padding: 1rem 1.25rem;
+  text-align: left;
+}
+
+.signal-card-label {
+  font-size: 0.55rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #64748b;
+  font-weight: 700;
+}
+
+.signal-list {
+  margin: 0.5rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.signal-item {
+  font-size: 0.8rem;
+  color: #94a3b8;
+  padding: 0.2rem 0;
+  line-height: 1.4;
+}
+
+.signal-item::before {
+  content: '◉ ';
+  color: #22c55e;
+  font-size: 0.6rem;
+}
+
+.top-match-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-top: 0.6rem;
+}
+
+.top-match-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: rgba(139, 92, 246, 0.15);
+  border: 1px solid rgba(139, 92, 246, 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #c4b5fd;
+  font-size: 0.9rem;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.top-match-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+
+.top-match-name {
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+.top-match-score {
+  font-size: 0.7rem;
+  color: #64748b;
+}
+
+.top-match-detail {
+  font-size: 0.78rem;
+  color: #8b9cc0;
+  margin: 0.5rem 0 0;
+}
+
+.top-match-reason {
+  font-size: 0.78rem;
+  color: #64748b;
+  margin: 0.25rem 0 0.75rem;
+  font-style: italic;
+  line-height: 1.5;
+}
+
+.action-btn--primary {
+  border: none;
+  color: #0f0f1a;
+  width: 100%;
 }
 
 /* ── Mobile: stack panels ── */
