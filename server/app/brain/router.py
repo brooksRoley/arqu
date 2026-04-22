@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import imghdr
 from uuid import UUID, uuid4
 
 from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile, status
