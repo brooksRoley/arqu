@@ -1,5 +1,20 @@
 <script setup lang="ts">
+import { ref, onMounted, onUnmounted } from 'vue'
 import { RouterLink } from 'vue-router'
+import { useCosmicPhysics } from '@/composables/useCosmicPhysics'
+
+const bgCanvas = ref<HTMLCanvasElement>()
+const { init: initCosmic, destroy: destroyCosmic } = useCosmicPhysics(bgCanvas, {
+  particleCount: 60,
+  starCount: 80,
+  enableKeyboard: false,
+  enableMouseInteract: true,
+  clearAlpha: 0.06,
+  mouseAttractForce: 0.3,
+})
+
+onMounted(() => initCosmic())
+onUnmounted(() => destroyCosmic())
 
 interface Session {
   title: string
@@ -53,13 +68,8 @@ const groups: Group[] = [
     sessions: [
       {
         title: 'Liquid Glass',
-        path: '/glass',
-        description: 'Refractive moving-glass visual field for soft focus.'
-      },
-      {
-        title: 'Song Sandbox',
         path: '/liquidglass',
-        description: 'Glass visuals reactive to your own audio source.'
+        description: 'Refractive moving-glass visual field for soft focus.'
       },
       {
         title: 'Spiral',
@@ -78,6 +88,7 @@ const groups: Group[] = [
 
 <template>
   <main class="sessions">
+    <canvas ref="bgCanvas" class="sessions-bg" />
     <header class="sessions-head">
       <h1>Sessions</h1>
       <p class="lede">Pick a tool. Each session is one route into Enfractionation.</p>
@@ -103,8 +114,9 @@ const groups: Group[] = [
 
 <style scoped>
 .sessions {
+  position: relative;
   min-height: 100vh;
-  background: #1a1a1a;
+  background: transparent;
   color: #e2e8f0;
   padding: 3rem 1.25rem 4rem;
   max-width: 1080px;
@@ -112,7 +124,24 @@ const groups: Group[] = [
   font-family: inherit;
 }
 
+.sessions-bg {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 0;
+  pointer-events: none;
+}
+
 .sessions-head {
+  position: relative;
+  z-index: 1;
+  margin-bottom: 2.5rem;
+}
+
+.group {
+  position: relative;
+  z-index: 1;
   margin-bottom: 2.5rem;
 }
 
@@ -128,10 +157,6 @@ const groups: Group[] = [
   color: #94a3b8;
   font-size: 0.95rem;
   line-height: 1.6;
-}
-
-.group {
-  margin-bottom: 2.5rem;
 }
 
 .group-label {
@@ -154,17 +179,19 @@ const groups: Group[] = [
   flex-direction: column;
   gap: 0.4rem;
   padding: 1.1rem 1.25rem;
-  background: rgba(255, 255, 255, 0.03);
+  background: rgba(10, 10, 25, 0.65);
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 0.6rem;
   text-decoration: none;
   color: inherit;
-  transition: border-color 0.15s ease, background 0.15s ease;
+  backdrop-filter: blur(8px);
+  transition: border-color 0.2s ease, background 0.2s ease, box-shadow 0.2s ease;
 }
 
 .card:hover {
-  background: rgba(255, 255, 255, 0.05);
-  border-color: rgba(255, 255, 255, 0.18);
+  background: rgba(15, 15, 35, 0.75);
+  border-color: rgba(99, 102, 241, 0.3);
+  box-shadow: 0 0 20px rgba(99, 102, 241, 0.08);
 }
 
 .card-title {

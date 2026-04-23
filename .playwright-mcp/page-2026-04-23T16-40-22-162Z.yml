@@ -1,0 +1,73 @@
+- generic [ref=e3]:
+  - complementary [ref=e4]:
+    - generic [ref=e5]:
+      - link "CZ Channel Zero" [ref=e6] [cursor=pointer]:
+        - /url: /
+        - generic [ref=e7]: CZ
+        - generic [ref=e8]: Channel Zero
+      - button "Collapse sidebar" [ref=e9] [cursor=pointer]:
+        - img [ref=e10]
+    - generic [ref=e12]:
+      - generic [ref=e13]: Nexus
+      - navigation [ref=e14]:
+        - link "Home" [ref=e15] [cursor=pointer]:
+          - /url: /
+          - img [ref=e16]: M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-4 0a1 1 0 01-1-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 01-1 1h-2z
+          - generic [ref=e17]: Home
+    - generic [ref=e18]:
+      - generic [ref=e19]: Forge
+      - navigation [ref=e20]:
+        - link "Studio" [ref=e21] [cursor=pointer]:
+          - /url: /studio
+          - img [ref=e22]: M2 3h20v14H2zM8 21h8M12 17v4M7 8h1m4-1v2m4-1h1
+          - generic [ref=e23]: Studio
+        - link "Reader" [ref=e24] [cursor=pointer]:
+          - /url: /reader
+          - img [ref=e25]: M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253z
+          - generic [ref=e26]: Reader
+        - link "Audio" [ref=e27] [cursor=pointer]:
+          - /url: /audio
+          - img [ref=e28]: M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2z
+          - generic [ref=e29]: Audio
+  - navigation [ref=e31]:
+    - generic [ref=e32]:
+      - generic [ref=e33]:
+        - link "Home" [ref=e34] [cursor=pointer]:
+          - /url: /
+        - link "Learn" [ref=e35] [cursor=pointer]:
+          - /url: /learn
+        - link "Sessions" [ref=e36] [cursor=pointer]:
+          - /url: /sessions
+        - link "About" [ref=e37] [cursor=pointer]:
+          - /url: /about
+      - link "Login" [ref=e38] [cursor=pointer]:
+        - /url: /login
+        - img [ref=e39]
+      - button "Toggle controls" [ref=e41] [cursor=pointer]
+  - main [ref=e46]:
+    - main [ref=e47]:
+      - heading "About ChannelZero" [level=1] [ref=e49]
+      - generic [ref=e50]:
+        - paragraph [ref=e51]: ChannelZero is an Enfractionation platform — a small set of tools that work together to make a person more receptive to suggestion. It combines brainwave entrainment (binaural and isochronic audio), trance induction through visual fixation and pacing, and reading-assisted suggestion via a phrase-paced text reader.
+        - paragraph [ref=e52]: "Each tool can be used on its own. Used together, they layer: a steady binaural carrier, a slow visual rhythm, and language delivered at the edge of attention."
+      - generic [ref=e53]:
+        - heading "How to use this site" [level=2] [ref=e54]
+        - list [ref=e55]:
+          - listitem [ref=e56]:
+            - text: Start with
+            - link "Learn" [ref=e57] [cursor=pointer]:
+              - /url: /learn
+            - text: to understand the concepts before opening a session.
+          - listitem [ref=e58]:
+            - text: Use
+            - link "Sessions" [ref=e59] [cursor=pointer]:
+              - /url: /sessions
+            - text: to access the tools directly when you know what you want.
+          - listitem [ref=e60]:
+            - text: Take the poll on the
+            - link "home page" [ref=e61] [cursor=pointer]:
+              - /url: /
+            - text: for a recommended session matched to your current state.
+      - generic [ref=e62]:
+        - heading "This is not medical advice" [level=2] [ref=e63]
+        - paragraph [ref=e64]: ChannelZero is not a medical device and does not diagnose, treat, or cure any condition. Do not use binaural audio, strobing visuals, or trance sessions if you have epilepsy, a seizure disorder, or any condition that could be aggravated by altered states. Do not use while driving or operating machinery. If something here makes you feel unwell, stop.

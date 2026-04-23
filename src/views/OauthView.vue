@@ -65,6 +65,23 @@
           <p class="mt-4 text-xs text-gray-600 font-mono italic">Since your body holds the tension your mind ignores.</p>
         </div>
 
+        <!-- Google Calendar -->
+        <div class="bg-gray-800 border rounded-2xl p-6 shadow-xl transition-transform hover:-translate-y-1"
+             :class="oauthState.google.connected ? 'border-red-500/50' : 'border-gray-700'">
+          <div class="flex justify-between items-start mb-4">
+            <div>
+              <h2 class="text-2xl font-bold text-red-400">Google Calendar</h2>
+              <h3 class="text-sm font-medium text-gray-500 uppercase tracking-wider mt-1">The Temporal Grid</h3>
+            </div>
+            <GCalConnect />
+          </div>
+          <div class="space-y-3 text-gray-300">
+            <p><strong>Data Collected:</strong> Event density, free/busy windows, recurring rituals, peak scheduling hours, evening overcommitment ratio.</p>
+            <p><strong>Correlation Engine:</strong> Maps your <span class="text-red-400 font-semibold">Temporal Anxiety</span> — when you overbook, when you leave white space, and whether your calendar reflects intention or dread. The Oracle uses this to predict burnout compatibility and co-regulation windows.</p>
+          </div>
+          <p class="mt-4 text-xs text-gray-600 font-mono italic">Your schedule is a confession you write every morning.</p>
+        </div>
+
         <!-- Co-Star -->
         <div class="bg-gray-800 border rounded-2xl p-6 shadow-xl transition-transform hover:-translate-y-1"
              :class="oauthState.costar.connected ? 'border-indigo-500/50' : 'border-gray-700'">
@@ -191,6 +208,7 @@ import StravaConnect from '@/components/StravaConnect.vue'
 import CoStarConnect from '@/components/CoStarConnect.vue'
 import LetterboxdConnect from '@/components/LetterboxdConnect.vue'
 import SteamConnect from '@/components/SteamConnect.vue'
+import GCalConnect from '@/components/GCalConnect.vue'
 
 const FEEDBACK_TAGS = ['felt_relevant', 'didnt_add_value', 'surprised_me', 'want_more_like_this']
 
@@ -208,6 +226,7 @@ const connectedSources = computed(() => {
     { key: 'spotify',    label: 'Spotify',     state: oauthState.value.spotify },
     { key: 'twitter',    label: 'X / Twitter',  state: oauthState.value.twitter },
     { key: 'strava',     label: 'Strava',       state: oauthState.value.strava },
+    { key: 'google',     label: 'Google Calendar', state: oauthState.value.google },
     { key: 'costar',     label: 'Co-Star',      state: oauthState.value.costar },
     { key: 'letterboxd', label: 'Letterboxd',   state: oauthState.value.letterboxd },
     { key: 'steam',      label: 'Steam',        state: oauthState.value.steam },

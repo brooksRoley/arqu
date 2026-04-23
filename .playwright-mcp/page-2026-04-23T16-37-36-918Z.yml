@@ -1,0 +1,107 @@
+- generic [ref=e3]:
+  - complementary [ref=e4]:
+    - generic [ref=e5]:
+      - link "CZ Channel Zero" [ref=e6] [cursor=pointer]:
+        - /url: /
+        - generic [ref=e7]: CZ
+        - generic [ref=e8]: Channel Zero
+      - button "Collapse sidebar" [ref=e9] [cursor=pointer]:
+        - img [ref=e10]
+    - generic [ref=e12]:
+      - generic [ref=e13]: Nexus
+      - navigation [ref=e14]:
+        - link "Home" [ref=e15] [cursor=pointer]:
+          - /url: /
+          - img [ref=e16]: M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-4 0a1 1 0 01-1-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 01-1 1h-2z
+          - generic [ref=e17]: Home
+    - generic [ref=e18]:
+      - generic [ref=e19]: Forge
+      - navigation [ref=e20]:
+        - link "Studio" [ref=e21] [cursor=pointer]:
+          - /url: /studio
+          - img [ref=e22]: M2 3h20v14H2zM8 21h8M12 17v4M7 8h1m4-1v2m4-1h1
+          - generic [ref=e23]: Studio
+        - link "Reader" [ref=e24] [cursor=pointer]:
+          - /url: /reader
+          - img [ref=e25]: M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253z
+          - generic [ref=e26]: Reader
+        - link "Audio" [ref=e27] [cursor=pointer]:
+          - /url: /audio
+          - img [ref=e28]: M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2z
+          - generic [ref=e29]: Audio
+  - navigation [ref=e31]:
+    - generic [ref=e32]:
+      - generic [ref=e33]:
+        - link "Home" [ref=e34] [cursor=pointer]:
+          - /url: /
+        - link "Learn" [ref=e35] [cursor=pointer]:
+          - /url: /learn
+        - link "Sessions" [ref=e36] [cursor=pointer]:
+          - /url: /sessions
+        - link "About" [ref=e37] [cursor=pointer]:
+          - /url: /about
+      - link "Login" [ref=e38] [cursor=pointer]:
+        - /url: /login
+        - img [ref=e39]
+      - button "Toggle controls" [ref=e41] [cursor=pointer]
+  - main [ref=e46]:
+    - generic [ref=e47]:
+      - button "◎" [ref=e48] [cursor=pointer]
+      - generic [ref=e49]:
+        - 'heading "Channel Zero: Dreamer" [level=1] [ref=e50]'
+        - generic [ref=e51]:
+          - generic [ref=e52] [cursor=pointer]:
+            - generic [ref=e53]: ✦
+            - generic [ref=e54]: Discover Your Experience
+            - generic [ref=e55]: A quick introduction to find the right session for your mind
+          - generic [ref=e56]:
+            - generic [ref=e57]:
+              - generic [ref=e58]: Signal Sources
+              - generic [ref=e59]: 0 / 6
+            - generic [ref=e61]:
+              - button "Spotify" [ref=e62] [cursor=pointer]:
+                - img [ref=e65]
+                - generic [ref=e67]: Spotify
+              - button "X" [ref=e68] [cursor=pointer]:
+                - img [ref=e71]
+                - generic [ref=e73]: X
+              - button "Strava" [ref=e74] [cursor=pointer]:
+                - img [ref=e77]
+                - generic [ref=e79]: Strava
+              - button "Co-Star" [ref=e80] [cursor=pointer]:
+                - img [ref=e83]
+                - generic [ref=e86]: Co-Star
+              - button "Letterboxd" [ref=e87] [cursor=pointer]:
+                - img [ref=e90]
+                - generic [ref=e94]: Letterboxd
+              - button "Steam" [ref=e95] [cursor=pointer]:
+                - img [ref=e98]
+                - generic [ref=e102]: Steam
+            - link "Manage sources" [ref=e103] [cursor=pointer]:
+              - /url: /calibrate
+              - text: Manage sources
+              - img [ref=e104]
+          - generic [ref=e106]:
+            - link "Check-In Journal, intake, and the game — your daily pipeline" [ref=e107] [cursor=pointer]:
+              - /url: /checkin
+              - generic [ref=e108]: Check-In
+              - generic [ref=e109]: Journal, intake, and the game — your daily pipeline
+            - link "Journal Write, draw, record — reflective journaling with TTS" [ref=e110] [cursor=pointer]:
+              - /url: /journal
+              - generic [ref=e111]: Journal
+              - generic [ref=e112]: Write, draw, record — reflective journaling with TTS
+            - generic [ref=e113] [cursor=pointer]:
+              - generic [ref=e114]: Meditation
+              - generic [ref=e115]: Guided affirmations with gentle music and nature sounds
+            - link "Reader Speed-read through uploaded stories and text" [ref=e116] [cursor=pointer]:
+              - /url: /reader
+              - generic [ref=e117]: Reader
+              - generic [ref=e118]: Speed-read through uploaded stories and text
+            - link "Audio Browse and play background audio tracks" [ref=e119] [cursor=pointer]:
+              - /url: /audio
+              - generic [ref=e120]: Audio
+              - generic [ref=e121]: Browse and play background audio tracks
+            - link "Glass Studio Upload media, layer binaural tones, add text overlays" [ref=e122] [cursor=pointer]:
+              - /url: /studio
+              - generic [ref=e123]: Glass Studio
+              - generic [ref=e124]: Upload media, layer binaural tones, add text overlays

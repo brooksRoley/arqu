@@ -1,0 +1,121 @@
+- generic [ref=e3]:
+  - complementary [ref=e4]:
+    - generic [ref=e5]:
+      - link "CZ Channel Zero" [ref=e6] [cursor=pointer]:
+        - /url: /
+        - generic [ref=e7]: CZ
+        - generic [ref=e8]: Channel Zero
+      - button "Collapse sidebar" [ref=e9] [cursor=pointer]:
+        - img [ref=e10]
+    - generic [ref=e12]:
+      - generic [ref=e13]: Nexus
+      - navigation [ref=e14]:
+        - link "Home" [ref=e15] [cursor=pointer]:
+          - /url: /
+          - img [ref=e16]: M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-4 0a1 1 0 01-1-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 01-1 1h-2z
+          - generic [ref=e17]: Home
+    - generic [ref=e18]:
+      - generic [ref=e19]: Forge
+      - navigation [ref=e20]:
+        - link "Studio" [ref=e21] [cursor=pointer]:
+          - /url: /studio
+          - img [ref=e22]: M2 3h20v14H2zM8 21h8M12 17v4M7 8h1m4-1v2m4-1h1
+          - generic [ref=e23]: Studio
+        - link "Reader" [ref=e24] [cursor=pointer]:
+          - /url: /reader
+          - img [ref=e25]: M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253z
+          - generic [ref=e26]: Reader
+        - link "Audio" [ref=e27] [cursor=pointer]:
+          - /url: /audio
+          - img [ref=e28]: M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2z
+          - generic [ref=e29]: Audio
+  - navigation [ref=e31]:
+    - generic [ref=e32]:
+      - generic [ref=e33]:
+        - link "Home" [ref=e34] [cursor=pointer]:
+          - /url: /
+        - link "Learn" [ref=e35] [cursor=pointer]:
+          - /url: /learn
+        - link "Sessions" [ref=e36] [cursor=pointer]:
+          - /url: /sessions
+        - link "About" [ref=e37] [cursor=pointer]:
+          - /url: /about
+      - link "Login" [ref=e38] [cursor=pointer]:
+        - /url: /login
+        - img [ref=e39]
+      - button "Toggle controls" [ref=e41] [cursor=pointer]
+  - main [ref=e46]:
+    - main [ref=e47]:
+      - generic [ref=e48]:
+        - heading "Learn" [level=1] [ref=e49]
+        - paragraph [ref=e50]: A curriculum in three phases
+      - generic [ref=e51]:
+        - generic [ref=e52]:
+          - generic [ref=e53]: Phase 1
+          - heading "Foundations" [level=2] [ref=e54]
+        - generic [ref=e55]:
+          - link "Enfractionation The act of making someone more receptive — the central thread that ties every tool on this site together. Read" [ref=e56] [cursor=pointer]:
+            - /url: /learn/enfractionation
+            - heading "Enfractionation" [level=3] [ref=e57]
+            - paragraph [ref=e58]: The act of making someone more receptive — the central thread that ties every tool on this site together.
+            - generic [ref=e59]: Read →
+          - link "Hypnotic Induction The opening move — how a session shifts attention and lowers the threshold for everything that follows. Read" [ref=e60] [cursor=pointer]:
+            - /url: /learn/hypnotic-induction
+            - heading "Hypnotic Induction" [level=3] [ref=e61]
+            - paragraph [ref=e62]: The opening move — how a session shifts attention and lowers the threshold for everything that follows.
+            - generic [ref=e63]: Read →
+          - link "Suggestion Induction What you do once attention has softened — the language that lands when the filter is down. Read" [ref=e64] [cursor=pointer]:
+            - /url: /learn/suggestion-induction
+            - heading "Suggestion Induction" [level=3] [ref=e65]
+            - paragraph [ref=e66]: What you do once attention has softened — the language that lands when the filter is down.
+            - generic [ref=e67]: Read →
+          - link "Trance States A range, not a destination — the family of altered states where suggestion is easier to accept. Read" [ref=e68] [cursor=pointer]:
+            - /url: /learn/trance-states
+            - heading "Trance States" [level=3] [ref=e69]
+            - paragraph [ref=e70]: A range, not a destination — the family of altered states where suggestion is easier to accept.
+            - generic [ref=e71]: Read →
+      - generic [ref=e72]:
+        - generic [ref=e73]:
+          - generic [ref=e74]: Phase 2
+          - heading "Sound Mechanics" [level=2] [ref=e75]
+        - generic [ref=e76]:
+          - link "Binaural Entrainment Two close tones, one in each ear — the brain hears a third pulse that does not exist outside the head. Read" [ref=e77] [cursor=pointer]:
+            - /url: /learn/binaural-entrainment
+            - heading "Binaural Entrainment" [level=3] [ref=e78]
+            - paragraph [ref=e79]: Two close tones, one in each ear — the brain hears a third pulse that does not exist outside the head.
+            - generic [ref=e80]: Read →
+          - link "Isochronic Tones A single tone switched on and off at a precise rate — entrainment without headphones. Read" [ref=e81] [cursor=pointer]:
+            - /url: /learn/isochronic-tones
+            - heading "Isochronic Tones" [level=3] [ref=e82]
+            - paragraph [ref=e83]: A single tone switched on and off at a precise rate — entrainment without headphones.
+            - generic [ref=e84]: Read →
+          - link "Targeting Brainwave States Which method, which frequency, which state — a practical guide to picking the right tool for delta, theta, alpha, or beta. Read" [ref=e85] [cursor=pointer]:
+            - /url: /learn/targeting-brainwave-states
+            - heading "Targeting Brainwave States" [level=3] [ref=e86]
+            - paragraph [ref=e87]: Which method, which frequency, which state — a practical guide to picking the right tool for delta, theta, alpha, or beta.
+            - generic [ref=e88]: Read →
+          - link "Binaural Beats Protocol How to actually use binaural beats — frequencies, durations, and the conditions that matter. Read" [ref=e89] [cursor=pointer]:
+            - /url: /learn/binaural-beats-protocol
+            - heading "Binaural Beats Protocol" [level=3] [ref=e90]
+            - paragraph [ref=e91]: How to actually use binaural beats — frequencies, durations, and the conditions that matter.
+            - generic [ref=e92]: Read →
+          - link "Brainwave Entrainment Techniques The full toolkit — auditory, visual, and combined methods for nudging brainwave activity. Read" [ref=e93] [cursor=pointer]:
+            - /url: /learn/brainwave-entrainment-techniques
+            - heading "Brainwave Entrainment Techniques" [level=3] [ref=e94]
+            - paragraph [ref=e95]: The full toolkit — auditory, visual, and combined methods for nudging brainwave activity.
+            - generic [ref=e96]: Read →
+      - generic [ref=e97]:
+        - generic [ref=e98]:
+          - generic [ref=e99]: Phase 3
+          - heading "Application" [level=2] [ref=e100]
+        - generic [ref=e101]:
+          - link "Trance Induction A specific technique for entering trance — the choreography of frequency, breath, and attention. Read" [ref=e102] [cursor=pointer]:
+            - /url: /learn/trance-induction
+            - heading "Trance Induction" [level=3] [ref=e103]
+            - paragraph [ref=e104]: A specific technique for entering trance — the choreography of frequency, breath, and attention.
+            - generic [ref=e105]: Read →
+          - link "Neuro-Linguistic Programming (NLP) A model linking language, thought, and behavior — useful frames, contested science, worth knowing about. Read" [ref=e106] [cursor=pointer]:
+            - /url: /learn/nlp
+            - heading "Neuro-Linguistic Programming (NLP)" [level=3] [ref=e107]
+            - paragraph [ref=e108]: A model linking language, thought, and behavior — useful frames, contested science, worth knowing about.
+            - generic [ref=e109]: Read →
