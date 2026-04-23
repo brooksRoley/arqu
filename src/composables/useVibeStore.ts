@@ -95,6 +95,65 @@ export interface InteractResult {
   action: string
 }
 
+export interface FittingData {
+  body_type: 'female' | 'male'
+  height: number
+  build: number
+  chest: number
+  waist: number
+  hips: number
+  shoulders: number
+  skin_color: string
+  skin_shadow: string
+  hair_color: string
+  hair_length: 'short' | 'medium' | 'long'
+  suit_color: string
+  suit_color_dark: string
+  top_style?: string
+  rise?: string
+  coverage?: string
+  top?: string
+  bottom?: string
+  wetsuit?: string
+}
+
+export interface RevealUserData {
+  display_name: string | null
+  fitting_self: FittingData | null
+  fitting_ideal: FittingData | null
+  spotify_data: Record<string, unknown> | null
+  twitter_data: Record<string, unknown> | null
+  strava_data: Record<string, unknown> | null
+  steam_data: Record<string, unknown> | null
+  oracle_coordinate: Record<string, unknown> | null
+  attachment_style: string | null
+  defense_mechanism: string | null
+  has_spotify: boolean
+  has_twitter: boolean
+  has_strava: boolean
+  has_steam: boolean
+  has_oracle: boolean
+}
+
+export interface RevealPsychometrics {
+  ipip_neo_scores: Record<string, number> | null
+  ecr_r_scores: Record<string, number> | null
+  love_language: string | null
+  sociosexual_orientation: string | null
+  values_cluster: string | null
+}
+
+export interface RevealData {
+  similarity: number
+  match_reason: string
+  self: RevealUserData | null
+  match: RevealUserData | null
+  psychometrics: {
+    self: RevealPsychometrics | null
+    match: RevealPsychometrics | null
+  }
+}
+
 // ── Storage key ──────────────────────────────────────────────────────────────
 
 const OAUTH_KEY = 'channelzero-oauth'
