@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from datetime import datetime
+from typing import Literal
 from uuid import UUID
 
 from pydantic import BaseModel, field_validator
@@ -38,6 +39,11 @@ class ConfessResponse(BaseModel):
     readiness_score: int
     insight: str
     memories: list[str] = []  # resonant journal snippets surfaced by Pinecone
+
+
+class FittingRequest(BaseModel):
+    phase: Literal["self", "ideal"]
+    data: dict
 
 
 class VibeVectorResponse(BaseModel):

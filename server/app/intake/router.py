@@ -8,7 +8,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, status
 
-from .models import ConfessRequest, ConfessResponse
+from .models import ConfessRequest, ConfessResponse, FittingRequest
 from ..auth.deps import get_current_user_id
 from ..db import get_conn, get_tx
 from ..llm.encryption import encrypt_api_key
@@ -387,3 +387,21 @@ async def get_vibe_vector(user_id: UUID = Depends(get_current_user_id)):
     if row is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No vibe vector found — complete the intake first")
     return dict(row)
+
+
+@router.post("/fitting", status_code=204)
+async def save_fitting(
+    body: FittingRequest,
+    user_id: UUID = Depends(get_current_user_id),
+):
+    """Store self-avatar or ideal-partner avatar for the fitting ritual."""
+    column = "fitting_self" if body.phase == "self" else "fitting_ideal"
+    async with get_conn() as conn:
+        await conn.execute(
+            f"""
+            UPDATE vibe_vectors
+            SET {column} = $2::jsonb, updated_at = now()
+            WHERE user_id = $1
+            """,
+            user_id, json.dumps(body.data),
+        )

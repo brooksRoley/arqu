@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -168,3 +169,144 @@ async def get_mutual_matches(user_id: UUID = Depends(get_current_user_id)):
         {"user_id": str(r["matched_user_id"]), "matched_at": r["matched_at"].isoformat()}
         for r in rows
     ]
+
+
+@router.get("/reveal/{target_id}")
+async def get_reveal(
+    target_id: UUID,
+    user_id: UUID = Depends(get_current_user_id),
+):
+    """Return the full signal story for a mutual match pair."""
+    async with get_conn() as conn:
+        mutual = await conn.fetchrow(
+            """
+            SELECT 1 FROM match_interactions a
+            JOIN match_interactions b
+                ON a.actor_id = b.target_id AND a.target_id = b.actor_id
+            WHERE a.action = 'accept' AND b.action = 'accept'
+              AND a.actor_id = $1 AND a.target_id = $2
+            """,
+            user_id, target_id,
+        )
+        if not mutual:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="No mutual match found with this user",
+            )
+
+        my_vibe = await conn.fetchrow(
+            """
+            SELECT user_id, spotify_data, twitter_data, strava_data, steam_data,
+                   oracle_coordinate, attachment_style, defense_mechanism,
+                   fitting_self, fitting_ideal,
+                   (spotify_data IS NOT NULL) AS has_spotify,
+                   (twitter_data IS NOT NULL) AS has_twitter,
+                   (strava_data IS NOT NULL) AS has_strava,
+                   (steam_data IS NOT NULL) AS has_steam,
+                   (oracle_coordinate IS NOT NULL) AS has_oracle
+            FROM vibe_vectors WHERE user_id = $1
+            """,
+            user_id,
+        )
+        their_vibe = await conn.fetchrow(
+            """
+            SELECT user_id, spotify_data, twitter_data, strava_data, steam_data,
+                   oracle_coordinate, attachment_style, defense_mechanism,
+                   fitting_self, fitting_ideal,
+                   (spotify_data IS NOT NULL) AS has_spotify,
+                   (twitter_data IS NOT NULL) AS has_twitter,
+                   (strava_data IS NOT NULL) AS has_strava,
+                   (steam_data IS NOT NULL) AS has_steam,
+                   (oracle_coordinate IS NOT NULL) AS has_oracle
+            FROM vibe_vectors WHERE user_id = $1
+            """,
+            target_id,
+        )
+
+        my_user = await conn.fetchrow(
+            "SELECT display_name FROM users WHERE id = $1", user_id
+        )
+        their_user = await conn.fetchrow(
+            "SELECT display_name FROM users WHERE id = $1", target_id
+        )
+
+        my_psych = await conn.fetchrow(
+            "SELECT ipip_neo_scores, ecr_r_scores, love_language, "
+            "sociosexual_orientation, values_cluster FROM user_psychometrics WHERE user_id = $1",
+            user_id,
+        )
+        their_psych = await conn.fetchrow(
+            "SELECT ipip_neo_scores, ecr_r_scores, love_language, "
+            "sociosexual_orientation, values_cluster FROM user_psychometrics WHERE user_id = $1",
+            target_id,
+        )
+
+    def parse_json(val):
+        if val is None:
+            return None
+        return json.loads(val) if isinstance(val, str) else val
+
+    def build_user_data(vibe, user_row):
+        if not vibe:
+            return None
+        return {
+            "display_name": user_row["display_name"] if user_row else None,
+            "fitting_self": parse_json(vibe["fitting_self"]),
+            "fitting_ideal": parse_json(vibe["fitting_ideal"]),
+            "spotify_data": parse_json(vibe["spotify_data"]),
+            "twitter_data": parse_json(vibe["twitter_data"]),
+            "strava_data": parse_json(vibe["strava_data"]),
+            "steam_data": parse_json(vibe["steam_data"]),
+            "oracle_coordinate": parse_json(vibe["oracle_coordinate"]),
+            "attachment_style": vibe["attachment_style"],
+            "defense_mechanism": vibe["defense_mechanism"],
+            "has_spotify": vibe["has_spotify"],
+            "has_twitter": vibe["has_twitter"],
+            "has_strava": vibe["has_strava"],
+            "has_steam": vibe["has_steam"],
+            "has_oracle": vibe["has_oracle"],
+        }
+
+    def build_psych(row):
+        if not row:
+            return None
+        return {
+            "ipip_neo_scores": parse_json(row["ipip_neo_scores"]),
+            "ecr_r_scores": parse_json(row["ecr_r_scores"]),
+            "love_language": row["love_language"],
+            "sociosexual_orientation": row["sociosexual_orientation"],
+            "values_cluster": row["values_cluster"],
+        }
+
+    from ..intake.router import _build_match_reason
+
+    match_stub = {
+        "score": 0,
+        "attachment_style": their_vibe["attachment_style"] if their_vibe else None,
+        "defense_mechanism": their_vibe["defense_mechanism"] if their_vibe else None,
+    }
+
+    similarity = 0.0
+    try:
+        from ..vector.service import find_nearest_users
+        nearest = await find_nearest_users(str(user_id), top_k=10)
+        for n in nearest:
+            if n["user_id"] == str(target_id):
+                similarity = n["score"]
+                break
+    except Exception:
+        pass
+
+    match_stub["score"] = similarity
+    reason = _build_match_reason(match_stub, my_vibe, their_vibe)
+
+    return {
+        "similarity": similarity,
+        "match_reason": reason,
+        "self": build_user_data(my_vibe, my_user),
+        "match": build_user_data(their_vibe, their_user),
+        "psychometrics": {
+            "self": build_psych(my_psych),
+            "match": build_psych(their_psych),
+        },
+    }
