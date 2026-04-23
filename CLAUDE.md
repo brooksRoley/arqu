@@ -17,12 +17,24 @@
 /server
   /app
     /auth         — Login, register, JWT, Google/X OAuth identity
-    /analytics    — Admin funnel + connector metrics
-    /spotify      — Spotify OAuth + sonic profile
-    /twitter      — X OAuth 2.0 PKCE data connector
-    /strava       — Strava connector
-    /vector       — Pinecone upsert/query
+    /analytics    — Admin funnel + connector metrics + insights panels
+    /brain        — Image library (upload, browse, embeddings, similarity)
+    /costar       — Co-Star credential-based natal chart ingestion
+    /gcal         — Google Calendar OAuth + temporal pattern extraction
+    /intake       — Psychoanalytic confessional pipeline + matching
+    /journal      — Journal CRUD + vector embeddings
+    /letterboxd   — Letterboxd API film taste ingestion
     /llm          — Encryption helpers (AES-256-GCM)
+    /match        — Accept/reject interactions + mutual match detection
+    /messages     — Encrypted mutual-match messaging
+    /oracle       — 7D psychological synthesis + Pinecone upsert
+    /poll         — Archetype poll tokens
+    /psychometrics — Multi-part assessment scoring + profile generation
+    /spotify      — Spotify OAuth + sonic profile
+    /steam        — Steam OpenID + game library ingestion
+    /strava       — Strava OAuth + activity data
+    /twitter      — X OAuth 2.0 PKCE data connector
+    /vector       — Pinecone upsert/query + zeromind sessions
   /migrations     — SQL files run by migrate.py (tracked in _migrations table)
 ```
 
@@ -67,6 +79,9 @@
 `X_CLIENT_ID`, `X_CLIENT_SECRET`, `TWITTER_DATA_REDIRECT_URI`,
 `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`,
 `STRAVA_CLIENT_ID`, `STRAVA_CLIENT_SECRET`,
+`GCAL_REDIRECT_URI`,
+`STEAM_API_KEY`,
+`LETTERBOXD_API_KEY`, `LETTERBOXD_API_SECRET`,
 `CORS_ORIGINS`
 
 ## Commit Style
