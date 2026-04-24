@@ -153,7 +153,8 @@ async function acceptMatch() {
   try {
     const result = await interactWithMatch(currentMatch.value.user_id, 'accept')
     if (result.mutual_match) {
-      phase.value = 'mutual'
+      router.push(`/fitting/${currentMatch.value.user_id}`)
+      return
     } else {
       advanceToNext()
     }

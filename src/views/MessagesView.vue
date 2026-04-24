@@ -58,27 +58,33 @@ function formatTime(iso: string | null): string {
     </div>
 
     <div v-else class="thread-list">
-      <router-link
+      <div
         v-for="t in threads"
         :key="t.other_user_id"
-        :to="`/messages/${t.other_user_id}`"
         class="thread-row"
         :class="{ 'thread-row--unread': t.unread_count > 0 }"
       >
-        <div class="thread-avatar">
-          {{ (t.other_user_name || '?')[0].toUpperCase() }}
-        </div>
-        <div class="thread-info">
-          <div class="thread-top">
-            <span class="thread-name">{{ t.other_user_name }}</span>
-            <span class="thread-time">{{ formatTime(t.last_message_at) }}</span>
+        <router-link :to="`/messages/${t.other_user_id}`" class="thread-link">
+          <div class="thread-avatar">
+            {{ (t.other_user_name || '?')[0].toUpperCase() }}
           </div>
-          <div class="thread-preview">
-            <span class="preview-text">{{ t.last_message }}</span>
-            <span v-if="t.unread_count > 0" class="unread-badge">{{ t.unread_count }}</span>
+          <div class="thread-info">
+            <div class="thread-top">
+              <span class="thread-name">{{ t.other_user_name }}</span>
+              <span class="thread-time">{{ formatTime(t.last_message_at) }}</span>
+            </div>
+            <div class="thread-preview">
+              <span class="preview-text">{{ t.last_message }}</span>
+              <span v-if="t.unread_count > 0" class="unread-badge">{{ t.unread_count }}</span>
+            </div>
           </div>
-        </div>
-      </router-link>
+        </router-link>
+        <router-link
+          :to="`/reveal/${t.other_user_id}`"
+          class="signal-story-link"
+          @click.stop
+        >Signal Story</router-link>
+      </div>
     </div>
   </div>
 </template>
@@ -160,6 +166,30 @@ function formatTime(iso: string | null): string {
 
 .thread-row:hover {
   background: rgba(255, 255, 255, 0.04);
+}
+
+.thread-link {
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+  flex: 1;
+  text-decoration: none;
+  color: inherit;
+}
+
+.signal-story-link {
+  font-size: 11px;
+  color: #a78bfa;
+  text-decoration: none;
+  padding: 4px 10px;
+  border-radius: 6px;
+  white-space: nowrap;
+  transition: background 0.15s, color 0.15s;
+}
+
+.signal-story-link:hover {
+  background: rgba(139, 92, 246, 0.1);
+  color: #c4b5fd;
 }
 
 .thread-row--unread .thread-name {

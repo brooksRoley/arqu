@@ -120,6 +120,8 @@
 | `/studio` | no | Glass studio |
 | `/liquidglass` | no | Liquid glass experiment |
 | `/fitting` | no | Body/swimsuit configurator (standalone) |
+| `/fitting/:matchId` | yes | Pre-reveal avatar ritual (self + ideal) |
+| `/reveal/:matchId` | yes | Match reveal scroll narrative |
 | `/poll` | no | Archetype poll |
 | `/reader` | no | Reader view |
 | `/webaudio` | no | WebAudio experiment |
