@@ -68,7 +68,7 @@ import { useVibeStore } from '@/composables/useVibeStore'
 
 const route = useRoute()
 const router = useRouter()
-const { token } = useAuthStore()
+const { token, logout } = useAuthStore()
 const { oauthState, markConnected } = useVibeStore()
 
 const API = import.meta.env.VITE_API_URL || ''
@@ -88,6 +88,11 @@ async function initiateLetterboxdAuth() {
 
   try {
     const response = await fetch(`${API}/api/letterboxd/connect?token=${token.value}`)
+    if (response.status === 401) {
+      logout()
+      window.location.href = '/login'
+      return
+    }
     const data = await response.json()
 
     if (data.auth_url) {

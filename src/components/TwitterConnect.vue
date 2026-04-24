@@ -60,7 +60,7 @@ import { ref, computed } from 'vue'
 import { useAuthStore } from '@/composables/useAuthStore'
 import { useVibeStore } from '@/composables/useVibeStore'
 
-const { token } = useAuthStore()
+const { token, logout } = useAuthStore()
 const { oauthState } = useVibeStore()
 
 const API = import.meta.env.VITE_API_URL || ''
@@ -81,6 +81,11 @@ async function initiateXAuth() {
 
   try {
     const response = await fetch(`${API}/api/twitter/connect?token=${token.value}`)
+    if (response.status === 401) {
+      logout()
+      window.location.href = '/login'
+      return
+    }
     const data = await response.json()
 
     if (!response.ok) {

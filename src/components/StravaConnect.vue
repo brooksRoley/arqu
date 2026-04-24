@@ -59,7 +59,7 @@ import { ref, computed } from 'vue'
 import { useAuthStore } from '@/composables/useAuthStore'
 import { useVibeStore } from '@/composables/useVibeStore'
 
-const { token } = useAuthStore()
+const { token, logout } = useAuthStore()
 const { oauthState } = useVibeStore()
 
 const API = import.meta.env.VITE_API_URL || ''
@@ -79,6 +79,11 @@ async function initiateStravaAuth() {
 
   try {
     const response = await fetch(`${API}/api/strava/connect?token=${token.value}`)
+    if (response.status === 401) {
+      logout()
+      window.location.href = '/login'
+      return
+    }
     const data = await response.json()
 
     if (data.auth_url) {

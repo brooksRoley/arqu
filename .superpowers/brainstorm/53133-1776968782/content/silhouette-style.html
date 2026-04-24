@@ -1,0 +1,88 @@
+<h2>Signal Silhouette — Visual Language</h2>
+<p class="subtitle">How the abstract signal profile renders alongside the body avatars</p>
+
+<div class="cards">
+  <div class="card" data-choice="a" onclick="toggleSelect(this)">
+    <div class="card-image" style="height:280px; display:flex; align-items:center; justify-content:center; background:linear-gradient(180deg, rgba(15,15,30,1) 0%, rgba(25,15,40,1) 100%);">
+      <!-- Aura/halo silhouette -->
+      <div style="position:relative; width:120px; height:220px;">
+        <div style="position:absolute; inset:-30px; border-radius:50% 50% 45% 45%; background:radial-gradient(ellipse at center, rgba(139,92,246,0.3) 0%, rgba(236,72,153,0.15) 40%, rgba(34,197,94,0.08) 65%, transparent 85%); filter:blur(8px);"></div>
+        <div style="position:absolute; inset:0; border-radius:40% 40% 35% 35% / 30% 30% 45% 45%; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.1);"></div>
+        <!-- Signal rings -->
+        <div style="position:absolute; top:20%; left:50%; transform:translateX(-50%); width:80px; height:80px; border-radius:50%; border:1px solid rgba(139,92,246,0.4);"></div>
+        <div style="position:absolute; top:15%; left:50%; transform:translateX(-50%); width:100px; height:100px; border-radius:50%; border:1px solid rgba(236,72,153,0.2);"></div>
+        <div style="position:absolute; top:10%; left:50%; transform:translateX(-50%); width:120px; height:120px; border-radius:50%; border:1px solid rgba(34,197,94,0.1);"></div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>A — Aura Field</h3>
+      <p>Body-shaped silhouette with colored aura layers. Each signal type (Spotify, Oracle, psychometrics) is a different color ring radiating outward. Overlap = where two people's auras bleed into each other. Organic, spiritual feel.</p>
+    </div>
+  </div>
+
+  <div class="card" data-choice="b" onclick="toggleSelect(this)">
+    <div class="card-image" style="height:280px; display:flex; align-items:center; justify-content:center; background:linear-gradient(180deg, rgba(15,15,30,1) 0%, rgba(25,15,40,1) 100%); overflow:hidden;">
+      <!-- Constellation silhouette -->
+      <svg viewBox="0 0 200 280" width="160" height="240">
+        <!-- Body outline as constellation points -->
+        <circle cx="100" cy="40" r="3" fill="#c4b5fd" opacity="0.9"/>
+        <circle cx="70" cy="90" r="2.5" fill="#f9a8d4" opacity="0.8"/>
+        <circle cx="130" cy="90" r="2.5" fill="#f9a8d4" opacity="0.8"/>
+        <circle cx="100" cy="120" r="3" fill="#86efac" opacity="0.7"/>
+        <circle cx="60" cy="150" r="2" fill="#fcd34d" opacity="0.7"/>
+        <circle cx="140" cy="150" r="2" fill="#fcd34d" opacity="0.7"/>
+        <circle cx="100" cy="170" r="2.5" fill="#c4b5fd" opacity="0.8"/>
+        <circle cx="80" cy="220" r="2" fill="#93c5fd" opacity="0.6"/>
+        <circle cx="120" cy="220" r="2" fill="#93c5fd" opacity="0.6"/>
+        <circle cx="75" cy="260" r="2" fill="#c4b5fd" opacity="0.5"/>
+        <circle cx="125" cy="260" r="2" fill="#c4b5fd" opacity="0.5"/>
+        <!-- Connecting lines -->
+        <line x1="100" y1="40" x2="70" y2="90" stroke="#c4b5fd" stroke-width="0.5" opacity="0.3"/>
+        <line x1="100" y1="40" x2="130" y2="90" stroke="#c4b5fd" stroke-width="0.5" opacity="0.3"/>
+        <line x1="70" y1="90" x2="100" y2="120" stroke="#f9a8d4" stroke-width="0.5" opacity="0.3"/>
+        <line x1="130" y1="90" x2="100" y2="120" stroke="#f9a8d4" stroke-width="0.5" opacity="0.3"/>
+        <line x1="100" y1="120" x2="60" y2="150" stroke="#86efac" stroke-width="0.5" opacity="0.3"/>
+        <line x1="100" y1="120" x2="140" y2="150" stroke="#86efac" stroke-width="0.5" opacity="0.3"/>
+        <line x1="60" y1="150" x2="100" y2="170" stroke="#fcd34d" stroke-width="0.5" opacity="0.3"/>
+        <line x1="140" y1="150" x2="100" y2="170" stroke="#fcd34d" stroke-width="0.5" opacity="0.3"/>
+        <line x1="100" y1="170" x2="80" y2="220" stroke="#c4b5fd" stroke-width="0.5" opacity="0.3"/>
+        <line x1="100" y1="170" x2="120" y2="220" stroke="#c4b5fd" stroke-width="0.5" opacity="0.3"/>
+        <line x1="80" y1="220" x2="75" y2="260" stroke="#93c5fd" stroke-width="0.5" opacity="0.3"/>
+        <line x1="120" y1="220" x2="125" y2="260" stroke="#93c5fd" stroke-width="0.5" opacity="0.3"/>
+        <!-- Signal nodes (larger, signal-specific) -->
+        <circle cx="55" cy="70" r="5" fill="none" stroke="#86efac" stroke-width="1" opacity="0.5"/>
+        <text x="55" y="73" text-anchor="middle" fill="#86efac" font-size="5" opacity="0.7">♫</text>
+        <circle cx="145" cy="70" r="5" fill="none" stroke="#fcd34d" stroke-width="1" opacity="0.5"/>
+        <text x="145" y="73" text-anchor="middle" fill="#fcd34d" font-size="5" opacity="0.7">Ψ</text>
+        <circle cx="100" cy="95" r="5" fill="none" stroke="#f9a8d4" stroke-width="1" opacity="0.5"/>
+        <text x="100" y="98" text-anchor="middle" fill="#f9a8d4" font-size="5" opacity="0.7">☿</text>
+      </svg>
+    </div>
+    <div class="card-body">
+      <h3>B — Constellation Map</h3>
+      <p>Body reduced to points in space connected by lines — a human constellation. Each node's color and size encodes a signal dimension. Signal-specific glyphs orbit nearby. Overlap = shared stars, connected constellations. Celestial, data-forward.</p>
+    </div>
+  </div>
+
+  <div class="card" data-choice="c" onclick="toggleSelect(this)">
+    <div class="card-image" style="height:280px; display:flex; align-items:center; justify-content:center; background:linear-gradient(180deg, rgba(15,15,30,1) 0%, rgba(25,15,40,1) 100%);">
+      <!-- Topographic/contour silhouette -->
+      <div style="position:relative; width:140px; height:240px;">
+        <!-- Contour layers -->
+        <div style="position:absolute; inset:0; border-radius:40% 40% 35% 35% / 25% 25% 40% 40%; border:1px solid rgba(139,92,246,0.5); transform:scale(1);"></div>
+        <div style="position:absolute; inset:8px; border-radius:40% 40% 35% 35% / 25% 25% 40% 40%; border:1px solid rgba(139,92,246,0.4); transform:scale(0.95);"></div>
+        <div style="position:absolute; inset:16px; border-radius:40% 40% 35% 35% / 25% 25% 40% 40%; border:1px solid rgba(236,72,153,0.35);"></div>
+        <div style="position:absolute; inset:24px; border-radius:40% 40% 35% 35% / 25% 25% 40% 40%; border:1px solid rgba(236,72,153,0.3);"></div>
+        <div style="position:absolute; inset:32px; border-radius:40% 40% 35% 35% / 25% 25% 40% 40%; border:1px solid rgba(34,197,94,0.25);"></div>
+        <div style="position:absolute; inset:40px; border-radius:40% 40% 35% 35% / 25% 25% 40% 40%; border:1px solid rgba(34,197,94,0.2);"></div>
+        <div style="position:absolute; inset:48px; border-radius:42% 42% 38% 38% / 28% 28% 42% 42%; border:1px solid rgba(251,191,36,0.2);"></div>
+        <!-- Core -->
+        <div style="position:absolute; inset:56px; border-radius:45% 45% 40% 40% / 30% 30% 45% 45%; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.15);"></div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>C — Topographic Contour</h3>
+      <p>Body shape rendered as elevation contour lines — like a topographic map of a person. Each contour ring is a signal layer, deeper = more aligned. When two people's contours are shown together, shared depth zones light up. Scientific, intimate, geological.</p>
+    </div>
+  </div>
+</div>

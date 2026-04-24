@@ -50,7 +50,7 @@ import { useAuthStore } from '@/composables/useAuthStore'
 import { useVibeStore } from '@/composables/useVibeStore'
 
 const router = useRouter()
-const { token } = useAuthStore()
+const { token, logout } = useAuthStore()
 const { oauthState } = useVibeStore()
 
 const API = import.meta.env.VITE_API_URL || ''
@@ -76,6 +76,7 @@ const connectors = computed(() => [
     connect: async () => {
       if (!token.value) return
       const res = await fetch(`${API}/api/twitter/connect?token=${token.value}`)
+      if (res.status === 401) { logout(); window.location.href = '/login'; return }
       const data = await res.json()
       if (data.auth_url) window.location.href = data.auth_url
     },
