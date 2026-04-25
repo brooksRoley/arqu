@@ -21,6 +21,7 @@
     /brain        — Image library (upload, browse, embeddings, similarity)
     /costar       — Co-Star credential-based natal chart ingestion
     /gcal         — Google Calendar OAuth + temporal pattern extraction
+    /github       — GitHub OAuth + developer profile ingestion
     /intake       — Psychoanalytic confessional pipeline + matching
     /journal      — Journal CRUD + vector embeddings
     /letterboxd   — Letterboxd API film taste ingestion
@@ -30,11 +31,13 @@
     /oracle       — 7D psychological synthesis + Pinecone upsert
     /poll         — Archetype poll tokens
     /psychometrics — Multi-part assessment scoring + profile generation
+    /reddit       — Reddit OAuth + behavioral profile ingestion
     /spotify      — Spotify OAuth + sonic profile
     /steam        — Steam OpenID + game library ingestion
     /strava       — Strava OAuth + activity data
     /twitter      — X OAuth 2.0 PKCE data connector
     /vector       — Pinecone upsert/query + zeromind sessions
+    /youtube      — YouTube OAuth + attention profile ingestion
   /migrations     — SQL files run by migrate.py (tracked in _migrations table)
 ```
 
@@ -82,6 +85,9 @@
 `GCAL_REDIRECT_URI`,
 `STEAM_API_KEY`,
 `LETTERBOXD_API_KEY`, `LETTERBOXD_API_SECRET`,
+`GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET`, `GITHUB_REDIRECT_URI`,
+`YOUTUBE_REDIRECT_URI`,
+`REDDIT_CLIENT_ID`, `REDDIT_CLIENT_SECRET`, `REDDIT_REDIRECT_URI`,
 `CORS_ORIGINS`
 
 ## Commit Style
