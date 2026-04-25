@@ -290,6 +290,14 @@ onMounted(() => {
     markConnected('reddit')
     router.replace({ path: '/calibrate' })
   }
+  if (route.query.instagram === 'connected') {
+    markConnected('instagram')
+    router.replace({ path: '/calibrate' })
+  }
+  if (route.query.tiktok === 'connected') {
+    markConnected('tiktok')
+    router.replace({ path: '/calibrate' })
+  }
 })
 
 function proceed() {

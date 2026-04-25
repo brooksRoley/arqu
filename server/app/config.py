@@ -78,6 +78,16 @@ class Settings(BaseSettings):
     reddit_client_secret: str = ""
     reddit_redirect_uri: str = "http://localhost:8000/api/reddit/callback"
 
+    # ── Instagram (Facebook/Meta OAuth) ──────────────────────────────
+    instagram_client_id: str = ""
+    instagram_client_secret: str = ""
+    instagram_redirect_uri: str = "http://localhost:8000/api/instagram/callback"
+
+    # ── TikTok OAuth ──────────────────────────────────────────────────
+    tiktok_client_key: str = ""
+    tiktok_client_secret: str = ""
+    tiktok_redirect_uri: str = "http://localhost:8000/api/tiktok/callback"
+
     # ── Letterboxd API ────────────────────────────────────────────────
     letterboxd_api_key: str = ""
     letterboxd_api_secret: str = ""

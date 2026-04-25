@@ -143,6 +143,16 @@ const router = createRouter({
       name: 'reddit-callback',
       component: () => import('@/views/RedditCallback.vue')
     },
+    {
+      path: '/auth/instagram/callback',
+      name: 'instagram-callback',
+      component: () => import('@/views/InstagramCallback.vue')
+    },
+    {
+      path: '/auth/tiktok/callback',
+      name: 'tiktok-callback',
+      component: () => import('@/views/TikTokCallback.vue')
+    },
 
     // ── Vibe calibration (OAuth connections) ────────────────────
     {

@@ -31,6 +31,8 @@ export interface OAuthState {
   github: ProviderState
   youtube: ProviderState
   reddit: ProviderState
+  instagram: ProviderState
+  tiktok: ProviderState
 }
 
 export interface SonicOverlap {
@@ -176,6 +178,8 @@ function defaultOAuthState(): OAuthState {
     github:     { connected: false, lastSync: null },
     youtube:    { connected: false, lastSync: null },
     reddit:     { connected: false, lastSync: null },
+    instagram:  { connected: false, lastSync: null },
+    tiktok:     { connected: false, lastSync: null },
   }
 }
 
