@@ -2,6 +2,7 @@
 import { ref, watch, onMounted, onUnmounted } from 'vue'
 import { useStoryStore } from '@/composables/useStoryStore'
 import { useTranceEngine } from '@/composables/useTranceEngine'
+import PostTranceOverlay from '@/components/PostTranceOverlay.vue'
 
 function loadScript(src: string): Promise<void> {
   return new Promise((resolve, reject) => {
@@ -19,7 +20,20 @@ const {
   currentInstruction,
   phaseAccent,
   phaseDisplayName,
+  completedSession,
+  clearCompletedSession,
 } = useTranceEngine()
+
+const showOverlay = ref(false)
+
+watch(completedSession, (data) => {
+  if (data) showOverlay.value = true
+})
+
+function handleOverlayClose() {
+  showOverlay.value = false
+  clearCompletedSession()
+}
 const canvas = ref<HTMLCanvasElement>()
 
 // ── Audio config per mode ─────────────────────────────────────────
@@ -695,6 +709,16 @@ onUnmounted(() => {
         {{ phaseDisplayName }}
       </div>
     </Transition>
+
+    <!-- Post-trance microdose overlay -->
+    <PostTranceOverlay
+      v-if="showOverlay && completedSession"
+      :coherence="completedSession.coherence"
+      :sync-count="completedSession.syncCount"
+      :session-duration="completedSession.sessionDurationMs"
+      :dominant-phase="completedSession.dominantPhase"
+      @close="handleOverlayClose"
+    />
   </div>
 </template>
 

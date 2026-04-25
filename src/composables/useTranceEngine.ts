@@ -15,6 +15,15 @@ const currentInstruction = ref('')
 const isSyncing = ref(false)
 const tunnelPulseStrength = ref(0)
 
+// Post-session data for overlay (captured before stopSession clears state)
+export interface CompletedSessionData {
+  coherence: number
+  syncCount: number
+  sessionDurationMs: number
+  dominantPhase: string
+}
+const completedSession = ref<CompletedSessionData | null>(null)
+
 // Feature module states
 const baselineModulatorActive = ref(false)
 const ptosisInducerActive = ref(false)
@@ -509,6 +518,14 @@ async function completeSession() {
     ].filter(Boolean) as string[],
   }
 
+  // Capture for post-trance overlay before state is cleared
+  completedSession.value = {
+    coherence: coherenceScore.value,
+    syncCount: syncCount.value,
+    sessionDurationMs: Date.now() - sessionStartTime,
+    dominantPhase: phase.value,
+  }
+
   // Fire-and-forget to backend
   try {
     const { apiFetch } = useAuthStore()
@@ -519,6 +536,10 @@ async function completeSession() {
   } catch { /* non-blocking */ }
 
   stopSession()
+}
+
+function clearCompletedSession() {
+  completedSession.value = null
 }
 
 function stopSession() {
@@ -689,6 +710,8 @@ export function useTranceEngine() {
     activeLayerCount,
     totalLayers: TOTAL_LAYERS,
     phaseDisplayName,
+    completedSession: readonly(completedSession),
+    clearCompletedSession,
 
     // Session control
     startSession,
