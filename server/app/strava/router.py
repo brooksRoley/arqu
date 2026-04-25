@@ -24,9 +24,10 @@ from ..oracle.trigger import maybe_trigger_synthesis
 
 import httpx
 import jwt
-from fastapi import APIRouter, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from fastapi.responses import JSONResponse
 
+from ..auth.deps import get_current_user_id
 from ..auth.service import decode_access_token
 from ..config import get_settings
 from ..db import get_conn
@@ -215,6 +216,22 @@ async def strava_callback(code: str, state: str):
 
     # 7. Return success — frontend handles navigation
     return JSONResponse({"status": "connected", "athlete": strava_profile.get("athlete_name", "")})
+
+
+# ── Profile distillation ─────────────────────────────────────────────────────
+
+@router.get("/profile")
+async def get_strava_profile(user_id: UUID = Depends(get_current_user_id)):
+    """Return the stored Strava profile for the current user, or null."""
+    async with get_conn() as conn:
+        row = await conn.fetchrow(
+            "SELECT strava_data FROM vibe_vectors WHERE user_id = $1",
+            user_id,
+        )
+    if not row or not row["strava_data"]:
+        return None
+    data = row["strava_data"]
+    return json.loads(data) if isinstance(data, str) else data
 
 
 # ── Profile distillation ─────────────────────────────────────────────────────
