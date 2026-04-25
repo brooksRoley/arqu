@@ -74,3 +74,14 @@ async def me(user_id: UUID = Depends(get_current_user_id)):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
 
     return UserResponse(**dict(row))
+
+
+@router.get("/connectors")
+async def my_connectors(user_id: UUID = Depends(get_current_user_id)):
+    """Return which OAuth providers the user has tokens for."""
+    async with get_conn() as conn:
+        rows = await conn.fetch(
+            "SELECT provider FROM oauth_tokens WHERE user_id = $1",
+            user_id,
+        )
+    return [r["provider"] for r in rows]

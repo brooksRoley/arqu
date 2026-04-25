@@ -5,8 +5,10 @@ import NavBar from '@/components/NavBar.vue'
 import SideBar from '@/components/SideBar.vue'
 import MatchNotification from '@/components/MatchNotification.vue'
 import { useZenMode } from '@/composables/useZenMode'
+import { useVibeStore } from '@/composables/useVibeStore'
 
 const route = useRoute()
+const { syncConnectors } = useVibeStore()
 const mainRef = ref<HTMLElement | null>(null)
 const { zenMode } = useZenMode()
 
@@ -43,7 +45,10 @@ function onKeydown(e: KeyboardEvent) {
   }
 }
 
-onMounted(() => document.addEventListener('keydown', onKeydown))
+onMounted(() => {
+  document.addEventListener('keydown', onKeydown)
+  syncConnectors()
+})
 onUnmounted(() => document.removeEventListener('keydown', onKeydown))
 </script>
 

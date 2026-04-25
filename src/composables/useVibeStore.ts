@@ -201,6 +201,27 @@ function persist() {
 // ── Actions ──────────────────────────────────────────────────────────────────
 
 /**
+ * Hydrate connected state from the backend (source of truth).
+ * Called on app init when the user is authenticated.
+ */
+async function syncConnectors() {
+  const { apiFetch, isAuthenticated } = useAuthStore()
+  if (!isAuthenticated.value) return
+  try {
+    const providers = await apiFetch<string[]>('/api/auth/connectors')
+    for (const p of providers) {
+      if (p in oauthState.value) {
+        const key = p as keyof OAuthState
+        if (!oauthState.value[key].connected) {
+          oauthState.value[key] = { connected: true, lastSync: new Date().toISOString() }
+        }
+      }
+    }
+    persist()
+  } catch { /* non-blocking */ }
+}
+
+/**
  * Mark a provider as connected (called after OAuth callback redirect returns).
  * The backend has already stored the tokens — we just update local state.
  */
@@ -319,6 +340,7 @@ export function useVibeStore() {
     oracleCoordinate: readonly(oracleCoordinate),
 
     markConnected,
+    syncConnectors,
     fetchOracleCoordinate,
     connectSpotify,
     triggerSynthesis,
