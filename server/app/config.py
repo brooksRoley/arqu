@@ -65,6 +65,19 @@ class Settings(BaseSettings):
     steam_api_key: str = ""
     steam_redirect_uri: str = "http://localhost:8000/api/steam/callback"
 
+    # ── GitHub OAuth ────────────────────────────────────────────────────
+    github_client_id: str = ""
+    github_client_secret: str = ""
+    github_redirect_uri: str = "http://localhost:8000/api/github/callback"
+
+    # ── YouTube (reuses Google OAuth creds, separate scope) ────────────
+    youtube_redirect_uri: str = "http://localhost:8000/api/youtube/callback"
+
+    # ── Reddit OAuth ──────────────────────────────────────────────────
+    reddit_client_id: str = ""
+    reddit_client_secret: str = ""
+    reddit_redirect_uri: str = "http://localhost:8000/api/reddit/callback"
+
     # ── Letterboxd API ────────────────────────────────────────────────
     letterboxd_api_key: str = ""
     letterboxd_api_secret: str = ""

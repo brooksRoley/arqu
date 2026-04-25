@@ -1,0 +1,1 @@
+ALTER TABLE vibe_vectors ADD COLUMN IF NOT EXISTS github_data JSONB;

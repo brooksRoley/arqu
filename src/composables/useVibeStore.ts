@@ -28,6 +28,9 @@ export interface OAuthState {
   costar: ProviderState
   letterboxd: ProviderState
   steam: ProviderState
+  github: ProviderState
+  youtube: ProviderState
+  reddit: ProviderState
 }
 
 export interface SonicOverlap {
@@ -170,6 +173,9 @@ function defaultOAuthState(): OAuthState {
     costar:     { connected: false, lastSync: null },
     letterboxd: { connected: false, lastSync: null },
     steam:      { connected: false, lastSync: null },
+    github:     { connected: false, lastSync: null },
+    youtube:    { connected: false, lastSync: null },
+    reddit:     { connected: false, lastSync: null },
   }
 }
 

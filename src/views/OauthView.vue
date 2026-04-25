@@ -278,6 +278,18 @@ onMounted(() => {
     markConnected('strava')
     router.replace({ path: '/calibrate' })
   }
+  if (route.query.github === 'connected') {
+    markConnected('github')
+    router.replace({ path: '/calibrate' })
+  }
+  if (route.query.youtube === 'connected') {
+    markConnected('youtube')
+    router.replace({ path: '/calibrate' })
+  }
+  if (route.query.reddit === 'connected') {
+    markConnected('reddit')
+    router.replace({ path: '/calibrate' })
+  }
 })
 
 function proceed() {

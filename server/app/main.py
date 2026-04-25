@@ -26,6 +26,9 @@ from .steam.router import router as steam_router
 from .twitter.router import router as twitter_router
 from .letterboxd.router import router as letterboxd_router
 from .costar.router import router as costar_router
+from .github.router import router as github_router
+from .youtube.router import router as youtube_router
+from .reddit.router import router as reddit_router
 from .match.router import router as match_router
 from .messages.router import router as messages_router
 from .analytics.router import router as analytics_router
@@ -89,6 +92,9 @@ def create_app() -> FastAPI:
     app.include_router(twitter_router, prefix=f"{prefix}/twitter", tags=["twitter"])
     app.include_router(letterboxd_router, prefix=f"{prefix}/letterboxd", tags=["letterboxd"])
     app.include_router(costar_router, prefix=f"{prefix}/costar", tags=["costar"])
+    app.include_router(github_router, prefix=f"{prefix}/github", tags=["github"])
+    app.include_router(youtube_router, prefix=f"{prefix}/youtube", tags=["youtube"])
+    app.include_router(reddit_router, prefix=f"{prefix}/reddit", tags=["reddit"])
     app.include_router(match_router, prefix=f"{prefix}/match", tags=["match"])
     app.include_router(messages_router, prefix=f"{prefix}/messages", tags=["messages"])
     app.include_router(analytics_router, prefix=f"{prefix}/analytics", tags=["analytics"])

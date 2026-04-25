@@ -128,6 +128,21 @@ const router = createRouter({
       name: 'strava-callback',
       component: () => import('@/views/StravaCallback.vue')
     },
+    {
+      path: '/auth/github/callback',
+      name: 'github-callback',
+      component: () => import('@/views/GitHubCallback.vue')
+    },
+    {
+      path: '/auth/youtube/callback',
+      name: 'youtube-callback',
+      component: () => import('@/views/YouTubeCallback.vue')
+    },
+    {
+      path: '/auth/reddit/callback',
+      name: 'reddit-callback',
+      component: () => import('@/views/RedditCallback.vue')
+    },
 
     // ── Vibe calibration (OAuth connections) ────────────────────
     {
