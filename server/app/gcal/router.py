@@ -21,9 +21,10 @@ import secrets
 
 import httpx
 import jwt
-from fastapi import APIRouter, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from fastapi.responses import RedirectResponse
 
+from ..auth.deps import get_current_user_id
 from ..auth.service import decode_access_token
 from ..config import get_settings
 from ..db import get_conn
@@ -258,3 +259,95 @@ def _distill_profile(events: list[dict], calendars: list[dict]) -> dict:
         "evening_ratio": evening_ratio,
         "day_distribution": day_dist,
     }
+
+
+@router.get("/analyze")
+async def gcal_analyze(user_id: UUID = Depends(get_current_user_id)):
+    """Generate an LLM psychoanalysis of the user's Google Calendar temporal patterns."""
+    settings = get_settings()
+
+    async with get_conn() as conn:
+        row = await conn.fetchrow(
+            "SELECT gcal_data FROM vibe_vectors WHERE user_id = $1",
+            user_id,
+        )
+
+    if not row or not row["gcal_data"]:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No Google Calendar data found")
+
+    data = row["gcal_data"]
+    profile = json.loads(data) if isinstance(data, str) else data
+
+    if not settings.openai_embed_key:
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="LLM not configured")
+
+    narrative = await _analyze_gcal_profile(settings.openai_embed_key, profile)
+    return {"narrative": narrative}
+
+
+async def _analyze_gcal_profile(api_key: str, profile: dict) -> str:
+    total_events = profile.get("total_events_60d", 0)
+    events_per_week = profile.get("events_per_week", 0)
+    calendar_count = profile.get("calendar_count", 0)
+    recurring_ratio = profile.get("recurring_ratio", 0)
+    all_day_count = profile.get("all_day_count", 0)
+    peak_day = profile.get("peak_day", "N/A")
+    peak_hour = profile.get("peak_hour", "N/A")
+    evening_ratio = profile.get("evening_ratio", 0)
+    day_dist = profile.get("day_distribution", {})
+    day_dist_str = ", ".join(f"{d}: {c}" for d, c in day_dist.items())
+
+    prompt = f"""You are a perceptive behavioral psychologist analyzing a person's Google Calendar data as a window into their relationship with time and control.
+Your task: write a sharp, warm, 2-3 paragraph psychoanalysis of this user's temporal anxiety patterns and scheduling psychology.
+Do not be clinical. Be insightful, specific, and draw connections between data points.
+
+SIGNAL DATA:
+- Total events (next 60 days): {total_events}
+- Events per week: {events_per_week}
+- Number of calendars: {calendar_count}
+- Recurring event ratio: {recurring_ratio}
+- All-day events: {all_day_count}
+- Peak scheduling day: {peak_day}
+- Peak scheduling hour: {peak_hour}
+- Evening event ratio (after 6pm): {evening_ratio}
+- Day distribution: {day_dist_str}
+
+Write 2-3 paragraphs analyzing:
+1. Temporal anxiety — what event density, calendar count, and recurring ratios reveal about their need for structure and predictability
+2. Relationship with time — peak hours and day distribution as signals of when they feel most alive, most productive, most anxious
+3. Scheduling as control mechanism — what the balance of recurring vs. spontaneous, evening vs. daytime reveals about how they manage uncertainty
+
+Be direct, specific, a little poetic. Avoid generic statements. Return only the narrative."""
+
+    headers = {
+        "Authorization": f"Bearer {api_key}",
+        "Content-Type": "application/json",
+    }
+    payload = {
+        "model": "gpt-4o-mini",
+        "max_tokens": 800,
+        "messages": [{"role": "user", "content": prompt}],
+    }
+    async with httpx.AsyncClient(timeout=60) as client:
+        resp = await client.post(
+            "https://api.openai.com/v1/chat/completions",
+            json=payload,
+            headers=headers,
+        )
+        if resp.status_code != 200:
+            raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail="LLM call failed")
+        return resp.json()["choices"][0]["message"]["content"]
+
+
+@router.get("/profile")
+async def get_gcal_profile(user_id: UUID = Depends(get_current_user_id)):
+    """Return the stored Google Calendar profile for the current user, or null."""
+    async with get_conn() as conn:
+        row = await conn.fetchrow(
+            "SELECT gcal_data FROM vibe_vectors WHERE user_id = $1",
+            user_id,
+        )
+    if not row or not row["gcal_data"]:
+        return None
+    data = row["gcal_data"]
+    return json.loads(data) if isinstance(data, str) else data

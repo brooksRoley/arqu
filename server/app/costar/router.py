@@ -23,6 +23,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
 
 from ..auth.deps import get_current_user_id
+from ..config import get_settings
 from ..db import get_conn
 
 router = APIRouter()
@@ -179,3 +180,99 @@ def _distill_chart(raw: dict) -> dict:
         "jupiter": chart.get("jupiter", ""),
         "saturn": chart.get("saturn", ""),
     }
+
+
+@router.get("/analyze")
+async def costar_analyze(user_id: UUID = Depends(get_current_user_id)):
+    """Generate an LLM psychoanalysis of the user's Co-Star natal chart data."""
+    settings = get_settings()
+
+    async with get_conn() as conn:
+        row = await conn.fetchrow(
+            "SELECT costar_data FROM vibe_vectors WHERE user_id = $1",
+            user_id,
+        )
+
+    if not row or not row["costar_data"]:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No Co-Star data found")
+
+    data = row["costar_data"]
+    profile = json.loads(data) if isinstance(data, str) else data
+
+    if not settings.openai_embed_key:
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="LLM not configured")
+
+    narrative = await _analyze_costar_profile(settings.openai_embed_key, profile)
+    return {"narrative": narrative}
+
+
+async def _analyze_costar_profile(api_key: str, profile: dict) -> str:
+    source = profile.get("source", "unknown")
+    sun = profile.get("sun", "unknown")
+    moon = profile.get("moon", "unknown")
+    rising = profile.get("rising", "unknown")
+    venus = profile.get("venus", "")
+    mars = profile.get("mars", "")
+    mercury = profile.get("mercury", "")
+    jupiter = profile.get("jupiter", "")
+    saturn = profile.get("saturn", "")
+
+    placements_str = f"Sun: {sun}, Moon: {moon}, Rising: {rising}"
+    if venus:
+        placements_str += f", Venus: {venus}"
+    if mars:
+        placements_str += f", Mars: {mars}"
+    if mercury:
+        placements_str += f", Mercury: {mercury}"
+    if jupiter:
+        placements_str += f", Jupiter: {jupiter}"
+    if saturn:
+        placements_str += f", Saturn: {saturn}"
+
+    prompt = f"""You are a perceptive behavioral psychologist with deep knowledge of archetypal astrology, analyzing a person's natal chart placements as a map of their psychological architecture.
+Your task: write a sharp, warm, 2-3 paragraph psychoanalysis of how these planetary placements map to observable behavioral patterns.
+Do not be clinical. Be insightful, specific, and draw connections between placements. Do NOT write a generic horoscope — write a psychological profile that uses astrological language as metaphor.
+
+NATAL CHART DATA:
+- Source: {source}
+- {placements_str}
+
+Write 2-3 paragraphs analyzing:
+1. Core identity architecture — how the Sun-Moon-Rising triad creates a specific tension between who they are (Sun), what they need (Moon), and how they present (Rising), and what behavioral patterns emerge from that tension
+2. Relational and drive patterns — what Venus and Mars placements reveal about how they love, what they're attracted to, how they pursue what they want, and the gap between desire and action
+3. Growth edges — what the outer planet placements (Mercury, Jupiter, Saturn) suggest about their communication style, where they seek expansion, and what structures or limitations they've internalized
+
+Be direct, specific, a little poetic. Avoid generic statements. Return only the narrative."""
+
+    headers = {
+        "Authorization": f"Bearer {api_key}",
+        "Content-Type": "application/json",
+    }
+    payload = {
+        "model": "gpt-4o-mini",
+        "max_tokens": 800,
+        "messages": [{"role": "user", "content": prompt}],
+    }
+    async with httpx.AsyncClient(timeout=60) as client:
+        resp = await client.post(
+            "https://api.openai.com/v1/chat/completions",
+            json=payload,
+            headers=headers,
+        )
+        if resp.status_code != 200:
+            raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail="LLM call failed")
+        return resp.json()["choices"][0]["message"]["content"]
+
+
+@router.get("/profile")
+async def get_costar_profile(user_id: UUID = Depends(get_current_user_id)):
+    """Return the stored Co-Star profile for the current user, or null."""
+    async with get_conn() as conn:
+        row = await conn.fetchrow(
+            "SELECT costar_data FROM vibe_vectors WHERE user_id = $1",
+            user_id,
+        )
+    if not row or not row["costar_data"]:
+        return None
+    data = row["costar_data"]
+    return json.loads(data) if isinstance(data, str) else data

@@ -206,6 +206,91 @@ async def tiktok_callback(code: str, state: str):
     return RedirectResponse(f"{frontend}/calibrate?tiktok=connected")
 
 
+@router.get("/analyze")
+async def tiktok_analyze(user_id: UUID = Depends(get_current_user_id)):
+    """Generate an LLM psychoanalysis of the user's TikTok behavioral profile."""
+    settings = get_settings()
+
+    async with get_conn() as conn:
+        row = await conn.fetchrow(
+            "SELECT tiktok_data FROM vibe_vectors WHERE user_id = $1",
+            user_id,
+        )
+
+    if not row or not row["tiktok_data"]:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No TikTok data found")
+
+    data = row["tiktok_data"]
+    profile = json.loads(data) if isinstance(data, str) else data
+
+    if not settings.openai_embed_key:
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="LLM not configured")
+
+    narrative = await _analyze_tiktok_profile(settings.openai_embed_key, profile)
+    return {"narrative": narrative}
+
+
+async def _analyze_tiktok_profile(api_key: str, profile: dict) -> str:
+    display_name = profile.get("display_name", "")
+    bio = profile.get("bio", "")
+    is_verified = profile.get("is_verified", False)
+    follower_count = profile.get("follower_count", 0)
+    following_count = profile.get("following_count", 0)
+    likes_received = profile.get("likes_received", 0)
+    video_count = profile.get("video_count", 0)
+    avg_duration = profile.get("avg_duration_sec", 0)
+    avg_likes = profile.get("avg_likes_per_video", 0)
+    avg_comments = profile.get("avg_comments_per_video", 0)
+    avg_shares = profile.get("avg_shares_per_video", 0)
+    avg_views = profile.get("avg_views_per_video", 0)
+    top_hashtags = ", ".join(profile.get("top_hashtags", []))
+    posting_hours = profile.get("posting_hours", {})
+    peak_hour = max(posting_hours, key=posting_hours.get) if posting_hours else "N/A"
+
+    ff_ratio = round(follower_count / max(following_count, 1), 2)
+
+    prompt = f"""You are a perceptive behavioral psychologist analyzing a person's TikTok data as a window into their dopamine sensitivity and attention patterns.
+Your task: write a sharp, warm, 2-3 paragraph psychoanalysis of this user's algorithmic self vs intentional self.
+Do not be clinical. Be insightful, specific, and draw connections between data points.
+
+SIGNAL DATA:
+- Display name: "{display_name}"
+- Bio: "{bio}"
+- Verified: {is_verified}
+- Followers: {follower_count} | Following: {following_count} | Ratio: {ff_ratio}
+- Total likes received: {likes_received}
+- Videos: {video_count} | Avg duration: {avg_duration}s
+- Avg likes/video: {avg_likes} | Avg comments: {avg_comments} | Avg shares: {avg_shares} | Avg views: {avg_views}
+- Top hashtags: {top_hashtags}
+- Peak posting hour (UTC): {peak_hour}
+
+Write 2-3 paragraphs analyzing:
+1. Dopamine sensitivity — what video duration, posting frequency, and engagement patterns reveal about their attention span, their tolerance for slow rewards, and how the algorithm has shaped their creative output
+2. Algorithmic self vs intentional self — what hashtag choices and content patterns reveal about whether they're creating for the algorithm or for themselves, the tension between virality and authenticity
+3. Attention economy position — follower/following ratio, engagement metrics, and what their relationship with TikTok reveals about their need for immediate feedback vs. sustained creative practice
+
+Be direct, specific, a little poetic. Avoid generic statements. Return only the narrative."""
+
+    headers = {
+        "Authorization": f"Bearer {api_key}",
+        "Content-Type": "application/json",
+    }
+    payload = {
+        "model": "gpt-4o-mini",
+        "max_tokens": 800,
+        "messages": [{"role": "user", "content": prompt}],
+    }
+    async with httpx.AsyncClient(timeout=60) as client:
+        resp = await client.post(
+            "https://api.openai.com/v1/chat/completions",
+            json=payload,
+            headers=headers,
+        )
+        if resp.status_code != 200:
+            raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail="LLM call failed")
+        return resp.json()["choices"][0]["message"]["content"]
+
+
 @router.get("/profile")
 async def get_tiktok_profile(user_id: UUID = Depends(get_current_user_id)):
     """Return the stored TikTok profile for the current user."""

@@ -30,9 +30,10 @@ import secrets
 
 import httpx
 import jwt
-from fastapi import APIRouter, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from fastapi.responses import JSONResponse
 
+from ..auth.deps import get_current_user_id
 from ..auth.service import decode_access_token
 from ..config import get_settings
 from ..db import get_conn
@@ -262,3 +263,88 @@ def _distill_profile(username: str, entries: list[dict], watchlist: list[dict]) 
         "watchlist_sample": watchlist_titles,
         "ratings_given": len(ratings),
     }
+
+
+@router.get("/analyze")
+async def letterboxd_analyze(user_id: UUID = Depends(get_current_user_id)):
+    """Generate an LLM psychoanalysis of the user's Letterboxd film profile."""
+    settings = get_settings()
+
+    async with get_conn() as conn:
+        row = await conn.fetchrow(
+            "SELECT letterboxd_data FROM vibe_vectors WHERE user_id = $1",
+            user_id,
+        )
+
+    if not row or not row["letterboxd_data"]:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No Letterboxd data found")
+
+    data = row["letterboxd_data"]
+    profile = json.loads(data) if isinstance(data, str) else data
+
+    if not settings.openai_embed_key:
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="LLM not configured")
+
+    narrative = await _analyze_letterboxd_profile(settings.openai_embed_key, profile)
+    return {"narrative": narrative}
+
+
+async def _analyze_letterboxd_profile(api_key: str, profile: dict) -> str:
+    username = profile.get("username", "")
+    diary_count = profile.get("diary_count", 0)
+    recent_films = ", ".join(profile.get("recent_films", [])[:10])
+    avg_rating = profile.get("avg_rating")
+    watchlist = ", ".join(profile.get("watchlist_sample", [])[:8])
+    ratings_given = profile.get("ratings_given", 0)
+
+    prompt = f"""You are a perceptive behavioral psychologist analyzing a person's Letterboxd film diary as a window into their empathic range and emotional processing.
+Your task: write a sharp, warm, 2-3 paragraph psychoanalysis of this user's narrative preferences and what their film taste reveals about their inner life.
+Do not be clinical. Be insightful, specific, and draw connections between data points.
+
+SIGNAL DATA:
+- Username: {username}
+- Diary entries (recent): {diary_count}
+- Recent films watched: {recent_films}
+- Average rating: {avg_rating or 'N/A'} / 5.0
+- Ratings given: {ratings_given}
+- Watchlist sample: {watchlist}
+
+Write 2-3 paragraphs analyzing:
+1. Empathic range — what the breadth or narrowness of their film choices reveals about the emotional experiences they seek out, the lives they want to inhabit vicariously
+2. Narrative preferences — what genres, directors, and film styles they gravitate toward as signals of how they process complexity, ambiguity, and emotional difficulty
+3. The rating psychology — what their average rating and rating frequency reveal about their relationship with judgment, criticism, and aesthetic standards
+
+Be direct, specific, a little poetic. Avoid generic statements. Return only the narrative."""
+
+    headers = {
+        "Authorization": f"Bearer {api_key}",
+        "Content-Type": "application/json",
+    }
+    payload = {
+        "model": "gpt-4o-mini",
+        "max_tokens": 800,
+        "messages": [{"role": "user", "content": prompt}],
+    }
+    async with httpx.AsyncClient(timeout=60) as client:
+        resp = await client.post(
+            "https://api.openai.com/v1/chat/completions",
+            json=payload,
+            headers=headers,
+        )
+        if resp.status_code != 200:
+            raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail="LLM call failed")
+        return resp.json()["choices"][0]["message"]["content"]
+
+
+@router.get("/profile")
+async def get_letterboxd_profile(user_id: UUID = Depends(get_current_user_id)):
+    """Return the stored Letterboxd profile for the current user, or null."""
+    async with get_conn() as conn:
+        row = await conn.fetchrow(
+            "SELECT letterboxd_data FROM vibe_vectors WHERE user_id = $1",
+            user_id,
+        )
+    if not row or not row["letterboxd_data"]:
+        return None
+    data = row["letterboxd_data"]
+    return json.loads(data) if isinstance(data, str) else data

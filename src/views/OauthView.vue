@@ -24,7 +24,7 @@
               <h2 class="text-2xl font-bold text-green-400">Spotify</h2>
               <h3 class="text-sm font-medium text-gray-500 uppercase tracking-wider mt-1">The Sonic Blueprint</h3>
             </div>
-            <span class="text-xs font-medium text-green-400 bg-green-400/10 border border-green-500/30 rounded-full px-3 py-1">Connected &#10003;</span>
+            <router-link to="/calibrate/spotify" class="text-xs font-medium text-green-400 bg-green-400/10 border border-green-500/30 rounded-full px-3 py-1 hover:bg-green-400/20 transition-colors">View Signal &rarr;</router-link>
           </div>
           <!-- Loading skeleton -->
           <div v-if="spotifyLoading || !spotifyProfile" class="space-y-3 animate-pulse">
@@ -98,7 +98,7 @@
               <h2 class="text-2xl font-bold text-blue-400">X / Twitter</h2>
               <h3 class="text-sm font-medium text-gray-500 uppercase tracking-wider mt-1">The Neurotic Imprint</h3>
             </div>
-            <span class="text-xs font-medium text-blue-400 bg-blue-400/10 border border-blue-500/30 rounded-full px-3 py-1">Connected &#10003;</span>
+            <router-link to="/calibrate/twitter" class="text-xs font-medium text-blue-400 bg-blue-400/10 border border-blue-500/30 rounded-full px-3 py-1 hover:bg-blue-400/20 transition-colors">View Signal &rarr;</router-link>
           </div>
           <div v-if="twitterLoading || !twitterProfile" class="space-y-3 animate-pulse">
             <div class="h-4 bg-gray-700 rounded w-3/4"></div>
@@ -149,7 +149,7 @@
               <h2 class="text-2xl font-bold text-orange-400">Strava</h2>
               <h3 class="text-sm font-medium text-gray-500 uppercase tracking-wider mt-1">The Somatic Ledger</h3>
             </div>
-            <span class="text-xs font-medium text-orange-400 bg-orange-400/10 border border-orange-500/30 rounded-full px-3 py-1">Connected &#10003;</span>
+            <router-link to="/calibrate/strava" class="text-xs font-medium text-orange-400 bg-orange-400/10 border border-orange-500/30 rounded-full px-3 py-1 hover:bg-orange-400/20 transition-colors">View Signal &rarr;</router-link>
           </div>
           <!-- Loading skeleton -->
           <div v-if="stravaLoading || !stravaProfile" class="space-y-3 animate-pulse">
@@ -212,7 +212,7 @@
               <h2 class="text-2xl font-bold text-red-400">Google Calendar</h2>
               <h3 class="text-sm font-medium text-gray-500 uppercase tracking-wider mt-1">The Temporal Grid</h3>
             </div>
-            <span class="text-xs font-medium text-red-400 bg-red-400/10 border border-red-500/30 rounded-full px-3 py-1">Connected &#10003;</span>
+            <router-link to="/calibrate/google" class="text-xs font-medium text-red-400 bg-red-400/10 border border-red-500/30 rounded-full px-3 py-1 hover:bg-red-400/20 transition-colors">View Signal &rarr;</router-link>
           </div>
           <div class="space-y-3 text-gray-300">
             <p>Your temporal patterns are being mapped. Event density, free/busy windows, and scheduling rhythms feed the Oracle's understanding of your co-regulation capacity.</p>
@@ -243,7 +243,7 @@
               <h2 class="text-2xl font-bold text-indigo-400">Co&#8239;&#8212;&#8239;Star</h2>
               <h3 class="text-sm font-medium text-gray-500 uppercase tracking-wider mt-1">The Fatalistic Mirror</h3>
             </div>
-            <span class="text-xs font-medium text-indigo-400 bg-indigo-400/10 border border-indigo-500/30 rounded-full px-3 py-1">Connected &#10003;</span>
+            <router-link to="/calibrate/costar" class="text-xs font-medium text-indigo-400 bg-indigo-400/10 border border-indigo-500/30 rounded-full px-3 py-1 hover:bg-indigo-400/20 transition-colors">View Signal &rarr;</router-link>
           </div>
           <div class="space-y-3 text-gray-300">
             <p>Your natal chart has been ingested. Sun, Moon, Rising, Mars, Venus — the Oracle is reading your cosmic wiring to predict friction points and structure daily challenges.</p>
@@ -274,7 +274,7 @@
               <h2 class="text-2xl font-bold text-emerald-400">Letterboxd</h2>
               <h3 class="text-sm font-medium text-gray-500 uppercase tracking-wider mt-1">The Empathy Simulator</h3>
             </div>
-            <span class="text-xs font-medium text-emerald-400 bg-emerald-400/10 border border-emerald-500/30 rounded-full px-3 py-1">Connected &#10003;</span>
+            <router-link to="/calibrate/letterboxd" class="text-xs font-medium text-emerald-400 bg-emerald-400/10 border border-emerald-500/30 rounded-full px-3 py-1 hover:bg-emerald-400/20 transition-colors">View Signal &rarr;</router-link>
           </div>
           <div class="space-y-3 text-gray-300">
             <p>Your watchlist and diary entries are being analyzed. Aesthetic pretension markers and star-rating patterns feed the Cinema Co-Op matching engine.</p>
@@ -297,59 +297,8 @@
           <p class="mt-4 text-xs text-gray-600 font-mono italic">We already know you cried during that one.</p>
         </div>
 
-        <!-- Steam -->
-        <div v-if="oauthState.steam.connected"
-             class="bg-gray-800 border border-blue-500/50 rounded-2xl p-6 shadow-xl">
-          <div class="flex justify-between items-start mb-4">
-            <div>
-              <h2 class="text-2xl font-bold text-blue-400">Steam</h2>
-              <h3 class="text-sm font-medium text-gray-500 uppercase tracking-wider mt-1">The Isolation Metric</h3>
-            </div>
-            <span class="text-xs font-medium text-blue-400 bg-blue-400/10 border border-blue-500/30 rounded-full px-3 py-1">Connected &#10003;</span>
-          </div>
-          <div v-if="steamLoading || !steamProfile" class="space-y-3 animate-pulse">
-            <div class="h-4 bg-gray-700 rounded w-3/4"></div>
-            <div class="h-4 bg-gray-700 rounded w-1/2"></div>
-            <div class="h-4 bg-gray-700 rounded w-2/3"></div>
-          </div>
-          <div v-else class="space-y-4">
-            <div v-if="steamProfile.recent_games?.length">
-              <p class="text-xs text-gray-500 uppercase tracking-wider mb-2">Recent Games</p>
-              <div class="flex flex-wrap gap-2">
-                <span v-for="game in steamProfile.recent_games.slice(0, 4)" :key="game.name"
-                      class="text-xs px-3 py-1 rounded-full border bg-blue-500/20 text-blue-300 border-blue-500/40">
-                  {{ game.name }}
-                </span>
-              </div>
-            </div>
-            <div class="grid grid-cols-2 gap-4">
-              <div>
-                <p class="text-xs text-gray-500 uppercase tracking-wider mb-1">Library</p>
-                <p class="text-lg font-bold text-blue-300">{{ steamProfile.total_games }} <span class="text-xs text-gray-500 font-normal">games</span></p>
-              </div>
-              <div>
-                <p class="text-xs text-gray-500 uppercase tracking-wider mb-1">Total Hours</p>
-                <p class="text-lg font-bold text-blue-300">{{ Math.round(steamProfile.total_hours).toLocaleString() }} <span class="text-xs text-gray-500 font-normal">hrs</span></p>
-              </div>
-            </div>
-          </div>
-          <p class="mt-4 text-xs text-gray-600 font-mono italic">80 hours in Skyrim this fortnight. We see you. We're routing you gently.</p>
-        </div>
-        <div v-else
-             class="bg-gray-800 border border-gray-700 rounded-2xl p-6 shadow-xl transition-transform hover:-translate-y-1">
-          <div class="flex justify-between items-start mb-4">
-            <div>
-              <h2 class="text-2xl font-bold text-blue-400">Steam</h2>
-              <h3 class="text-sm font-medium text-gray-500 uppercase tracking-wider mt-1">The Isolation Metric</h3>
-            </div>
-            <SteamConnect />
-          </div>
-          <div class="space-y-3 text-gray-300">
-            <p><strong>Data Collected:</strong> Recently played games, total hours logged, single-player vs. co-op ratio, late-night session frequency.</p>
-            <p><strong>Correlation Engine:</strong> Maps async isolation hours and cooperative tendencies. High-anxiety users are eased into digital hangouts before the algorithm deploys them into the physical world.</p>
-          </div>
-          <p class="mt-4 text-xs text-gray-600 font-mono italic">80 hours in Skyrim this fortnight. We see you. We're routing you gently.</p>
-        </div>
+        <!-- Steam (commented out — no profile endpoint yet) -->
+        <!-- <div v-if="oauthState.steam.connected" ... > ... </div> -->
 
         <!-- GitHub -->
         <div v-if="oauthState.github.connected"
@@ -359,7 +308,7 @@
               <h2 class="text-2xl font-bold text-purple-400">GitHub</h2>
               <h3 class="text-sm font-medium text-gray-500 uppercase tracking-wider mt-1">The Builder's Ledger</h3>
             </div>
-            <span class="text-xs font-medium text-purple-400 bg-purple-400/10 border border-purple-500/30 rounded-full px-3 py-1">Connected &#10003;</span>
+            <router-link to="/calibrate/github" class="text-xs font-medium text-purple-400 bg-purple-400/10 border border-purple-500/30 rounded-full px-3 py-1 hover:bg-purple-400/20 transition-colors">View Signal &rarr;</router-link>
           </div>
           <div v-if="githubLoading || !githubProfile" class="space-y-3 animate-pulse">
             <div class="h-4 bg-gray-700 rounded w-3/4"></div>
@@ -417,7 +366,7 @@
               <h2 class="text-2xl font-bold text-red-400">YouTube</h2>
               <h3 class="text-sm font-medium text-gray-500 uppercase tracking-wider mt-1">The Attention Archive</h3>
             </div>
-            <span class="text-xs font-medium text-red-400 bg-red-400/10 border border-red-500/30 rounded-full px-3 py-1">Connected &#10003;</span>
+            <router-link to="/calibrate/youtube" class="text-xs font-medium text-red-400 bg-red-400/10 border border-red-500/30 rounded-full px-3 py-1 hover:bg-red-400/20 transition-colors">View Signal &rarr;</router-link>
           </div>
           <div v-if="youtubeLoading || !youtubeProfile" class="space-y-3 animate-pulse">
             <div class="h-4 bg-gray-700 rounded w-3/4"></div>
@@ -479,7 +428,7 @@
               <h2 class="text-2xl font-bold text-orange-600">Reddit</h2>
               <h3 class="text-sm font-medium text-gray-500 uppercase tracking-wider mt-1">The Anonymous Confessional</h3>
             </div>
-            <span class="text-xs font-medium text-orange-600 bg-orange-600/10 border border-orange-600/30 rounded-full px-3 py-1">Connected &#10003;</span>
+            <router-link to="/calibrate/reddit" class="text-xs font-medium text-orange-600 bg-orange-600/10 border border-orange-600/30 rounded-full px-3 py-1 hover:bg-orange-600/20 transition-colors">View Signal &rarr;</router-link>
           </div>
           <div v-if="redditLoading || !redditProfile" class="space-y-3 animate-pulse">
             <div class="h-4 bg-gray-700 rounded w-3/4"></div>
@@ -537,7 +486,7 @@
               <h2 class="text-2xl font-bold text-pink-400">Instagram</h2>
               <h3 class="text-sm font-medium text-gray-500 uppercase tracking-wider mt-1">The Curated Self</h3>
             </div>
-            <span class="text-xs font-medium text-pink-400 bg-pink-400/10 border border-pink-500/30 rounded-full px-3 py-1">Connected &#10003;</span>
+            <router-link to="/calibrate/instagram" class="text-xs font-medium text-pink-400 bg-pink-400/10 border border-pink-500/30 rounded-full px-3 py-1 hover:bg-pink-400/20 transition-colors">View Signal &rarr;</router-link>
           </div>
           <div class="space-y-3 text-gray-300">
             <p>Your visual identity is being analyzed. The Oracle reads the gap between your grid and your reality.</p>
@@ -568,7 +517,7 @@
               <h2 class="text-2xl font-bold text-cyan-400">TikTok</h2>
               <h3 class="text-sm font-medium text-gray-500 uppercase tracking-wider mt-1">The Dopamine Map</h3>
             </div>
-            <span class="text-xs font-medium text-cyan-400 bg-cyan-400/10 border border-cyan-500/30 rounded-full px-3 py-1">Connected &#10003;</span>
+            <router-link to="/calibrate/tiktok" class="text-xs font-medium text-cyan-400 bg-cyan-400/10 border border-cyan-500/30 rounded-full px-3 py-1 hover:bg-cyan-400/20 transition-colors">View Signal &rarr;</router-link>
           </div>
           <div class="space-y-3 text-gray-300">
             <p>Your For You Page is being decoded. Scroll patterns and content affinity feed the Oracle's understanding of your attention architecture.</p>
@@ -666,7 +615,7 @@ import TwitterConnect from '@/components/TwitterConnect.vue'
 import StravaConnect from '@/components/StravaConnect.vue'
 import CoStarConnect from '@/components/CoStarConnect.vue'
 import LetterboxdConnect from '@/components/LetterboxdConnect.vue'
-import SteamConnect from '@/components/SteamConnect.vue'
+// import SteamConnect from '@/components/SteamConnect.vue'  // commented out — no profile endpoint yet
 import GCalConnect from '@/components/GCalConnect.vue'
 import GitHubConnect from '@/components/GitHubConnect.vue'
 import YouTubeConnect from '@/components/YouTubeConnect.vue'
@@ -710,11 +659,11 @@ interface TwitterProfile {
   following_count: number
 }
 
-interface SteamProfile {
-  recent_games: { name: string; playtime_2weeks: number }[]
-  total_games: number
-  total_hours: number
-}
+// interface SteamProfile {
+//   recent_games: { name: string; playtime_2weeks: number }[]
+//   total_games: number
+//   total_hours: number
+// }
 
 interface GitHubProfile {
   username: string
@@ -752,8 +701,8 @@ const stravaProfile = ref<StravaProfile | null>(null)
 const stravaLoading = ref(false)
 const twitterProfile = ref<TwitterProfile | null>(null)
 const twitterLoading = ref(false)
-const steamProfile = ref<SteamProfile | null>(null)
-const steamLoading = ref(false)
+// const steamProfile = ref<SteamProfile | null>(null)
+// const steamLoading = ref(false)
 const githubProfile = ref<GitHubProfile | null>(null)
 const githubLoading = ref(false)
 const youtubeProfile = ref<YouTubeProfile | null>(null)
@@ -801,14 +750,14 @@ async function fetchTwitterProfile() {
   twitterLoading.value = false
 }
 
-async function fetchSteamProfile() {
-  if (steamProfile.value || steamLoading.value) return
-  steamLoading.value = true
-  try {
-    steamProfile.value = await apiFetch<SteamProfile>('/api/steam/profile')
-  } catch { /* non-blocking */ }
-  steamLoading.value = false
-}
+// async function fetchSteamProfile() {
+//   if (steamProfile.value || steamLoading.value) return
+//   steamLoading.value = true
+//   try {
+//     steamProfile.value = await apiFetch<SteamProfile>('/api/steam/profile')
+//   } catch { /* non-blocking */ }
+//   steamLoading.value = false
+// }
 
 async function fetchGitHubProfile() {
   if (githubProfile.value || githubLoading.value) return
@@ -894,9 +843,9 @@ watch(() => oauthState.value.twitter.connected, (connected) => {
   if (connected) fetchTwitterProfile()
 }, { immediate: true })
 
-watch(() => oauthState.value.steam.connected, (connected) => {
-  if (connected) fetchSteamProfile()
-}, { immediate: true })
+// watch(() => oauthState.value.steam.connected, (connected) => {
+//   if (connected) fetchSteamProfile()
+// }, { immediate: true })
 
 watch(() => oauthState.value.github.connected, (connected) => {
   if (connected) fetchGitHubProfile()

@@ -1,0 +1,135 @@
+<h2>Connector Results Page Layout</h2>
+<p class="subtitle">How should the data, narrative, and cross-connector insights be arranged?</p>
+
+<div class="cards">
+  <div class="card" data-choice="a" onclick="toggleSelect(this)">
+    <div class="card-image" style="padding: 20px; background: #0a0a0f;">
+      <!-- Mockup A: Scroll narrative -->
+      <div style="font-family: monospace; font-size: 10px; color: #888; text-align: left; line-height: 1.6;">
+        <div style="border-bottom: 1px solid #333; padding-bottom: 8px; margin-bottom: 12px;">
+          <span style="color: #1db954; font-size: 14px; font-weight: bold;">Spotify</span>
+          <span style="color: #555; margin-left: 8px;">The Sonic Blueprint</span>
+        </div>
+        <div style="color: #9ca3af; font-size: 11px; margin-bottom: 16px; line-height: 1.7;">
+          Your sonic fingerprint reveals a restless interiority — high energy married to low valence suggests someone who moves fast but feels deeply. The acoustic pull says you need silence to recharge...
+        </div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 16px;">
+          <div style="background: #111; border: 1px solid #1db95433; border-radius: 8px; padding: 10px;">
+            <div style="color: #555; font-size: 8px; text-transform: uppercase;">Top Artists</div>
+            <div style="color: #1db954; font-size: 10px; margin-top: 4px;">Radiohead, Bjork, FKA twigs</div>
+          </div>
+          <div style="background: #111; border: 1px solid #1db95433; border-radius: 8px; padding: 10px;">
+            <div style="color: #555; font-size: 8px; text-transform: uppercase;">Energy</div>
+            <div style="color: #1db954; font-size: 10px; margin-top: 4px;">0.73 ████████░░</div>
+          </div>
+        </div>
+        <div style="background: #111; border: 1px solid #333; border-radius: 8px; padding: 10px; margin-bottom: 12px;">
+          <div style="color: #555; font-size: 8px; text-transform: uppercase; margin-bottom: 6px;">Raw Signal</div>
+          <div style="color: #666; font-size: 9px; font-family: monospace;">{"valence": 0.34, "energy": 0.73, "danceability": 0.61, "acousticness": 0.42 ...}</div>
+        </div>
+        <div style="border-top: 1px solid #333; padding-top: 10px;">
+          <div style="color: #555; font-size: 8px; text-transform: uppercase; margin-bottom: 6px;">Cross-Signal Resonance</div>
+          <div style="color: #9ca3af; font-size: 10px;">Your Strava data confirms this: late-night runs at 160bpm mirror the tempo of your top tracks...</div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>A: Narrative Scroll</h3>
+      <p>Single-column cinematic flow. Narrative first, then data cards, then raw JSON, then cross-connector insights at the bottom. Like reading a dossier.</p>
+    </div>
+  </div>
+
+  <div class="card" data-choice="b" onclick="toggleSelect(this)">
+    <div class="card-image" style="padding: 20px; background: #0a0a0f;">
+      <!-- Mockup B: Split panel -->
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; font-family: monospace; font-size: 10px; text-align: left;">
+        <div style="border-right: 1px solid #222; padding-right: 12px;">
+          <div style="color: #1db954; font-size: 13px; font-weight: bold; margin-bottom: 8px;">The Read</div>
+          <div style="color: #9ca3af; font-size: 10px; line-height: 1.7; margin-bottom: 12px;">
+            Your sonic fingerprint reveals a restless interiority ��� high energy married to low valence...
+          </div>
+          <div style="border-top: 1px solid #222; padding-top: 8px; margin-top: 8px;">
+            <div style="color: #555; font-size: 8px; text-transform: uppercase; margin-bottom: 6px;">Cross-Signal</div>
+            <div style="display: flex; gap: 4px; flex-wrap: wrap;">
+              <span style="background: #ef444433; color: #f87171; font-size: 8px; padding: 2px 6px; border-radius: 10px;">Strava ↔ tempo</span>
+              <span style="background: #8b5cf633; color: #a78bfa; font-size: 8px; padding: 2px 6px; border-radius: 10px;">Reddit ↔ mood</span>
+              <span style="background: #06b6d433; color: #67e8f9; font-size: 8px; padding: 2px 6px; border-radius: 10px;">GCal ↔ rhythm</span>
+            </div>
+          </div>
+        </div>
+        <div>
+          <div style="color: #888; font-size: 9px; text-transform: uppercase; margin-bottom: 8px;">Signal Data</div>
+          <div style="background: #111; border: 1px solid #1db95433; border-radius: 6px; padding: 8px; margin-bottom: 6px;">
+            <div style="color: #555; font-size: 8px;">TOP ARTISTS</div>
+            <div style="color: #1db954; font-size: 9px;">Radiohead, Bjork, FKA twigs</div>
+          </div>
+          <div style="background: #111; border: 1px solid #1db95433; border-radius: 6px; padding: 8px; margin-bottom: 6px;">
+            <div style="color: #555; font-size: 8px;">AUDIO FEATURES</div>
+            <div style="margin-top: 4px;">
+              <div style="display: flex; align-items: center; gap: 4px; margin-bottom: 2px;">
+                <span style="color: #666; font-size: 8px; width: 55px;">valence</span>
+                <div style="flex: 1; height: 3px; background: #222; border-radius: 2px;"><div style="width: 34%; height: 100%; background: #1db954; border-radius: 2px;"></div></div>
+              </div>
+              <div style="display: flex; align-items: center; gap: 4px; margin-bottom: 2px;">
+                <span style="color: #666; font-size: 8px; width: 55px;">energy</span>
+                <div style="flex: 1; height: 3px; background: #222; border-radius: 2px;"><div style="width: 73%; height: 100%; background: #1db954; border-radius: 2px;"></div></div>
+              </div>
+            </div>
+          </div>
+          <div style="background: #111; border: 1px solid #333; border-radius: 6px; padding: 8px;">
+            <div style="color: #555; font-size: 8px;">RAW JSON</div>
+            <div style="color: #555; font-size: 8px; font-family: monospace; margin-top: 4px;">{ "valence": 0.34, ... }</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>B: Split Panel</h3>
+      <p>Narrative + cross-signal on the left, structured data + raw JSON on the right. Dashboard feel. Everything visible at once without scrolling.</p>
+    </div>
+  </div>
+
+  <div class="card" data-choice="c" onclick="toggleSelect(this)">
+    <div class="card-image" style="padding: 20px; background: #0a0a0f;">
+      <!-- Mockup C: Tabbed sections -->
+      <div style="font-family: monospace; font-size: 10px; text-align: left;">
+        <div style="border-bottom: 1px solid #333; padding-bottom: 8px; margin-bottom: 12px;">
+          <span style="color: #1db954; font-size: 14px; font-weight: bold;">Spotify</span>
+          <span style="color: #555; margin-left: 8px;">The Sonic Blueprint</span>
+        </div>
+        <div style="display: flex; gap: 0; margin-bottom: 16px; border-bottom: 1px solid #333;">
+          <div style="padding: 6px 12px; color: #1db954; border-bottom: 2px solid #1db954; font-size: 10px; font-weight: bold;">Overview</div>
+          <div style="padding: 6px 12px; color: #555; font-size: 10px;">Raw Data</div>
+          <div style="padding: 6px 12px; color: #555; font-size: 10px;">Our Read</div>
+          <div style="padding: 6px 12px; color: #555; font-size: 10px;">Cross-Signal</div>
+        </div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 12px;">
+          <div style="background: #111; border: 1px solid #1db95433; border-radius: 8px; padding: 10px; text-align: center;">
+            <div style="color: #1db954; font-size: 16px; font-weight: bold;">0.73</div>
+            <div style="color: #555; font-size: 8px; text-transform: uppercase; margin-top: 2px;">Energy</div>
+          </div>
+          <div style="background: #111; border: 1px solid #1db95433; border-radius: 8px; padding: 10px; text-align: center;">
+            <div style="color: #1db954; font-size: 16px; font-weight: bold;">0.34</div>
+            <div style="color: #555; font-size: 8px; text-transform: uppercase; margin-top: 2px;">Valence</div>
+          </div>
+          <div style="background: #111; border: 1px solid #1db95433; border-radius: 8px; padding: 10px; text-align: center;">
+            <div style="color: #1db954; font-size: 16px; font-weight: bold;">12</div>
+            <div style="color: #555; font-size: 8px; text-transform: uppercase; margin-top: 2px;">Genres</div>
+          </div>
+        </div>
+        <div style="background: #111; border: 1px solid #1db95433; border-radius: 8px; padding: 10px;">
+          <div style="color: #555; font-size: 8px; text-transform: uppercase; margin-bottom: 6px;">Top Artists</div>
+          <div style="display: flex; gap: 4px; flex-wrap: wrap;">
+            <span style="background: #1db95422; color: #1db954; font-size: 8px; padding: 2px 8px; border-radius: 10px;">Radiohead</span>
+            <span style="background: #1db95422; color: #1db954; font-size: 8px; padding: 2px 8px; border-radius: 10px;">Bjork</span>
+            <span style="background: #1db95422; color: #1db954; font-size: 8px; padding: 2px 8px; border-radius: 10px;">FKA twigs</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>C: Tabbed Sections</h3>
+      <p>Overview tab with key metrics, separate tabs for Raw Data (pretty JSON), Our Read (narrative), and Cross-Signal (other connector correlations). Organized but requires clicking through.</p>
+    </div>
+  </div>
+</div>

@@ -161,6 +161,12 @@ const router = createRouter({
       component: () => import('@/views/OauthView.vue'),
       meta: { requiresAuth: true }
     },
+    {
+      path: '/calibrate/:provider',
+      name: 'connector-result',
+      component: () => import('@/views/ConnectorResultView.vue'),
+      meta: { requiresAuth: true }
+    },
 
     // ── Peripheral → calibrate redirect ──────────────────────────
     {

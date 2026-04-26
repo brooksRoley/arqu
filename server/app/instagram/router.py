@@ -226,6 +226,88 @@ async def instagram_callback(code: str, state: str):
     return JSONResponse({"status": "connected", "username": instagram_profile.get("username", "")})
 
 
+# ── Psychoanalysis ────────────────────────────────────────────────────────────
+
+@router.get("/analyze")
+async def instagram_analyze(user_id: UUID = Depends(get_current_user_id)):
+    """Generate an LLM psychoanalysis of the user's Instagram aesthetic profile."""
+    settings = get_settings()
+
+    async with get_conn() as conn:
+        row = await conn.fetchrow(
+            "SELECT instagram_data FROM vibe_vectors WHERE user_id = $1",
+            user_id,
+        )
+
+    if not row or not row["instagram_data"]:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No Instagram data found")
+
+    data = row["instagram_data"]
+    profile = json.loads(data) if isinstance(data, str) else data
+
+    if not settings.openai_embed_key:
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="LLM not configured")
+
+    narrative = await _analyze_instagram_profile(settings.openai_embed_key, profile)
+    return {"narrative": narrative}
+
+
+async def _analyze_instagram_profile(api_key: str, profile: dict) -> str:
+    username = profile.get("username", "")
+    account_type = profile.get("account_type", "personal")
+    media_count = profile.get("media_count", 0)
+    media_types = profile.get("media_types", {})
+    types_str = ", ".join(f"{k}: {v}" for k, v in media_types.items())
+    avg_caption_len = profile.get("avg_caption_length", 0)
+    posts_per_week = profile.get("posts_per_week")
+    top_hashtags = ", ".join(profile.get("top_hashtags", [])[:10])
+    avg_likes = profile.get("avg_likes", 0)
+    avg_comments = profile.get("avg_comments", 0)
+    total_likes = profile.get("total_likes", 0)
+    total_comments = profile.get("total_comments", 0)
+
+    prompt = f"""You are a perceptive behavioral psychologist analyzing a person's Instagram data as a window into their curated vs authentic self and visual identity.
+Your task: write a sharp, warm, 2-3 paragraph psychoanalysis of this user's performance patterns and what their Instagram presence reveals about their inner life.
+Do not be clinical. Be insightful, specific, and draw connections between data points.
+
+SIGNAL DATA:
+- Username: {username}
+- Account type: {account_type}
+- Total media: {media_count}
+- Media type distribution: {types_str}
+- Posts per week: {posts_per_week or 'N/A'}
+- Average caption length: {avg_caption_len} chars
+- Top hashtags: {top_hashtags}
+- Average likes per post: {avg_likes} | Average comments: {avg_comments}
+- Total likes: {total_likes} | Total comments: {total_comments}
+
+Write 2-3 paragraphs analyzing:
+1. Curated vs authentic self — what media types, posting frequency, and caption length reveal about how carefully they construct their public image, the gap between the feed and the person
+2. Visual identity — what hashtag choices and content patterns reveal about the aesthetic world they want to inhabit, the tribe they're signaling to
+3. Performance patterns — what engagement metrics (likes, comments) reveal about their relationship with external validation, and how posting frequency maps to their need to be seen
+
+Be direct, specific, a little poetic. Avoid generic statements. Return only the narrative."""
+
+    headers = {
+        "Authorization": f"Bearer {api_key}",
+        "Content-Type": "application/json",
+    }
+    payload = {
+        "model": "gpt-4o-mini",
+        "max_tokens": 800,
+        "messages": [{"role": "user", "content": prompt}],
+    }
+    async with httpx.AsyncClient(timeout=60) as client:
+        resp = await client.post(
+            "https://api.openai.com/v1/chat/completions",
+            json=payload,
+            headers=headers,
+        )
+        if resp.status_code != 200:
+            raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail="LLM call failed")
+        return resp.json()["choices"][0]["message"]["content"]
+
+
 # ── Profile distillation ─────────────────────────────────────────────────────
 
 @router.get("/profile")

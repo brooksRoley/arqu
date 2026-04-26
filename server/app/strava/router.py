@@ -234,6 +234,87 @@ async def get_strava_profile(user_id: UUID = Depends(get_current_user_id)):
     return json.loads(data) if isinstance(data, str) else data
 
 
+# ── Psychoanalysis ────────────────────────────────────────────────────────────
+
+@router.get("/analyze")
+async def strava_analyze(user_id: UUID = Depends(get_current_user_id)):
+    """Generate an LLM psychoanalysis of the user's Strava somatic profile."""
+    settings = get_settings()
+
+    async with get_conn() as conn:
+        row = await conn.fetchrow(
+            "SELECT strava_data FROM vibe_vectors WHERE user_id = $1",
+            user_id,
+        )
+
+    if not row or not row["strava_data"]:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No Strava data found")
+
+    data = row["strava_data"]
+    profile = json.loads(data) if isinstance(data, str) else data
+
+    if not settings.openai_embed_key:
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="LLM not configured")
+
+    narrative = await _analyze_strava_profile(settings.openai_embed_key, profile)
+    return {"narrative": narrative}
+
+
+async def _analyze_strava_profile(api_key: str, profile: dict) -> str:
+    activity_types = profile.get("activity_types", {})
+    activities_str = ", ".join(f"{k}: {v}" for k, v in activity_types.items())
+    recent_count = profile.get("recent_count", 0)
+    total_elevation = profile.get("total_elevation_m", 0)
+    total_distance = profile.get("total_distance_km", 0)
+    total_hours = profile.get("total_moving_hours", 0)
+    avg_hr = profile.get("avg_heartrate")
+    max_hr = profile.get("max_heartrate")
+    all_runs = profile.get("all_time_runs", 0)
+    all_run_km = profile.get("all_time_run_distance_km", 0)
+    all_rides = profile.get("all_time_rides", 0)
+    all_ride_km = profile.get("all_time_ride_distance_km", 0)
+
+    prompt = f"""You are a perceptive behavioral psychologist analyzing a person's Strava athletic data as a window into their relationship with their body and discipline.
+Your task: write a sharp, warm, 2-3 paragraph psychoanalysis of this user's somatic patterns and what they reveal about their inner life.
+Do not be clinical. Be insightful, specific, and draw connections between data points.
+
+SIGNAL DATA:
+- Activity types (recent 30): {activities_str}
+- Recent activities: {recent_count}
+- Total elevation gain: {total_elevation}m
+- Total distance: {total_distance}km
+- Total moving time: {total_hours} hours
+- Avg heart rate: {avg_hr or 'N/A'} bpm | Max heart rate: {max_hr or 'N/A'} bpm
+- All-time runs: {all_runs} ({all_run_km}km)
+- All-time rides: {all_rides} ({all_ride_km}km)
+
+Write 2-3 paragraphs analyzing:
+1. Relationship with the body — what activity choices and volume reveal about how they inhabit their physical form, whether movement is escape or communion
+2. Discipline patterns — consistency, intensity preferences, competitive vs meditative tendencies
+3. What elevation, distance, and heart rate patterns reveal about their relationship with suffering, endurance, and self-imposed limits
+
+Be direct, specific, a little poetic. Avoid generic statements. Return only the narrative."""
+
+    headers = {
+        "Authorization": f"Bearer {api_key}",
+        "Content-Type": "application/json",
+    }
+    payload = {
+        "model": "gpt-4o-mini",
+        "max_tokens": 800,
+        "messages": [{"role": "user", "content": prompt}],
+    }
+    async with httpx.AsyncClient(timeout=60) as client:
+        resp = await client.post(
+            "https://api.openai.com/v1/chat/completions",
+            json=payload,
+            headers=headers,
+        )
+        if resp.status_code != 200:
+            raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail="LLM call failed")
+        return resp.json()["choices"][0]["message"]["content"]
+
+
 # ── Profile distillation ─────────────────────────────────────────────────────
 
 def _distill_profile(athlete: dict, activities: list[dict], stats: dict) -> dict:

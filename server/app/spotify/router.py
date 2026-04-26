@@ -336,6 +336,82 @@ def _distill_profile(artists: list[dict], features: list[dict], tracks: list[dic
     }
 
 
+@router.get("/analyze")
+async def spotify_analyze(user_id: UUID = Depends(get_current_user_id)):
+    """Generate an LLM psychoanalysis of the user's Spotify sonic profile."""
+    settings = get_settings()
+
+    async with get_conn() as conn:
+        row = await conn.fetchrow(
+            "SELECT spotify_data FROM vibe_vectors WHERE user_id = $1",
+            user_id,
+        )
+
+    if not row or not row["spotify_data"]:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No Spotify data found")
+
+    data = row["spotify_data"]
+    profile = json.loads(data) if isinstance(data, str) else data
+
+    if not settings.openai_embed_key:
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="LLM not configured")
+
+    narrative = await _analyze_spotify_profile(settings.openai_embed_key, profile)
+    return {"narrative": narrative}
+
+
+async def _analyze_spotify_profile(api_key: str, profile: dict) -> str:
+    artists = ", ".join(profile.get("top_artists", []))
+    genres = ", ".join(profile.get("genres", []))
+    avg = profile.get("audio_avg", {})
+    valence = avg.get("valence", 0)
+    danceability = avg.get("danceability", 0)
+    energy = avg.get("energy", 0)
+    acousticness = avg.get("acousticness", 0)
+    instrumentalness = avg.get("instrumentalness", 0)
+    tempo = avg.get("tempo", 0)
+
+    prompt = f"""You are a perceptive behavioral psychologist analyzing a person's Spotify listening data as a window into their inner life.
+Your task: write a sharp, warm, 2-3 paragraph psychoanalysis of this user's sonic identity and emotional palette.
+Do not be clinical. Be insightful, specific, and draw connections between data points.
+
+SIGNAL DATA:
+- Top artists: {artists}
+- Genres: {genres}
+- Average valence (emotional positivity): {valence:.3f}
+- Average danceability: {danceability:.3f}
+- Average energy: {energy:.3f}
+- Average acousticness: {acousticness:.3f}
+- Average instrumentalness: {instrumentalness:.3f}
+- Average tempo: {tempo:.1f} BPM
+
+Write 2-3 paragraphs analyzing:
+1. Sonic identity — what their artist and genre choices reveal about how they construct their emotional world
+2. Emotional palette — what valence, energy, and acousticness patterns reveal about their inner life, their relationship with stillness vs. intensity
+3. The tension between their public taste (artists) and their private emotional needs (audio features)
+
+Be direct, specific, a little poetic. Avoid generic statements. Return only the narrative."""
+
+    headers = {
+        "Authorization": f"Bearer {api_key}",
+        "Content-Type": "application/json",
+    }
+    payload = {
+        "model": "gpt-4o-mini",
+        "max_tokens": 800,
+        "messages": [{"role": "user", "content": prompt}],
+    }
+    async with httpx.AsyncClient(timeout=60) as client:
+        resp = await client.post(
+            "https://api.openai.com/v1/chat/completions",
+            json=payload,
+            headers=headers,
+        )
+        if resp.status_code != 200:
+            raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail="LLM call failed")
+        return resp.json()["choices"][0]["message"]["content"]
+
+
 def _build_embedding_text(profile: dict) -> str:
     """Convert Spotify profile to natural-language text for blending into embedding."""
     artists = ", ".join(profile.get("top_artists", []))

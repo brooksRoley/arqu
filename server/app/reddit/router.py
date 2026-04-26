@@ -252,6 +252,90 @@ async def reddit_callback(code: str, state: str):
     return JSONResponse({"status": "connected", "username": reddit_profile.get("username", "")})
 
 
+# ── Psychoanalysis ────────────────────────────────────────────────────────────
+
+@router.get("/analyze")
+async def reddit_analyze(user_id: UUID = Depends(get_current_user_id)):
+    """Generate an LLM psychoanalysis of the user's Reddit psychographic profile."""
+    settings = get_settings()
+
+    async with get_conn() as conn:
+        row = await conn.fetchrow(
+            "SELECT reddit_data FROM vibe_vectors WHERE user_id = $1",
+            user_id,
+        )
+
+    if not row or not row["reddit_data"]:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No Reddit data found")
+
+    data = row["reddit_data"]
+    profile = json.loads(data) if isinstance(data, str) else data
+
+    if not settings.openai_embed_key:
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="LLM not configured")
+
+    narrative = await _analyze_reddit_profile(settings.openai_embed_key, profile)
+    return {"narrative": narrative}
+
+
+async def _analyze_reddit_profile(api_key: str, profile: dict) -> str:
+    username = profile.get("username", "")
+    total_karma = profile.get("total_karma", 0)
+    link_karma = profile.get("link_karma", 0)
+    comment_karma = profile.get("comment_karma", 0)
+    karma_ratio = profile.get("comment_karma_ratio")
+    account_age = profile.get("account_age_days", 0)
+    top_subs = profile.get("top_subreddits", [])
+    top_subs_str = ", ".join(s.get("name", "") for s in top_subs[:15])
+    comment_subs = profile.get("comment_subreddits", [])
+    comment_subs_str = ", ".join(f'{s.get("name", "")}: {s.get("count", 0)}' for s in comment_subs[:10])
+    diversity = profile.get("subreddit_diversity", 0)
+    trophies = ", ".join(profile.get("trophies", []))
+    active_hours = profile.get("active_hours", {})
+    peak_hour = max(active_hours, key=active_hours.get) if active_hours else "N/A"
+
+    prompt = f"""You are a perceptive behavioral psychologist analyzing a person's Reddit data as a window into their anonymous self and hidden interests.
+Your task: write a sharp, warm, 2-3 paragraph psychoanalysis of this user's community belonging patterns and what their subreddit choices reveal about their inner life.
+Do not be clinical. Be insightful, specific, and draw connections between data points.
+
+SIGNAL DATA:
+- Username: {username}
+- Total karma: {total_karma} (link: {link_karma}, comment: {comment_karma})
+- Comment karma ratio: {karma_ratio or 'N/A'} (1.0 = pure commenter, 0.0 = pure poster)
+- Account age: {account_age} days
+- Subreddit diversity: {diversity} unique communities
+- Top subscribed subreddits: {top_subs_str}
+- Most active comment subreddits: {comment_subs_str}
+- Peak activity hour (UTC): {peak_hour}
+- Trophies: {trophies or 'none'}
+
+Write 2-3 paragraphs analyzing:
+1. The anonymous self — what subreddit subscriptions reveal about the interests, curiosities, and vulnerabilities they explore when nobody from their real life is watching
+2. Community belonging patterns — where they comment vs. where they lurk, what the gap between subscriptions and active participation reveals about their social needs
+3. The lurker-contributor spectrum — karma ratio, posting patterns, and what their relationship with Reddit reveals about their need for validation vs. voyeuristic consumption
+
+Be direct, specific, a little poetic. Avoid generic statements. Return only the narrative."""
+
+    headers = {
+        "Authorization": f"Bearer {api_key}",
+        "Content-Type": "application/json",
+    }
+    payload = {
+        "model": "gpt-4o-mini",
+        "max_tokens": 800,
+        "messages": [{"role": "user", "content": prompt}],
+    }
+    async with httpx.AsyncClient(timeout=60) as client:
+        resp = await client.post(
+            "https://api.openai.com/v1/chat/completions",
+            json=payload,
+            headers=headers,
+        )
+        if resp.status_code != 200:
+            raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail="LLM call failed")
+        return resp.json()["choices"][0]["message"]["content"]
+
+
 # ── Profile distillation ─────────────────────────────────────────────────────
 
 @router.get("/profile")

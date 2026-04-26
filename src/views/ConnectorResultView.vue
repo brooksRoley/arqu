@@ -1,0 +1,496 @@
+<template>
+  <div class="min-h-screen bg-gray-950 text-gray-100 relative">
+
+    <!-- Section 1: Hero — full-viewport physics canvas + title -->
+    <section
+      ref="heroRef"
+      class="relative h-screen w-full flex items-center justify-center overflow-hidden"
+    >
+      <canvas
+        ref="canvasRef"
+        class="absolute inset-0 w-full h-full transition-opacity duration-700"
+        :style="{ opacity: canvasOpacity }"
+      />
+      <div class="relative z-10 text-center pointer-events-none select-none">
+        <h1
+          class="text-6xl sm:text-7xl md:text-8xl font-black tracking-tight mb-3"
+          :style="{ color: cfg?.color }"
+        >{{ cfg?.label }}</h1>
+        <p class="text-lg sm:text-xl font-mono text-gray-400 tracking-widest uppercase">{{ cfg?.subtitle }}</p>
+      </div>
+      <!-- Scroll indicator -->
+      <div class="absolute bottom-8 left-1/2 -translate-x-1/2 z-10 flex flex-col items-center gap-2 opacity-60">
+        <span class="text-xs text-gray-500 uppercase tracking-widest">Scroll</span>
+        <div class="w-px h-8 bg-gradient-to-b from-gray-500 to-transparent animate-pulse" />
+      </div>
+    </section>
+
+    <!-- Section 2: The Read — LLM Narrative -->
+    <section class="relative max-w-3xl mx-auto px-6 py-24">
+      <h2 class="text-xs uppercase tracking-[0.3em] text-gray-600 mb-10 font-mono">The Read</h2>
+      <div v-if="narrativeLoading" class="space-y-4 animate-pulse">
+        <div class="h-4 bg-gray-800 rounded w-full" />
+        <div class="h-4 bg-gray-800 rounded w-5/6" />
+        <div class="h-4 bg-gray-800 rounded w-4/5" />
+        <div class="h-4 bg-gray-800 rounded w-full" />
+        <div class="h-4 bg-gray-800 rounded w-3/4" />
+      </div>
+      <div v-else-if="narrativeError" class="text-gray-600 font-mono text-sm">
+        Analysis not available yet. Connect more data to unlock your read.
+      </div>
+      <div v-else class="space-y-6">
+        <p
+          v-for="(para, i) in narrativeParagraphs"
+          :key="i"
+          ref="narrativeRefs"
+          class="text-gray-400 font-mono text-sm sm:text-base leading-relaxed opacity-0 transition-opacity duration-1000"
+          :class="{ 'opacity-100': visibleNarratives.has(i) }"
+        >{{ para }}</p>
+      </div>
+    </section>
+
+    <!-- Section 3: Signal Data — Structured Cards -->
+    <section class="relative max-w-4xl mx-auto px-6 py-24">
+      <h2 class="text-xs uppercase tracking-[0.3em] text-gray-600 mb-10 font-mono">Signal Data</h2>
+
+      <div v-if="profileLoading" class="grid grid-cols-2 sm:grid-cols-3 gap-6">
+        <div v-for="n in 4" :key="n" class="bg-gray-900 rounded-2xl p-6 animate-pulse">
+          <div class="h-8 bg-gray-800 rounded w-1/2 mb-3" />
+          <div class="h-4 bg-gray-800 rounded w-3/4" />
+        </div>
+      </div>
+
+      <div v-else-if="profile" class="space-y-12">
+        <!-- Hero stats — large number cards -->
+        <div v-if="cfg?.heroStats.length" class="grid grid-cols-2 sm:grid-cols-3 gap-6">
+          <div
+            v-for="(stat, i) in cfg.heroStats"
+            :key="stat.field"
+            ref="statCardRefs"
+            class="bg-gray-900/80 border border-gray-800 rounded-2xl p-6 opacity-0 translate-y-4 transition-all duration-700"
+            :class="{ 'opacity-100 translate-y-0': visibleStats.has(i) }"
+          >
+            <div
+              class="text-3xl sm:text-4xl font-black tabular-nums"
+              :style="{ color: cfg.color }"
+            >{{ animatedStatValues[i] ?? formatStat(resolveField(profile, stat.field), stat.format) }}</div>
+            <div class="text-xs text-gray-500 uppercase tracking-wider mt-2">{{ stat.label }}</div>
+            <!-- Bar for 0-1 values -->
+            <div
+              v-if="stat.format === 'percent' && isNormalized(resolveField(profile, stat.field))"
+              class="mt-3 w-full bg-gray-800 rounded-full h-1.5"
+            >
+              <div
+                class="h-1.5 rounded-full transition-all duration-1000"
+                :style="{ width: (Number(resolveField(profile, stat.field)) * 100) + '%', backgroundColor: cfg.color }"
+              />
+            </div>
+          </div>
+        </div>
+
+        <!-- Tag fields — pill lists -->
+        <div v-for="tf in cfg?.tagFields" :key="tf.field" class="space-y-3">
+          <p class="text-xs text-gray-500 uppercase tracking-wider font-mono">{{ tf.label }}</p>
+          <div class="flex flex-wrap gap-2">
+            <template v-if="Array.isArray(resolveField(profile, tf.field))">
+              <span
+                v-for="tag in (resolveField(profile, tf.field) as string[]).slice(0, 12)"
+                :key="String(tag)"
+                class="text-xs px-3 py-1.5 rounded-full border font-mono"
+                :style="{
+                  borderColor: cfg!.color + '60',
+                  backgroundColor: cfg!.color + '18',
+                  color: cfg!.color,
+                }"
+              >{{ tag }}</span>
+            </template>
+            <template v-else-if="typeof resolveField(profile, tf.field) === 'object' && resolveField(profile, tf.field) != null">
+              <span
+                v-for="(val, key) in (resolveField(profile, tf.field) as Record<string, unknown>)"
+                :key="String(key)"
+                class="text-xs px-3 py-1.5 rounded-full border font-mono"
+                :style="{
+                  borderColor: cfg!.color + '60',
+                  backgroundColor: cfg!.color + '18',
+                  color: cfg!.color,
+                }"
+              >{{ key }}: {{ val }}</span>
+            </template>
+            <template v-else-if="resolveField(profile, tf.field) != null">
+              <span
+                class="text-sm font-mono"
+                :style="{ color: cfg!.color }"
+              >{{ resolveField(profile, tf.field) }}</span>
+            </template>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Section 4: Raw Signal — Pretty JSON -->
+    <section class="relative max-w-4xl mx-auto px-6 py-16">
+      <button
+        @click="rawExpanded = !rawExpanded"
+        class="flex items-center gap-3 text-xs uppercase tracking-[0.3em] text-gray-600 font-mono hover:text-gray-400 transition-colors"
+      >
+        <span class="transform transition-transform duration-300" :class="rawExpanded ? 'rotate-90' : ''">&#9654;</span>
+        Raw Signal
+      </button>
+      <div
+        v-if="rawExpanded && profile"
+        class="mt-6 bg-gray-900/60 border border-gray-800 rounded-2xl p-6 overflow-x-auto"
+      >
+        <pre class="text-xs font-mono leading-relaxed"><code v-html="syntaxHighlight(profile)" /></pre>
+      </div>
+    </section>
+
+    <!-- Section 5: Cross-Signal Correlations -->
+    <section class="relative max-w-4xl mx-auto px-6 py-24 pb-32">
+      <h2 class="text-xs uppercase tracking-[0.3em] text-gray-600 mb-10 font-mono">Cross-Signal Correlations</h2>
+
+      <div v-if="correlationsLoading" class="space-y-4 animate-pulse">
+        <div class="h-20 bg-gray-900 rounded-2xl" />
+        <div class="h-20 bg-gray-900 rounded-2xl" />
+      </div>
+
+      <div v-else-if="!correlations.length" class="text-center py-12">
+        <p class="text-gray-600 font-mono text-sm">Connect more services to see correlations.</p>
+      </div>
+
+      <div v-else class="space-y-4">
+        <div
+          v-for="(corr, i) in correlations"
+          :key="i"
+          class="bg-gray-900/60 border border-gray-800 rounded-2xl p-5 flex flex-col sm:flex-row sm:items-center gap-4"
+        >
+          <div class="flex items-center gap-2">
+            <span
+              class="text-xs font-bold px-2.5 py-1 rounded-full"
+              :style="{ backgroundColor: providerColor(corr.source.provider) + '20', color: providerColor(corr.source.provider) }"
+            >{{ corr.source.label || corr.source.provider }}</span>
+            <span class="text-gray-600 text-xs font-mono">{{ corr.source.field }}: {{ corr.source.value }}</span>
+          </div>
+
+          <span class="text-gray-700 text-lg hidden sm:block">&#8596;</span>
+
+          <div class="flex items-center gap-2">
+            <span
+              class="text-xs font-bold px-2.5 py-1 rounded-full"
+              :style="{ backgroundColor: providerColor(corr.target.provider) + '20', color: providerColor(corr.target.provider) }"
+            >{{ corr.target.label || corr.target.provider }}</span>
+            <span class="text-gray-600 text-xs font-mono">{{ corr.target.field }}: {{ corr.target.value }}</span>
+          </div>
+
+          <p v-if="corr.explanation" class="text-xs text-gray-500 sm:ml-auto max-w-xs">{{ corr.explanation }}</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Back to calibrate link -->
+    <div class="fixed bottom-6 left-6 z-20">
+      <router-link
+        to="/calibrate"
+        class="text-xs font-mono text-gray-600 hover:text-gray-400 transition-colors flex items-center gap-1"
+      >
+        &#8592; Calibrate
+      </router-link>
+    </div>
+  </div>
+</template>
+
+<script setup lang="ts">
+import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
+import { useAuthStore } from '@/composables/useAuthStore'
+import { useVibeStore } from '@/composables/useVibeStore'
+import { connectorConfigs, resolveField, profileEndpoint, analyzeEndpoint } from '@/config/connectorConfig'
+import type { ProviderConfig } from '@/config/connectorConfig'
+import type { OAuthState } from '@/composables/useVibeStore'
+import { useCosmicPhysics, type OrbDef } from '@/composables/useCosmicPhysics'
+
+const route = useRoute()
+const router = useRouter()
+const { apiFetch } = useAuthStore()
+const { oauthState } = useVibeStore()
+
+// ── Provider resolution ──────────────────────────────────────────────────────
+const provider = computed(() => route.params.provider as string)
+const cfg = computed<ProviderConfig | undefined>(() => connectorConfigs[provider.value])
+
+// ── Redirect guard ───────────────────────────────────────────────────────────
+watch(provider, (p) => {
+  if (!p || !connectorConfigs[p]) {
+    router.replace('/calibrate')
+    return
+  }
+  const state = oauthState.value[p as keyof OAuthState]
+  if (!state?.connected) {
+    router.replace('/calibrate')
+  }
+}, { immediate: true })
+
+// ── Physics ──────────────────────────────────────────────────────────────────
+const canvasRef = ref<HTMLCanvasElement>()
+const heroRef = ref<HTMLElement>()
+const canvasOpacity = ref(1)
+
+function hexToOrbDefs(hex: string): OrbDef[] {
+  const r = parseInt(hex.slice(1, 3), 16)
+  const g = parseInt(hex.slice(3, 5), 16)
+  const b = parseInt(hex.slice(5, 7), 16)
+  return [
+    { r, g, b },
+    { r: Math.max(0, r - 40), g: Math.max(0, g - 20), b: Math.min(255, b + 30) },
+    { r: Math.min(255, r + 30), g: Math.max(0, g - 30), b: Math.max(0, b - 20) },
+    { r: Math.max(0, r - 20), g: Math.min(255, g + 40), b: Math.min(255, b + 20) },
+  ]
+}
+
+let cosmicHandle: ReturnType<typeof useCosmicPhysics> | null = null
+
+// ── Profile data ─────────────────────────────────────────────────────────────
+const profile = ref<Record<string, unknown> | null>(null)
+const profileLoading = ref(false)
+
+// ── Narrative ────────────────────────────────────────────────────────────────
+const narrative = ref('')
+const narrativeLoading = ref(false)
+const narrativeError = ref(false)
+const narrativeParagraphs = computed(() =>
+  narrative.value.split(/\n\n+/).filter(p => p.trim())
+)
+const narrativeRefs = ref<HTMLElement[]>([])
+const visibleNarratives = ref(new Set<number>())
+
+// ── Stats animation ──────────────────────────────────────────────────────────
+const statCardRefs = ref<HTMLElement[]>([])
+const visibleStats = ref(new Set<number>())
+const animatedStatValues = ref<Record<number, string>>({})
+
+// ── Raw JSON ─────────────────────────────────────────────────────────────────
+const rawExpanded = ref(false)
+
+// ── Correlations ─────────────────────────────────────────────────────────────
+interface CorrelationEndpoint {
+  provider: string
+  field: string
+  value: unknown
+  label: string
+}
+interface Correlation {
+  source: CorrelationEndpoint
+  target: CorrelationEndpoint
+  explanation: string
+}
+const correlations = ref<Correlation[]>([])
+const correlationsLoading = ref(false)
+
+// ── Helpers ──────────────────────────────────────────────────────────────────
+function isNormalized(val: unknown): boolean {
+  return typeof val === 'number' && val >= 0 && val <= 1
+}
+
+function formatStat(val: unknown, format: 'decimal' | 'integer' | 'percent'): string {
+  if (val == null) return '--'
+  const n = Number(val)
+  if (isNaN(n)) return String(val)
+  if (format === 'percent') return isNormalized(val) ? (n * 100).toFixed(0) + '%' : n.toFixed(0) + '%'
+  if (format === 'integer') return Math.round(n).toLocaleString()
+  return n.toLocaleString(undefined, { maximumFractionDigits: 2 })
+}
+
+function providerColor(p: string): string {
+  return connectorConfigs[p]?.color ?? '#888'
+}
+
+function syntaxHighlight(obj: unknown): string {
+  const json = JSON.stringify(obj, null, 2)
+  return json.replace(
+    /("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+-]?\d+)?)/g,
+    (match) => {
+      let cls = 'text-amber-400' // number
+      if (/^"/.test(match)) {
+        cls = /:$/.test(match) ? 'text-purple-400' : 'text-green-400' // key : string
+      } else if (/true|false/.test(match)) {
+        cls = 'text-blue-400'
+      } else if (/null/.test(match)) {
+        cls = 'text-gray-600'
+      }
+      return `<span class="${cls}">${match}</span>`
+    }
+  )
+}
+
+// ── Animate count-up ─────────────────────────────────────────────────────────
+function animateCountUp(index: number, targetVal: unknown, format: 'decimal' | 'integer' | 'percent') {
+  const n = Number(targetVal)
+  if (isNaN(n) || targetVal == null) {
+    animatedStatValues.value[index] = formatStat(targetVal, format)
+    return
+  }
+  const duration = 1200
+  const start = performance.now()
+  function tick(now: number) {
+    const elapsed = now - start
+    const progress = Math.min(elapsed / duration, 1)
+    const eased = 1 - Math.pow(1 - progress, 3) // ease-out cubic
+    const current = n * eased
+    if (format === 'percent' && isNormalized(targetVal)) {
+      animatedStatValues.value[index] = (current * 100).toFixed(0) + '%'
+    } else if (format === 'integer') {
+      animatedStatValues.value[index] = Math.round(current).toLocaleString()
+    } else {
+      animatedStatValues.value[index] = current.toLocaleString(undefined, { maximumFractionDigits: 2 })
+    }
+    if (progress < 1) requestAnimationFrame(tick)
+  }
+  requestAnimationFrame(tick)
+}
+
+// ── Intersection observers ───────────────────────────────────────────────────
+let narrativeObserver: IntersectionObserver | null = null
+let statObserver: IntersectionObserver | null = null
+
+function setupObservers() {
+  // Narrative paragraphs
+  narrativeObserver = new IntersectionObserver(
+    (entries) => {
+      for (const entry of entries) {
+        if (entry.isIntersecting) {
+          const idx = narrativeRefs.value.indexOf(entry.target as HTMLElement)
+          if (idx >= 0) visibleNarratives.value.add(idx)
+        }
+      }
+    },
+    { threshold: 0.2 }
+  )
+
+  // Stat cards
+  statObserver = new IntersectionObserver(
+    (entries) => {
+      for (const entry of entries) {
+        if (entry.isIntersecting) {
+          const idx = statCardRefs.value.indexOf(entry.target as HTMLElement)
+          if (idx >= 0 && !visibleStats.value.has(idx)) {
+            visibleStats.value.add(idx)
+            // Trigger count-up animation
+            const c = cfg.value
+            if (c && profile.value) {
+              const stat = c.heroStats[idx]
+              if (stat) animateCountUp(idx, resolveField(profile.value, stat.field), stat.format)
+            }
+          }
+        }
+      }
+    },
+    { threshold: 0.3 }
+  )
+}
+
+function observeElements() {
+  nextTick(() => {
+    if (narrativeObserver) {
+      for (const el of narrativeRefs.value) {
+        if (el) narrativeObserver.observe(el)
+      }
+    }
+    if (statObserver) {
+      for (const el of statCardRefs.value) {
+        if (el) statObserver.observe(el)
+      }
+    }
+  })
+}
+
+// ── Scroll parallax ──────────────────────────────────────────────────────────
+function onScroll() {
+  if (!heroRef.value) return
+  const rect = heroRef.value.getBoundingClientRect()
+  const scrolled = -rect.top / rect.height
+  canvasOpacity.value = Math.max(0.15, 1 - scrolled * 1.2)
+}
+
+// ── Data fetching ────────────────────────────────────────────────────────────
+async function fetchProfile() {
+  if (!provider.value || !cfg.value) return
+  profileLoading.value = true
+  try {
+    profile.value = await apiFetch<Record<string, unknown>>(profileEndpoint(provider.value))
+  } catch {
+    profile.value = null
+  }
+  profileLoading.value = false
+}
+
+async function fetchNarrative() {
+  if (!provider.value || !cfg.value) return
+  narrativeLoading.value = true
+  narrativeError.value = false
+  try {
+    const data = await apiFetch<{ narrative: string }>(analyzeEndpoint(provider.value))
+    narrative.value = data.narrative || ''
+  } catch {
+    narrativeError.value = true
+  }
+  narrativeLoading.value = false
+}
+
+async function fetchCorrelations() {
+  if (!provider.value) return
+  correlationsLoading.value = true
+  try {
+    const data = await apiFetch<Correlation[]>(
+      `/api/connectors/correlations?provider=${provider.value}`
+    )
+    correlations.value = Array.isArray(data) ? data : []
+  } catch {
+    correlations.value = []
+  }
+  correlationsLoading.value = false
+}
+
+// ── Lifecycle ────────────────────────────────────────────────────────────────
+onMounted(async () => {
+  window.addEventListener('scroll', onScroll, { passive: true })
+  setupObservers()
+
+  // Init physics canvas
+  if (canvasRef.value && cfg.value) {
+    const orbDefs = hexToOrbDefs(cfg.value.color)
+    cosmicHandle = useCosmicPhysics(canvasRef, {
+      orbDefs,
+      particleCount: 180,
+      starCount: 120,
+      enableKeyboard: false,
+      enableMouseInteract: true,
+      clearAlpha: 0.08,
+      mouseAttractForce: 0.6,
+    })
+    await cosmicHandle.init()
+  }
+
+  // Fetch all data
+  await fetchProfile()
+  fetchNarrative()
+  fetchCorrelations()
+
+  // After profile loads, observe stat cards and narrative paragraphs
+  observeElements()
+})
+
+// Re-observe when narrativeParagraphs change
+watch(narrativeParagraphs, () => {
+  nextTick(() => observeElements())
+})
+
+watch(profile, () => {
+  nextTick(() => observeElements())
+})
+
+onUnmounted(() => {
+  window.removeEventListener('scroll', onScroll)
+  cosmicHandle?.destroy()
+  narrativeObserver?.disconnect()
+  statObserver?.disconnect()
+})
+</script>

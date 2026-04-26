@@ -244,6 +244,85 @@ async def youtube_callback(code: str, state: str):
     return RedirectResponse(f"{frontend}/calibrate?youtube=connected")
 
 
+# ── Psychoanalysis ────────────────────────────────────────────────────────────
+
+@router.get("/analyze")
+async def youtube_analyze(user_id: UUID = Depends(get_current_user_id)):
+    """Generate an LLM psychoanalysis of the user's YouTube attention profile."""
+    settings = get_settings()
+
+    async with get_conn() as conn:
+        row = await conn.fetchrow(
+            "SELECT youtube_data FROM vibe_vectors WHERE user_id = $1",
+            user_id,
+        )
+
+    if not row or not row["youtube_data"]:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No YouTube data found")
+
+    data = row["youtube_data"]
+    profile = json.loads(data) if isinstance(data, str) else data
+
+    if not settings.openai_embed_key:
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="LLM not configured")
+
+    narrative = await _analyze_youtube_profile(settings.openai_embed_key, profile)
+    return {"narrative": narrative}
+
+
+async def _analyze_youtube_profile(api_key: str, profile: dict) -> str:
+    channel_name = profile.get("channel_name", "")
+    channel_desc = profile.get("channel_description", "")
+    subscriber_count = profile.get("subscriber_count", 0)
+    video_count = profile.get("video_count", 0)
+    view_count = profile.get("view_count", 0)
+    top_subs = ", ".join(profile.get("top_subscriptions", [])[:15])
+    sub_cats = profile.get("subscription_categories", {})
+    cats_str = ", ".join(f"{k}: {v}" for k, v in sub_cats.items())
+    total_subs = profile.get("total_subscriptions", 0)
+    liked_count = profile.get("liked_videos_count", 0)
+    sub_diversity = profile.get("subscription_diversity", 0)
+
+    prompt = f"""You are a perceptive behavioral psychologist analyzing a person's YouTube data as a window into their attention patterns and aspirations.
+Your task: write a sharp, warm, 2-3 paragraph psychoanalysis of this user's consumption habits and what their subscription choices reveal about their inner life.
+Do not be clinical. Be insightful, specific, and draw connections between data points.
+
+SIGNAL DATA:
+- Channel name: "{channel_name}"
+- Channel description: "{channel_desc[:200]}"
+- Subscribers: {subscriber_count} | Videos uploaded: {video_count} | Total views: {view_count}
+- Total subscriptions: {total_subs} | Subscription diversity: {sub_diversity} unique channels
+- Top subscriptions: {top_subs}
+- Subscription categories: {cats_str}
+- Liked videos: {liked_count}
+
+Write 2-3 paragraphs analyzing:
+1. Attention patterns — what subscription choices and categories reveal about where they direct their finite attention, what they're hungry for, what they're avoiding
+2. Consumption vs creation — the ratio of videos uploaded to subscriptions and likes as a signal of passive vs active engagement with the world
+3. Aspirational self — what their subscription list reveals about who they want to become, what skills they're acquiring by osmosis, what communities they orbit
+
+Be direct, specific, a little poetic. Avoid generic statements. Return only the narrative."""
+
+    headers = {
+        "Authorization": f"Bearer {api_key}",
+        "Content-Type": "application/json",
+    }
+    payload = {
+        "model": "gpt-4o-mini",
+        "max_tokens": 800,
+        "messages": [{"role": "user", "content": prompt}],
+    }
+    async with httpx.AsyncClient(timeout=60) as client:
+        resp = await client.post(
+            "https://api.openai.com/v1/chat/completions",
+            json=payload,
+            headers=headers,
+        )
+        if resp.status_code != 200:
+            raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail="LLM call failed")
+        return resp.json()["choices"][0]["message"]["content"]
+
+
 # ── Profile distillation ─────────────────────────────────────────────────────
 
 @router.get("/profile")

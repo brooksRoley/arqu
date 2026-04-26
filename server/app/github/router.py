@@ -223,6 +223,93 @@ async def github_callback(code: str, state: str):
     return JSONResponse({"status": "connected", "username": github_profile.get("username", "")})
 
 
+# ── Psychoanalysis ────────────────────────────────────────────────────────────
+
+@router.get("/analyze")
+async def github_analyze(user_id: UUID = Depends(get_current_user_id)):
+    """Generate an LLM psychoanalysis of the user's GitHub developer profile."""
+    settings = get_settings()
+
+    async with get_conn() as conn:
+        row = await conn.fetchrow(
+            "SELECT github_data FROM vibe_vectors WHERE user_id = $1",
+            user_id,
+        )
+
+    if not row or not row["github_data"]:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No GitHub data found")
+
+    data = row["github_data"]
+    profile = json.loads(data) if isinstance(data, str) else data
+
+    if not settings.openai_embed_key:
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="LLM not configured")
+
+    narrative = await _analyze_github_profile(settings.openai_embed_key, profile)
+    return {"narrative": narrative}
+
+
+async def _analyze_github_profile(api_key: str, profile: dict) -> str:
+    username = profile.get("username", "")
+    bio = profile.get("bio", "")
+    company = profile.get("company", "")
+    public_repos = profile.get("public_repos", 0)
+    followers = profile.get("followers", 0)
+    following = profile.get("following", 0)
+    top_langs = ", ".join(profile.get("top_languages", []))
+    stars_given = profile.get("stars_given", 0)
+    repos_owned = profile.get("repos_owned", 0)
+    repos_forked = profile.get("repos_forked", 0)
+    owned_to_forked = profile.get("owned_to_forked_ratio", 0)
+    age = profile.get("account_age_years")
+    topics = ", ".join(profile.get("topics", [])[:20])
+    descriptions = profile.get("repo_descriptions", [])
+    desc_text = "\n".join(f'- "{d}"' for d in descriptions[:10]) if descriptions else "(unavailable)"
+
+    prompt = f"""You are a perceptive behavioral psychologist analyzing a person's GitHub profile as a window into their builder identity and creative patterns.
+Your task: write a sharp, warm, 2-3 paragraph psychoanalysis of this user's developer psychology and what their code reveals about their thought patterns.
+Do not be clinical. Be insightful, specific, and draw connections between data points.
+
+SIGNAL DATA:
+- Username: {username}
+- Bio: "{bio}"
+- Company: "{company}"
+- Public repos: {public_repos} | Followers: {followers} | Following: {following}
+- Top languages: {top_langs}
+- Stars given (curiosity signal): {stars_given}
+- Repos owned: {repos_owned} | Repos forked: {repos_forked} | Owned/forked ratio: {owned_to_forked}
+- Account age: {age} years
+- Topics/interests: {topics}
+- Repo descriptions:
+{desc_text}
+
+Write 2-3 paragraphs analyzing:
+1. Builder identity — what language choices, repo descriptions, and topics reveal about how they think, what problems attract them, their aesthetic sensibility in code
+2. Creative patterns — solo vs collaborative tendencies (owned vs forked ratio), curiosity breadth (stars given), and what their GitHub presence says about their relationship with making things
+3. Social positioning in the developer world — followers, following, bio as identity performance, and what the gap between public repos and stars reveals about recognition needs
+
+Be direct, specific, a little poetic. Avoid generic statements. Return only the narrative."""
+
+    headers = {
+        "Authorization": f"Bearer {api_key}",
+        "Content-Type": "application/json",
+    }
+    payload = {
+        "model": "gpt-4o-mini",
+        "max_tokens": 800,
+        "messages": [{"role": "user", "content": prompt}],
+    }
+    async with httpx.AsyncClient(timeout=60) as client:
+        resp = await client.post(
+            "https://api.openai.com/v1/chat/completions",
+            json=payload,
+            headers=headers,
+        )
+        if resp.status_code != 200:
+            raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail="LLM call failed")
+        return resp.json()["choices"][0]["message"]["content"]
+
+
 # -- Profile endpoint ----------------------------------------------------------
 
 @router.get("/profile")
