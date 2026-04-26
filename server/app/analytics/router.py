@@ -145,7 +145,13 @@ async def admin_users(
                 (vv.gcal_data        IS NOT NULL) AS has_gcal,
                 (vv.costar_data      IS NOT NULL) AS has_costar,
                 (vv.letterboxd_data  IS NOT NULL) AS has_letterboxd,
-                (vv.steam_data       IS NOT NULL) AS has_steam
+                (vv.steam_data       IS NOT NULL) AS has_steam,
+                (vv.github_data      IS NOT NULL) AS has_github,
+                (vv.youtube_data     IS NOT NULL) AS has_youtube,
+                (vv.reddit_data      IS NOT NULL) AS has_reddit,
+                (vv.instagram_data   IS NOT NULL) AS has_instagram,
+                (vv.tiktok_data      IS NOT NULL) AS has_tiktok,
+                (vv.strava_data      IS NOT NULL) AS has_strava
 
             FROM users u
             LEFT JOIN vibe_vectors vv ON vv.user_id = u.id
@@ -552,3 +558,59 @@ async def admin_psychometrics(
         })
 
     return {"total": total, "page": page, "per_page": per_page, "profiles": profiles}
+
+
+# ── Admin: per-user connector data detail ────────────────────────────────────
+
+@router.get("/users/{user_id}/connectors")
+async def admin_user_connectors(
+    user_id: str,
+    _: UUID = Depends(require_admin),
+):
+    """Return all connector JSONB data for a specific user. Admin only."""
+    async with get_conn() as conn:
+        row = await conn.fetchrow(
+            """
+            SELECT
+                vv.spotify_data,
+                vv.twitter_data,
+                vv.strava_data,
+                vv.gcal_data,
+                vv.costar_data,
+                vv.letterboxd_data,
+                vv.steam_data,
+                vv.github_data,
+                vv.youtube_data,
+                vv.reddit_data,
+                vv.instagram_data,
+                vv.tiktok_data
+            FROM vibe_vectors vv
+            WHERE vv.user_id = $1
+            """,
+            user_id,
+        )
+
+    if not row:
+        return {"connectors": {}}
+
+    def parse(val):
+        if val is None:
+            return None
+        return json.loads(val) if isinstance(val, str) else val
+
+    return {
+        "connectors": {
+            "spotify": parse(row["spotify_data"]),
+            "twitter": parse(row["twitter_data"]),
+            "strava": parse(row["strava_data"]),
+            "gcal": parse(row["gcal_data"]),
+            "costar": parse(row["costar_data"]),
+            "letterboxd": parse(row["letterboxd_data"]),
+            "steam": parse(row["steam_data"]),
+            "github": parse(row["github_data"]),
+            "youtube": parse(row["youtube_data"]),
+            "reddit": parse(row["reddit_data"]),
+            "instagram": parse(row["instagram_data"]),
+            "tiktok": parse(row["tiktok_data"]),
+        }
+    }

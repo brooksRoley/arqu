@@ -2,11 +2,25 @@
 import { ref, onMounted, onUnmounted, watch } from 'vue'
 import { useTextOverlay } from '@/composables/useTextOverlay'
 import { useCosmicPhysics } from '@/composables/useCosmicPhysics'
+import { useTranceEngine } from '@/composables/useTranceEngine'
+import PostTranceOverlay from '@/components/PostTranceOverlay.vue'
 
 const {
   displayText, displayLabel, isVisible,
   isReaderMode, readerProgress, isPlaying, toggleOrSkip
 } = useTextOverlay()
+
+const { completedSession, clearCompletedSession } = useTranceEngine()
+const showOverlay = ref(false)
+
+watch(completedSession, (data) => {
+  if (data) showOverlay.value = true
+})
+
+function handleOverlayClose() {
+  showOverlay.value = false
+  clearCompletedSession()
+}
 
 // ── CDN loader (for Tone.js only — Matter.js loaded by composable) ──
 function loadScript(src: string): Promise<void> {
@@ -165,6 +179,15 @@ onUnmounted(() => {
     <div v-if="audioOn" class="focus-meter">
       <div class="focus-fill" :style="{ height: `${adapt.focus * 100}%` }" />
     </div>
+
+    <PostTranceOverlay
+      v-if="showOverlay && completedSession"
+      :coherence="completedSession.coherence"
+      :sync-count="completedSession.syncCount"
+      :session-duration="completedSession.sessionDurationMs"
+      :dominant-phase="completedSession.dominantPhase"
+      @close="handleOverlayClose"
+    />
   </div>
 </template>
 

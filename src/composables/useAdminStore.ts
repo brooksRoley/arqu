@@ -30,6 +30,12 @@ export interface AdminUser {
   has_costar: boolean
   has_letterboxd: boolean
   has_steam: boolean
+  has_github: boolean
+  has_youtube: boolean
+  has_reddit: boolean
+  has_instagram: boolean
+  has_tiktok: boolean
+  has_strava: boolean
 }
 
 export interface FunnelStep {
@@ -219,6 +225,14 @@ async function fetchConnectorDepth() {
   } catch (e: any) { error.value = e.message }
 }
 
+async function fetchUserConnectors(userId: string): Promise<Record<string, any>> {
+  const { apiFetch } = useAuthStore()
+  const data = await apiFetch<{ connectors: Record<string, any> }>(
+    `/api/analytics/users/${userId}/connectors`
+  )
+  return data.connectors
+}
+
 async function submitConnectorFeedback(provider: string, rating: number, tags: string[]) {
   const { apiFetch } = useAuthStore()
   await apiFetch('/api/analytics/feedback/connector', {
@@ -270,6 +284,7 @@ export function useAdminStore() {
     fetchArchetypes,
     fetchAttachmentStyles,
     fetchConnectorDepth,
+    fetchUserConnectors,
     submitConnectorFeedback,
     logEvent,
   }

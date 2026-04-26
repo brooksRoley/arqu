@@ -216,6 +216,29 @@ async def submit_microdose(
             )
 
 
+@router.get("/progress")
+async def get_progress(user_id: UUID = Depends(get_current_user_id)):
+    """Return all answered psychometric item IDs, values, and whether they came from microdose (trance)."""
+    pool = get_pool()
+    async with pool.acquire() as conn:
+        rows = await conn.fetch(
+            "SELECT item_id, value, connector_context FROM psychometric_responses WHERE user_id = $1",
+            str(user_id),
+        )
+    answered = {
+        r["item_id"]: {
+            "value": r["value"],
+            "from_trance": r["connector_context"] is not None,
+        }
+        for r in rows
+    }
+    return {
+        "answered": answered,
+        "total": len(CORE_POOL),
+        "completed": len(answered),
+    }
+
+
 @router.get("/next-item")
 async def get_next_psychometric_item(
     connector: str | None = None,

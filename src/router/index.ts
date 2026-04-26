@@ -244,6 +244,14 @@ const router = createRouter({
       meta: { requiresAuth: true }
     },
 
+    // ── Strava somatic ledger ──────────────────────────────────────────────
+    {
+      path: '/strava',
+      name: 'strava',
+      component: () => import('@/views/StravaView.vue'),
+      meta: { requiresAuth: true }
+    },
+
     // ── Fitting ritual + Match reveal ─────────────────────────────────────
     {
       path: '/fitting/:matchId',

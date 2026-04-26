@@ -1,8 +1,10 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, watch } from 'vue'
 import { useAnimationCanvas, type AnimationContext } from '@/composables/useAnimationCanvas'
 import { useTextOverlay } from '@/composables/useTextOverlay'
 import { categories } from '@/composables/useTranceCategories'
+import { useTranceEngine } from '@/composables/useTranceEngine'
+import PostTranceOverlay from '@/components/PostTranceOverlay.vue'
 
 const canvasRef = ref<HTMLCanvasElement>()
 const {
@@ -15,6 +17,18 @@ const {
   isPlaying,
   toggleOrSkip
 } = useTextOverlay()
+
+const { completedSession, clearCompletedSession } = useTranceEngine()
+const showOverlay = ref(false)
+
+watch(completedSession, (data) => {
+  if (data) showOverlay.value = true
+})
+
+function handleOverlayClose() {
+  showOverlay.value = false
+  clearCompletedSession()
+}
 
 // Map category keys to spiral color tints
 const catColorMap: Record<string, [number, number, number]> = {
@@ -129,6 +143,15 @@ useAnimationCanvas(canvasRef, {
       <span class="reader-dot" :class="{ active: isPlaying }" />
       {{ isPlaying ? 'reading' : 'paused' }}
     </div>
+
+    <PostTranceOverlay
+      v-if="showOverlay && completedSession"
+      :coherence="completedSession.coherence"
+      :sync-count="completedSession.syncCount"
+      :session-duration="completedSession.sessionDurationMs"
+      :dominant-phase="completedSession.dominantPhase"
+      @close="handleOverlayClose"
+    />
   </div>
 </template>
 
