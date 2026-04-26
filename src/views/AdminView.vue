@@ -386,7 +386,7 @@
                           <div v-for="(val, key) in expandedData.spotify.audio_avg" :key="key" class="flex items-center gap-2">
                             <span class="text-[10px] text-gray-500 w-20 capitalize">{{ key }}</span>
                             <div class="flex-1 h-1 bg-gray-800 rounded-full">
-                              <div class="h-1 bg-green-500/60 rounded-full" :style="{ width: `${Math.min(key === 'tempo' ? Number(val) / 200 * 100 : Number(val) * 100, 100)}%` }"></div>
+                              <div class="h-1 bg-green-500/60 rounded-full" :style="{ width: `${Math.min(String(key) === 'tempo' ? Number(val) / 200 * 100 : Number(val) * 100, 100)}%` }"></div>
                             </div>
                             <span class="text-[10px] text-gray-500 w-8 text-right">{{ typeof val === 'number' ? val.toFixed(2) : val }}</span>
                           </div>
