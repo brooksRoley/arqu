@@ -112,6 +112,62 @@ def create_app() -> FastAPI:
     async def health():
         return {"status": "ok", "service": "channelzero-api"}
 
+    @app.get("/api/health/embeddings")
+    async def health_embeddings():
+        """
+        Diagnostic: test OpenAI embed key + Pinecone connectivity.
+        Returns status, latency, and error details for each dependency.
+        """
+        import time
+        import httpx
+        from .vector.service import _get_index_sync, EMBEDDING_MODEL
+
+        result: dict = {"openai": {"status": "unknown"}, "pinecone": {"status": "unknown"}}
+
+        # ── OpenAI embed key check ──
+        embed_key = settings.openai_embed_key
+        if not embed_key:
+            result["openai"] = {"status": "error", "error": "OPENAI_EMBED_KEY not configured"}
+        else:
+            t0 = time.monotonic()
+            try:
+                async with httpx.AsyncClient(timeout=10.0) as client:
+                    resp = await client.post(
+                        "https://api.openai.com/v1/embeddings",
+                        headers={"Authorization": f"Bearer {embed_key}", "Content-Type": "application/json"},
+                        json={"model": EMBEDDING_MODEL, "input": "health check"},
+                    )
+                    resp.raise_for_status()
+                latency = round((time.monotonic() - t0) * 1000)
+                dims = len(resp.json()["data"][0]["embedding"])
+                result["openai"] = {"status": "ok", "latency_ms": latency, "dimensions": dims}
+            except httpx.HTTPStatusError as e:
+                result["openai"] = {"status": "error", "code": e.response.status_code, "error": e.response.text[:500]}
+            except Exception as e:
+                result["openai"] = {"status": "error", "error": str(e)[:500]}
+
+        # ── Pinecone check ──
+        import asyncio
+        t0 = time.monotonic()
+        try:
+            index = await asyncio.to_thread(_get_index_sync)
+            if index is None:
+                result["pinecone"] = {"status": "error", "error": "PINECONE_API_KEY not configured or index unavailable"}
+            else:
+                stats = await asyncio.to_thread(index.describe_index_stats)
+                latency = round((time.monotonic() - t0) * 1000)
+                result["pinecone"] = {
+                    "status": "ok",
+                    "latency_ms": latency,
+                    "total_vectors": stats.total_vector_count,
+                    "namespaces": {k: v.vector_count for k, v in stats.namespaces.items()},
+                }
+        except Exception as e:
+            result["pinecone"] = {"status": "error", "error": str(e)[:500]}
+
+        overall = "ok" if all(r["status"] == "ok" for r in result.values()) else "degraded"
+        return {"status": overall, **result}
+
     return app
 
 

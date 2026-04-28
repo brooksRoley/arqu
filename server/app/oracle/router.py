@@ -1,4 +1,4 @@
-"""Oracle routes — trigger the 7-dimensional psychological synthesis pipeline."""
+"""Oracle routes — trigger the 12-dimensional psychological synthesis pipeline."""
 
 from __future__ import annotations
 

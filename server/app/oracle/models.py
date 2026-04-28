@@ -25,7 +25,7 @@ class ProviderPayload(BaseModel):
 
 
 class SynthesisRequest(BaseModel):
-    """All seven provider payloads fed into the Oracle."""
+    """All twelve provider payloads fed into the Oracle."""
     spotify: ProviderPayload = ProviderPayload()
     twitter: ProviderPayload = ProviderPayload()
     gcal: ProviderPayload = ProviderPayload()
@@ -33,6 +33,11 @@ class SynthesisRequest(BaseModel):
     costar: ProviderPayload = ProviderPayload()
     letterboxd: ProviderPayload = ProviderPayload()
     steam: ProviderPayload = ProviderPayload()
+    github: ProviderPayload = ProviderPayload()
+    youtube: ProviderPayload = ProviderPayload()
+    reddit: ProviderPayload = ProviderPayload()
+    instagram: ProviderPayload = ProviderPayload()
+    tiktok: ProviderPayload = ProviderPayload()
 
 
 class PsychCoordinate(BaseModel):

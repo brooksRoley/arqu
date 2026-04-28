@@ -17,7 +17,15 @@ _PROVIDER_COLUMNS = {
     "spotify": "spotify_data",
     "twitter": "twitter_data",
     "strava": "strava_data",
-    # Future: "gcal": "gcal_data", "costar": "costar_data", etc.
+    "gcal": "gcal_data",
+    "costar": "costar_data",
+    "letterboxd": "letterboxd_data",
+    "steam": "steam_data",
+    "github": "github_data",
+    "youtube": "youtube_data",
+    "reddit": "reddit_data",
+    "instagram": "instagram_data",
+    "tiktok": "tiktok_data",
 }
 
 _MIN_PROVIDERS = 2  # Minimum connected providers to trigger synthesis
@@ -32,7 +40,9 @@ async def maybe_trigger_synthesis(user_id: UUID) -> None:
         row = await conn.fetchrow(
             """
             SELECT spotify_data, twitter_data, strava_data,
-                   gcal_data, costar_data, letterboxd_data, steam_data
+                   gcal_data, costar_data, letterboxd_data, steam_data,
+                   github_data, youtube_data, reddit_data,
+                   instagram_data, tiktok_data
             FROM vibe_vectors
             WHERE user_id = $1
             """,
@@ -69,6 +79,11 @@ async def maybe_trigger_synthesis(user_id: UUID) -> None:
         costar=ProviderPayload(data=_parse(row["costar_data"])),
         letterboxd=ProviderPayload(data=_parse(row["letterboxd_data"])),
         steam=ProviderPayload(data=_parse(row["steam_data"])),
+        github=ProviderPayload(data=_parse(row["github_data"])),
+        youtube=ProviderPayload(data=_parse(row["youtube_data"])),
+        reddit=ProviderPayload(data=_parse(row["reddit_data"])),
+        instagram=ProviderPayload(data=_parse(row["instagram_data"])),
+        tiktok=ProviderPayload(data=_parse(row["tiktok_data"])),
     )
 
     logger.info("Auto-triggering Oracle synthesis for %s (%d providers)", user_id, connected)
