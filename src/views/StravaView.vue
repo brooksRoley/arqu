@@ -114,6 +114,19 @@
         </div>
       </section>
 
+      <!-- Continue -->
+      <nav class="flex flex-wrap justify-center gap-4 pt-8 pb-4 border-t border-gray-700/30">
+        <router-link to="/calibrate" class="px-5 py-2 border border-orange-400/30 text-orange-400/70 text-xs tracking-widest uppercase hover:bg-orange-400/10 transition-colors rounded-full">
+          calibrate
+        </router-link>
+        <router-link to="/intake" class="px-5 py-2 border border-gray-600/30 text-gray-400 text-xs tracking-widest uppercase hover:bg-gray-700/30 transition-colors rounded-full">
+          intake
+        </router-link>
+        <router-link to="/game" class="px-5 py-2 border border-gray-600/30 text-gray-400 text-xs tracking-widest uppercase hover:bg-gray-700/30 transition-colors rounded-full">
+          oracle
+        </router-link>
+      </nav>
+
     </div>
   </div>
 </template>

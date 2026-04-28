@@ -135,6 +135,15 @@
         </div>
       </div>
 
+      <!-- Navigation -->
+      <div class="nav-bar">
+        <router-link to="/calibrate" class="nav-link">calibrate</router-link>
+        <span class="nav-sep">·</span>
+        <router-link to="/intake" class="nav-link">intake</router-link>
+        <span class="nav-sep">·</span>
+        <router-link to="/game" class="nav-link">oracle</router-link>
+      </div>
+
     </div>
 
     <!-- ── IMPRINT VIEW ────────────────────────────────────────── -->
@@ -164,6 +173,15 @@
 
       <div v-if="analysisError" class="center-state">
         <p class="mono-sm error-text">{{ analysisError }}</p>
+      </div>
+
+      <!-- Navigation -->
+      <div class="nav-bar" style="margin-top: 2rem">
+        <router-link to="/calibrate" class="nav-link">calibrate</router-link>
+        <span class="nav-sep">·</span>
+        <router-link to="/intake" class="nav-link">intake</router-link>
+        <span class="nav-sep">·</span>
+        <router-link to="/game" class="nav-link">oracle</router-link>
       </div>
 
     </div>
@@ -667,4 +685,26 @@ function fmt(n: number): string {
 .rerun-btn:hover { color: #64748b; }
 
 .error-text { color: #f87171; }
+
+/* ── Navigation bar ── */
+.nav-bar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6rem;
+  padding: 1rem 0;
+}
+.nav-link {
+  font-size: 0.6rem;
+  color: #334155;
+  text-decoration: none;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  transition: color 0.15s;
+}
+.nav-link:hover { color: #94a3b8; }
+.nav-sep {
+  color: #1e293b;
+  font-size: 0.6rem;
+}
 </style>

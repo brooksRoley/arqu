@@ -15,8 +15,9 @@ const { apiFetch } = useAuthStore()
 
 const visible = ref(false)
 const submitting = ref(false)
-const submitted = ref(false)
+const finished = ref(false)
 const selectedValue = ref<number | null>(null)
+const transitioning = ref(false)
 
 interface NextItem {
   item_id: string
@@ -28,9 +29,13 @@ interface NextItem {
   progress: { answered: number; core_total: number }
 }
 
-const nextItem = ref<NextItem | null>(null)
+const items = ref<NextItem[]>([])
+const currentIdx = ref(0)
 const connectorData = ref<Record<string, unknown> | null>(null)
 const pickedConnector = ref<string>('spotify')
+
+const currentItem = computed(() => items.value[currentIdx.value] ?? null)
+const totalItems = computed(() => items.value.length)
 
 // ── Connector round-robin ────────────────────────────────────────
 const CONNECTOR_KEY = 'cz-last-reflect-connector'
@@ -115,24 +120,26 @@ const connectorLabel = computed(() =>
 
 // ── Likert helpers ──────────────────────────────────────────────
 const likertMax = computed(() => {
-  if (!nextItem.value) return 5
-  return nextItem.value.scale === 'likert_7' ? 7 : 5
+  if (!currentItem.value) return 5
+  return currentItem.value.scale === 'likert_7' ? 7 : 5
 })
 
 // ── Fetch & init ────────────────────────────────────────────────
 onMounted(async () => {
   pickedConnector.value = pickConnector()
 
-  const [itemRes, profileRes] = await Promise.allSettled([
-    apiFetch<NextItem | null>(`/api/psychometrics/next-item?connector=${pickedConnector.value}`),
+  const [itemsRes, profileRes] = await Promise.allSettled([
+    apiFetch<NextItem[]>(`/api/psychometrics/next-items?connector=${pickedConnector.value}&count=5`),
     apiFetch<Record<string, unknown> | null>(`/api/${pickedConnector.value}/profile`),
   ])
 
-  if (itemRes.status === 'fulfilled') nextItem.value = itemRes.value
+  if (itemsRes.status === 'fulfilled' && itemsRes.value?.length) {
+    items.value = itemsRes.value
+  }
   if (profileRes.status === 'fulfilled') connectorData.value = profileRes.value
 
-  // If we have no data and no question, don't show
-  if (!nextItem.value && !connectorData.value) {
+  // If we have no data and no questions, don't show
+  if (!items.value.length && !connectorData.value) {
     emit('close')
     return
   }
@@ -143,22 +150,35 @@ onMounted(async () => {
 
 // ── Submit ──────────────────────────────────────────────────────
 async function submit(value: number) {
-  if (!nextItem.value || submitting.value) return
+  if (!currentItem.value || submitting.value) return
   submitting.value = true
   selectedValue.value = value
   try {
     await apiFetch('/api/psychometrics/microdose', {
       method: 'POST',
       body: JSON.stringify({
-        item_id: nextItem.value.item_id,
+        item_id: currentItem.value.item_id,
         value,
         connector_context: pickedConnector.value,
         trance_coherence: props.coherence,
         session_duration_ms: props.sessionDuration,
       }),
     })
-    submitted.value = true
-    setTimeout(() => emit('close'), 1200)
+
+    if (currentIdx.value < totalItems.value - 1) {
+      // Transition to next question
+      transitioning.value = true
+      setTimeout(() => {
+        currentIdx.value++
+        selectedValue.value = null
+        submitting.value = false
+        transitioning.value = false
+      }, 400)
+    } else {
+      // Final question — close
+      finished.value = true
+      setTimeout(() => emit('close'), 1200)
+    }
   } catch {
     submitting.value = false
   }
@@ -184,7 +204,7 @@ function handleBackdropClick(e: MouseEvent) {
   >
     <div
       class="overlay-card relative w-full max-w-[400px] rounded-2xl border border-white/10 p-6 space-y-5"
-      :class="submitted ? 'opacity-0 translate-y-2' : 'opacity-100 translate-y-0'"
+      :class="finished ? 'opacity-0 translate-y-2' : 'opacity-100 translate-y-0'"
       style="
         background: rgba(15, 10, 25, 0.75);
         backdrop-filter: blur(16px);
@@ -210,60 +230,85 @@ function handleBackdropClick(e: MouseEvent) {
       <!-- Trance line -->
       <div class="text-xs text-gray-600 text-center">{{ tranceLine }}</div>
 
-      <!-- Psychometric item -->
-      <div v-if="nextItem" class="space-y-4">
-        <p class="text-sm text-gray-200 leading-relaxed">{{ nextItem.text }}</p>
+      <!-- Psychometric item (with fade transition) -->
+      <div v-if="currentItem" class="space-y-4">
+        <div
+          :key="currentItem.item_id"
+          class="question-fade"
+          :class="transitioning ? 'opacity-0 translate-y-1' : 'opacity-100 translate-y-0'"
+        >
+          <p class="text-sm text-gray-200 leading-relaxed mb-4">{{ currentItem.text }}</p>
 
-        <!-- Likert scale -->
-        <div v-if="nextItem.scale !== 'categorical'" class="flex justify-center gap-1.5">
-          <button
-            v-for="n in likertMax"
-            :key="n"
-            class="w-9 h-9 rounded-lg text-sm font-medium transition-all"
-            :class="
-              selectedValue === n
-                ? 'bg-purple-600 text-white scale-110'
-                : 'bg-white/5 text-gray-400 hover:bg-white/10 hover:text-gray-200'
-            "
-            :disabled="submitting"
-            @click="submit(n)"
-          >{{ n }}</button>
+          <!-- Likert scale -->
+          <div v-if="currentItem.scale !== 'categorical'" class="flex justify-center gap-1.5">
+            <button
+              v-for="n in likertMax"
+              :key="n"
+              class="w-9 h-9 rounded-lg text-sm font-medium transition-all"
+              :class="
+                selectedValue === n
+                  ? 'bg-purple-600 text-white scale-110'
+                  : 'bg-white/5 text-gray-400 hover:bg-white/10 hover:text-gray-200'
+              "
+              :disabled="submitting"
+              @click="submit(n)"
+            >{{ n }}</button>
+          </div>
+
+          <!-- Categorical options -->
+          <div v-else class="space-y-1.5">
+            <button
+              v-for="(opt, idx) in currentItem.options"
+              :key="opt"
+              class="w-full py-2 px-3 rounded-lg text-sm text-left transition-all"
+              :class="
+                selectedValue === idx
+                  ? 'bg-purple-600 text-white'
+                  : 'bg-white/5 text-gray-400 hover:bg-white/10 hover:text-gray-200'
+              "
+              :disabled="submitting"
+              @click="submitCategorical(idx)"
+            >{{ opt }}</button>
+          </div>
         </div>
 
-        <!-- Categorical options -->
-        <div v-else class="space-y-1.5">
-          <button
-            v-for="(opt, idx) in nextItem.options"
-            :key="opt"
-            class="w-full py-2 px-3 rounded-lg text-sm text-left transition-all"
-            :class="
-              selectedValue === idx
-                ? 'bg-purple-600 text-white'
-                : 'bg-white/5 text-gray-400 hover:bg-white/10 hover:text-gray-200'
-            "
-            :disabled="submitting"
-            @click="submitCategorical(idx)"
-          >{{ opt }}</button>
+        <!-- Mini-session progress (dots + counter) -->
+        <div class="flex items-center justify-center gap-3">
+          <div class="flex gap-1.5">
+            <span
+              v-for="i in totalItems"
+              :key="i"
+              class="w-1.5 h-1.5 rounded-full transition-all duration-300"
+              :class="i - 1 < currentIdx ? 'bg-purple-500' : i - 1 === currentIdx ? 'bg-purple-400 scale-125' : 'bg-gray-700'"
+            />
+          </div>
+          <span class="text-xs text-gray-600 tabular-nums">{{ currentIdx + 1 }} / {{ totalItems }}</span>
         </div>
 
-        <!-- Progress -->
-        <div v-if="nextItem.progress" class="flex items-center gap-2">
+        <!-- Overall pool progress -->
+        <div v-if="currentItem.progress" class="flex items-center gap-2">
           <div class="flex-1 h-0.5 bg-gray-800 rounded-full overflow-hidden">
             <div
               class="h-full bg-purple-600/50 rounded-full transition-all duration-500"
-              :style="{ width: `${(nextItem.progress.answered / nextItem.progress.core_total) * 100}%` }"
+              :style="{ width: `${((currentItem.progress.answered + currentIdx) / currentItem.progress.core_total) * 100}%` }"
             />
           </div>
           <span class="text-xs text-gray-600 tabular-nums">
-            {{ nextItem.progress.answered }} / {{ nextItem.progress.core_total }}
+            {{ currentItem.progress.answered + currentIdx }} / {{ currentItem.progress.core_total }}
           </span>
         </div>
       </div>
 
-      <!-- Data-only mode (no question) -->
+      <!-- Data-only mode (no questions) -->
       <div v-else-if="connectorStats.length" class="text-center">
         <p class="text-xs text-gray-600">reflect on your signal</p>
       </div>
     </div>
   </div>
 </template>
+
+<style scoped>
+.question-fade {
+  transition: opacity 0.35s ease, transform 0.35s ease;
+}
+</style>

@@ -16,24 +16,26 @@ from __future__ import annotations
 
 import json
 import time
-from urllib.parse import urlencode
 from uuid import UUID
 
 from ..oracle.trigger import maybe_trigger_synthesis
 
-import secrets
-
 import httpx
-import jwt
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from fastapi.responses import RedirectResponse
 
 from ..auth.deps import get_current_user_id
-from ..auth.service import decode_access_token
 from ..config import get_settings
 from ..db import get_conn
-from ..llm.encryption import encrypt_api_key, decrypt_api_key
 from ..vector.service import upsert_user_vector
+from ..oauth_base import (
+    build_authorize_url,
+    make_oauth_state,
+    store_oauth_tokens,
+    store_provider_data,
+    validate_connect_token,
+    verify_oauth_state,
+)
 
 router = APIRouter()
 
@@ -41,46 +43,6 @@ _SPOTIFY_AUTH_URL  = "https://accounts.spotify.com/authorize"
 _SPOTIFY_TOKEN_URL = "https://accounts.spotify.com/api/token"
 _SPOTIFY_API_BASE = "https://api.spotify.com/v1"
 _SCOPES = "user-top-read user-read-recently-played"
-
-
-# ── State helpers ─────────────────────────────────────────────────────────────
-# State is a JWT with a one-time nonce. After first use the nonce is consumed
-# in the DB so the same state cannot be replayed within its TTL window.
-
-def _make_state(user_id: str) -> str:
-    nonce = secrets.token_urlsafe(16)
-    payload = {"sub": user_id, "nonce": nonce, "exp": int(time.time()) + 600}
-    return jwt.encode(payload, get_settings().jwt_secret, algorithm="HS256")
-
-
-async def _verify_state(state: str) -> str:
-    """Decode, verify, and consume the state JWT (one-time use)."""
-    try:
-        payload = jwt.decode(state, get_settings().jwt_secret, algorithms=["HS256"])
-    except jwt.PyJWTError as exc:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid OAuth state") from exc
-
-    nonce = payload.get("nonce")
-    if not nonce:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid OAuth state — missing nonce")
-
-    # Consume the nonce — INSERT fails on replay due to UNIQUE constraint
-    async with get_conn() as conn:
-        try:
-            await conn.execute(
-                """
-                INSERT INTO _oauth_nonces (nonce, consumed_at)
-                VALUES ($1, now())
-                """,
-                nonce,
-            )
-        except Exception:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="OAuth state already consumed — possible replay attack",
-            )
-
-    return payload["sub"]
 
 
 # ── Routes ───────────────────────────────────────────────────────────────────
@@ -95,9 +57,8 @@ async def get_spotify_profile(user_id: UUID = Depends(get_current_user_id)):
         )
     if not row or not row["spotify_data"]:
         return None
-    import json as _json
     data = row["spotify_data"]
-    return _json.loads(data) if isinstance(data, str) else data
+    return json.loads(data) if isinstance(data, str) else data
 
 
 @router.get("/connect")
@@ -110,19 +71,17 @@ async def spotify_connect(token: str = Query(..., description="Frontend JWT")):
     if not settings.spotify_client_id:
         raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="Spotify not configured")
 
-    payload = decode_access_token(token)
-    if not payload:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
+    payload = validate_connect_token(token)
 
-    params = {
-        "client_id": settings.spotify_client_id,
-        "response_type": "code",
-        "redirect_uri": settings.spotify_redirect_uri,
-        "scope": _SCOPES,
-        "state": _make_state(payload["sub"]),
-        "show_dialog": "false",
-    }
-    return RedirectResponse(f"{_SPOTIFY_AUTH_URL}?{urlencode(params)}")
+    url = build_authorize_url(
+        _SPOTIFY_AUTH_URL,
+        client_id=settings.spotify_client_id,
+        redirect_uri=settings.spotify_redirect_uri,
+        scope=_SCOPES,
+        state=make_oauth_state(payload["sub"]),
+        extra_params={"show_dialog": "false"},
+    )
+    return RedirectResponse(url)
 
 
 @router.get("/callback")
@@ -131,7 +90,7 @@ async def spotify_callback(code: str, state: str):
     Spotify redirects here after user authorizes.
     Exchanges code for tokens, fetches audio profile, stores everything.
     """
-    user_id = await _verify_state(state)
+    user_id = await verify_oauth_state(state)
     settings = get_settings()
 
     async with httpx.AsyncClient(timeout=20.0) as client:
@@ -198,49 +157,19 @@ async def spotify_callback(code: str, state: str):
     # 5. Distill the audio profile
     spotify_profile = _distill_profile(artists_data, audio_features, tracks_data)
 
-    # 6. Encrypt and store tokens
-    enc_access, access_nonce = encrypt_api_key(access_token)
-    enc_refresh, refresh_nonce = encrypt_api_key(refresh_token) if refresh_token else (None, None)
+    # 6. Store tokens via shared helper
+    await store_oauth_tokens(
+        user_id, "spotify", access_token, refresh_token, expires_at, scope,
+    )
 
-    from datetime import datetime, timezone
-    expires_dt = datetime.fromtimestamp(expires_at, tz=timezone.utc)
+    # 7. Store Spotify profile on vibe_vectors row (if intake already done)
+    await store_provider_data(user_id, "spotify_data", spotify_profile)
 
+    # 7.5 Auto-trigger Oracle synthesis if enough providers connected
+    await maybe_trigger_synthesis(UUID(user_id))
+
+    # 8. Fetch full vibe vector to re-embed with Spotify context blended in
     async with get_conn() as conn:
-        await conn.execute(
-            """
-            INSERT INTO oauth_tokens
-                (user_id, provider, encrypted_access_token, access_nonce,
-                 encrypted_refresh_token, refresh_nonce, expires_at, scope)
-            VALUES ($1, 'spotify', $2, $3, $4, $5, $6, $7)
-            ON CONFLICT (user_id, provider) DO UPDATE SET
-                encrypted_access_token  = EXCLUDED.encrypted_access_token,
-                access_nonce            = EXCLUDED.access_nonce,
-                encrypted_refresh_token = EXCLUDED.encrypted_refresh_token,
-                refresh_nonce           = EXCLUDED.refresh_nonce,
-                expires_at              = EXCLUDED.expires_at,
-                scope                   = EXCLUDED.scope,
-                updated_at              = now()
-            """,
-            UUID(user_id),
-            enc_access, access_nonce,
-            enc_refresh, refresh_nonce,
-            expires_dt, scope,
-        )
-
-        # 7. Store Spotify profile on vibe_vectors row (if intake already done)
-        await conn.execute(
-            """
-            UPDATE vibe_vectors
-            SET spotify_data = $2, updated_at = now()
-            WHERE user_id = $1
-            """,
-            UUID(user_id), json.dumps(spotify_profile),
-        )
-
-        # 7.5 Auto-trigger Oracle synthesis if enough providers connected
-        await maybe_trigger_synthesis(UUID(user_id))
-
-        # 8. Fetch full vibe vector to re-embed with Spotify context blended in
         row = await conn.fetchrow(
             "SELECT attachment_style, defense_mechanism, readiness_score FROM vibe_vectors WHERE user_id = $1",
             UUID(user_id),

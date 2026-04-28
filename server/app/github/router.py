@@ -14,25 +14,26 @@ Flow:
 from __future__ import annotations
 
 import json
-import time
 from collections import Counter
-from urllib.parse import urlencode
 from uuid import UUID
-
-import secrets
 
 from ..oracle.trigger import maybe_trigger_synthesis
 
 import httpx
-import jwt
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from fastapi.responses import JSONResponse
 
 from ..auth.deps import get_current_user_id
-from ..auth.service import decode_access_token
 from ..config import get_settings
 from ..db import get_conn
-from ..llm.encryption import encrypt_api_key
+from ..oauth_base import (
+    build_authorize_url,
+    make_oauth_state,
+    store_oauth_tokens,
+    store_provider_data,
+    validate_connect_token,
+    verify_oauth_state,
+)
 
 router = APIRouter()
 
@@ -40,44 +41,6 @@ _GITHUB_AUTH_URL = "https://github.com/login/oauth/authorize"
 _GITHUB_TOKEN_URL = "https://github.com/login/oauth/access_token"
 _GITHUB_API_BASE = "https://api.github.com"
 _SCOPES = "read:user repo"
-
-
-# -- State helpers -------------------------------------------------------------
-
-def _make_state(user_id: str) -> str:
-    nonce = secrets.token_urlsafe(16)
-    payload = {"sub": user_id, "nonce": nonce, "exp": int(time.time()) + 600}
-    return jwt.encode(payload, get_settings().jwt_secret, algorithm="HS256")
-
-
-async def _verify_state(state: str) -> str:
-    """Decode, verify, and consume the state JWT (one-time use)."""
-    try:
-        payload = jwt.decode(state, get_settings().jwt_secret, algorithms=["HS256"])
-    except jwt.PyJWTError as exc:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid OAuth state") from exc
-
-    nonce = payload.get("nonce")
-    if not nonce:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid OAuth state — missing nonce")
-
-    # Consume the nonce — INSERT fails on replay due to UNIQUE constraint
-    async with get_conn() as conn:
-        try:
-            await conn.execute(
-                """
-                INSERT INTO _oauth_nonces (nonce, consumed_at)
-                VALUES ($1, now())
-                """,
-                nonce,
-            )
-        except Exception:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="OAuth state already consumed — possible replay attack",
-            )
-
-    return payload["sub"]
 
 
 # -- Routes --------------------------------------------------------------------
@@ -92,17 +55,16 @@ async def github_connect(token: str = Query(..., description="Frontend JWT")):
     if not settings.github_client_id:
         raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="GitHub not configured")
 
-    payload = decode_access_token(token)
-    if not payload:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
+    payload = validate_connect_token(token)
 
-    params = {
-        "client_id": settings.github_client_id,
-        "redirect_uri": settings.github_redirect_uri,
-        "scope": _SCOPES,
-        "state": _make_state(payload["sub"]),
-    }
-    return {"auth_url": f"{_GITHUB_AUTH_URL}?{urlencode(params)}"}
+    url = build_authorize_url(
+        _GITHUB_AUTH_URL,
+        client_id=settings.github_client_id,
+        redirect_uri=settings.github_redirect_uri,
+        scope=_SCOPES,
+        state=make_oauth_state(payload["sub"]),
+    )
+    return {"auth_url": url}
 
 
 @router.get("/callback")
@@ -111,7 +73,7 @@ async def github_callback(code: str, state: str):
     GitHub redirects here (via frontend) after user authorizes.
     Exchanges code for tokens, fetches user profile + repos + stars, stores everything.
     """
-    user_id = await _verify_state(state)
+    user_id = await verify_oauth_state(state)
     settings = get_settings()
 
     async with httpx.AsyncClient(timeout=20.0) as client:
@@ -173,11 +135,8 @@ async def github_callback(code: str, state: str):
     # 5. Distill the developer profile
     github_profile = _distill_profile(user_data, repos_data, starred_data)
 
-    # 6. Encrypt and store tokens (GitHub tokens don't expire by default)
-    enc_access, access_nonce = encrypt_api_key(access_token)
-
+    # 6. Store github_id on user
     async with get_conn() as conn:
-        # Store github_id on user
         github_id = str(user_data.get("id", ""))
         if github_id:
             await conn.execute(
@@ -185,41 +144,18 @@ async def github_callback(code: str, state: str):
                 github_id, UUID(user_id),
             )
 
-        await conn.execute(
-            """
-            INSERT INTO oauth_tokens
-                (user_id, provider, encrypted_access_token, access_nonce,
-                 encrypted_refresh_token, refresh_nonce, expires_at, scope)
-            VALUES ($1, 'github', $2, $3, $4, $5, $6, $7)
-            ON CONFLICT (user_id, provider) DO UPDATE SET
-                encrypted_access_token  = EXCLUDED.encrypted_access_token,
-                access_nonce            = EXCLUDED.access_nonce,
-                encrypted_refresh_token = EXCLUDED.encrypted_refresh_token,
-                refresh_nonce           = EXCLUDED.refresh_nonce,
-                expires_at              = EXCLUDED.expires_at,
-                scope                   = EXCLUDED.scope,
-                updated_at              = now()
-            """,
-            UUID(user_id),
-            enc_access, access_nonce,
-            None, None,
-            None, _SCOPES,
-        )
+    # 7. Store tokens via shared helper (GitHub tokens don't expire by default)
+    await store_oauth_tokens(
+        user_id, "github", access_token, None, None, _SCOPES,
+    )
 
-        # 7. Store GitHub profile on vibe_vectors row (if intake already done)
-        await conn.execute(
-            """
-            UPDATE vibe_vectors
-            SET github_data = $2, updated_at = now()
-            WHERE user_id = $1
-            """,
-            UUID(user_id), json.dumps(github_profile),
-        )
+    # 8. Store GitHub profile on vibe_vectors row (if intake already done)
+    await store_provider_data(user_id, "github_data", github_profile)
 
     # Auto-trigger Oracle synthesis if enough providers connected
     await maybe_trigger_synthesis(UUID(user_id))
 
-    # 8. Return success — frontend handles navigation
+    # 9. Return success — frontend handles navigation
     return JSONResponse({"status": "connected", "username": github_profile.get("username", "")})
 
 

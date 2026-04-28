@@ -156,20 +156,34 @@ def get_next_item(
     Falls back to 'general' affinity if no connector-specific items remain.
     Returns None when everything is answered.
     """
+    items = get_next_items(answered_ids, connector, count=1)
+    return items[0] if items else None
+
+
+def get_next_items(
+    answered_ids: set[str],
+    connector: str | None = None,
+    count: int = 5,
+) -> list[PoolItem]:
+    """
+    Return up to `count` unanswered items, preferring connector-affinity matches first,
+    then general, then any remaining.
+    """
     pool = get_pool()
     unanswered = [item for item in pool if item["item_id"] not in answered_ids]
     if not unanswered:
-        return None
+        return []
+
+    ordered: list[PoolItem] = []
 
     if connector:
-        # Try connector-specific first
         matched = [item for item in unanswered if item["connector_affinity"] == connector]
-        if matched:
-            return matched[0]
+        ordered.extend(matched)
 
-    # Fall back to general or any remaining
-    general = [item for item in unanswered if item["connector_affinity"] == "general"]
-    if general:
-        return general[0]
+    general = [item for item in unanswered if item["connector_affinity"] == "general" and item not in ordered]
+    ordered.extend(general)
 
-    return unanswered[0]
+    remaining = [item for item in unanswered if item not in ordered]
+    ordered.extend(remaining)
+
+    return ordered[:count]

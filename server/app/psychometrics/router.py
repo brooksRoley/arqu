@@ -10,7 +10,7 @@ from typing import Dict, Any
 from ..auth.deps import get_current_user_id
 from ..db import get_pool
 from .scoring import generate_psycho_profile, encrypt_responses
-from .question_pool import get_next_item, CORE_POOL
+from .question_pool import get_next_item, get_next_items, CORE_POOL
 from ..llm.psychoanalysis import generate_psychoanalysis_narrative
 
 router = APIRouter()
@@ -268,3 +268,35 @@ async def get_next_psychometric_item(
             "core_total": len(CORE_POOL),
         },
     }
+
+
+@router.get("/next-items")
+async def get_next_psychometric_items(
+    connector: str | None = None,
+    count: int = 5,
+    user_id: UUID = Depends(get_current_user_id),
+):
+    """Return up to `count` unanswered psychometric items for this user."""
+    pool = get_pool()
+    async with pool.acquire() as conn:
+        rows = await conn.fetch(
+            "SELECT item_id FROM psychometric_responses WHERE user_id = $1",
+            str(user_id),
+        )
+    answered_ids = {r["item_id"] for r in rows}
+    items = get_next_items(answered_ids, connector, count=min(count, 10))
+    return [
+        {
+            "item_id": it["item_id"],
+            "instrument": it["instrument"],
+            "text": it["text"],
+            "scale": it["scale"],
+            "options": it["options"],
+            "connector_affinity": it["connector_affinity"],
+            "progress": {
+                "answered": len(answered_ids),
+                "core_total": len(CORE_POOL),
+            },
+        }
+        for it in items
+    ]

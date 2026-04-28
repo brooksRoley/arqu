@@ -56,6 +56,15 @@
       hover → {{ topGenres[hoveredIdx] }}
     </div>
 
+    <!-- Navigation CTAs -->
+    <div v-if="profile" class="scene-hud scene-hud--nav">
+      <router-link to="/calibrate" class="nav-link">calibrate</router-link>
+      <span class="nav-sep">·</span>
+      <router-link to="/intake" class="nav-link">intake</router-link>
+      <span class="nav-sep">·</span>
+      <router-link to="/game" class="nav-link">oracle</router-link>
+    </div>
+
   </div>
 </template>
 
@@ -188,6 +197,36 @@ onUnmounted(() => {
   font-size: 0.65rem;
   color: #475569;
   pointer-events: none;
+}
+
+.scene-hud--nav {
+  bottom: 1.5rem;
+  right: 2rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: rgba(8, 6, 14, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 100px;
+  padding: 0.45rem 1rem;
+  backdrop-filter: blur(12px);
+}
+
+.nav-link {
+  font-size: 0.6rem;
+  color: #475569;
+  text-decoration: none;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  transition: color 0.15s;
+}
+.nav-link:hover {
+  color: #94a3b8;
+}
+
+.nav-sep {
+  color: #1e293b;
+  font-size: 0.6rem;
 }
 
 /* ── Stat bars ── */
