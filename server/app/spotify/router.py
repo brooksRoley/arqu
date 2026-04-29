@@ -29,6 +29,7 @@ from ..config import get_settings
 from ..db import get_conn
 from ..vector.service import upsert_user_vector
 from ..oauth_base import (
+from ..llm.chat import chat_completion
     build_authorize_url,
     make_oauth_state,
     store_oauth_tokens,
@@ -175,8 +176,9 @@ async def spotify_callback(code: str, state: str):
             UUID(user_id),
         )
 
-    # 9. Re-embed with Spotify data included — richer psychological coordinate
-    if row:
+    # 9. Re-embed with Spotify data included — richer psychological coordinate.
+    # Skip if intake hasn't been completed (attachment_style is null).
+    if row and row["attachment_style"] and row["defense_mechanism"]:
         spotify_summary = _build_embedding_text(spotify_profile)
         confession_base = (
             f"Attachment: {row['attachment_style']}. "
@@ -282,14 +284,11 @@ async def spotify_analyze(user_id: UUID = Depends(get_current_user_id)):
     data = row["spotify_data"]
     profile = json.loads(data) if isinstance(data, str) else data
 
-    if not settings.openai_embed_key:
-        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="LLM not configured")
-
-    narrative = await _analyze_spotify_profile(settings.openai_embed_key, profile)
+    narrative = await _analyze_spotify_profile(profile)
     return {"narrative": narrative}
 
 
-async def _analyze_spotify_profile(api_key: str, profile: dict) -> str:
+async def _analyze_spotify_profile(profile: dict) -> str:
     artists = ", ".join(profile.get("top_artists", []))
     genres = ", ".join(profile.get("genres", []))
     avg = profile.get("audio_avg", {})
@@ -321,24 +320,7 @@ Write 2-3 paragraphs analyzing:
 
 Be direct, specific, a little poetic. Avoid generic statements. Return only the narrative."""
 
-    headers = {
-        "Authorization": f"Bearer {api_key}",
-        "Content-Type": "application/json",
-    }
-    payload = {
-        "model": "gpt-4o-mini",
-        "max_tokens": 800,
-        "messages": [{"role": "user", "content": prompt}],
-    }
-    async with httpx.AsyncClient(timeout=60) as client:
-        resp = await client.post(
-            "https://api.openai.com/v1/chat/completions",
-            json=payload,
-            headers=headers,
-        )
-        if resp.status_code != 200:
-            raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail="LLM call failed")
-        return resp.json()["choices"][0]["message"]["content"]
+    return await chat_completion(prompt)
 
 
 def _build_embedding_text(profile: dict) -> str:

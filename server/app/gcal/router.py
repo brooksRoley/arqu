@@ -29,6 +29,8 @@ from ..auth.service import decode_access_token
 from ..config import get_settings
 from ..db import get_conn
 from ..llm.encryption import encrypt_api_key
+from ..oauth_base import store_provider_data
+from ..llm.chat import chat_completion
 
 router = APIRouter()
 
@@ -188,14 +190,7 @@ async def gcal_callback(code: str, state: str):
             expires_dt, _SCOPES,
         )
 
-        await conn.execute(
-            """
-            UPDATE vibe_vectors
-            SET gcal_data = $2, updated_at = now()
-            WHERE user_id = $1
-            """,
-            UUID(user_id), json.dumps(gcal_profile),
-        )
+    await store_provider_data(user_id, "gcal_data", gcal_profile)
 
     frontend = settings.cors_origin_list[0] if settings.cors_origin_list else "http://localhost:5173"
     return RedirectResponse(f"{frontend}/calibrate?gcal=connected")
@@ -278,14 +273,11 @@ async def gcal_analyze(user_id: UUID = Depends(get_current_user_id)):
     data = row["gcal_data"]
     profile = json.loads(data) if isinstance(data, str) else data
 
-    if not settings.openai_embed_key:
-        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="LLM not configured")
-
-    narrative = await _analyze_gcal_profile(settings.openai_embed_key, profile)
+    narrative = await _analyze_gcal_profile(profile)
     return {"narrative": narrative}
 
 
-async def _analyze_gcal_profile(api_key: str, profile: dict) -> str:
+async def _analyze_gcal_profile(profile: dict) -> str:
     total_events = profile.get("total_events_60d", 0)
     events_per_week = profile.get("events_per_week", 0)
     calendar_count = profile.get("calendar_count", 0)
@@ -319,24 +311,7 @@ Write 2-3 paragraphs analyzing:
 
 Be direct, specific, a little poetic. Avoid generic statements. Return only the narrative."""
 
-    headers = {
-        "Authorization": f"Bearer {api_key}",
-        "Content-Type": "application/json",
-    }
-    payload = {
-        "model": "gpt-4o-mini",
-        "max_tokens": 800,
-        "messages": [{"role": "user", "content": prompt}],
-    }
-    async with httpx.AsyncClient(timeout=60) as client:
-        resp = await client.post(
-            "https://api.openai.com/v1/chat/completions",
-            json=payload,
-            headers=headers,
-        )
-        if resp.status_code != 200:
-            raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail="LLM call failed")
-        return resp.json()["choices"][0]["message"]["content"]
+    return await chat_completion(prompt)
 
 
 @router.get("/profile")

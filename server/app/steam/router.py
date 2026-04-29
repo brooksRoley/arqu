@@ -29,6 +29,7 @@ from fastapi.responses import JSONResponse, RedirectResponse
 from ..auth.service import decode_access_token
 from ..config import get_settings
 from ..db import get_conn
+from ..oauth_base import store_provider_data
 
 router = APIRouter()
 
@@ -177,14 +178,7 @@ async def steam_callback(request: Request):
                 steam_id, UUID(user_id),
             )
 
-        await conn.execute(
-            """
-            UPDATE vibe_vectors
-            SET steam_data = $2, updated_at = now()
-            WHERE user_id = $1
-            """,
-            UUID(user_id), json.dumps(steam_profile),
-        )
+    await store_provider_data(user_id, "steam_data", steam_profile)
 
     # Redirect back to frontend
     frontend = settings.cors_origin_list[0] if settings.cors_origin_list else "http://localhost:5173"

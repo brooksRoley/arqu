@@ -7,12 +7,12 @@ from __future__ import annotations
 import json
 from uuid import UUID
 
-import httpx
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 
 from ..auth.deps import get_current_user_id
 from ..config import get_settings
 from ..db import get_conn
+from ..llm.chat import chat_completion, llm_configured
 
 router = APIRouter()
 
@@ -35,19 +35,54 @@ _DATA_COLUMNS = [
 _COL_TO_PROVIDER = {col: col.replace("_data", "") for col in _DATA_COLUMNS}
 
 
+# Each entry: (provider_key, [list of settings attrs that must be truthy])
+# A provider is "available" only if every credential it needs is present.
+_PROVIDER_REQS: list[tuple[str, list[str]]] = [
+    ("spotify",    ["spotify_client_id", "spotify_client_secret"]),
+    ("twitter",    ["x_client_id", "x_client_secret"]),
+    ("strava",     ["strava_client_id", "strava_client_secret"]),
+    ("google",     ["google_client_id", "google_client_secret"]),
+    ("gcal",       ["google_client_id", "google_client_secret"]),
+    ("youtube",    ["google_client_id", "google_client_secret"]),
+    ("github",     ["github_client_id", "github_client_secret"]),
+    ("reddit",     ["reddit_client_id", "reddit_client_secret"]),
+    ("instagram",  ["instagram_client_id", "instagram_client_secret"]),
+    ("tiktok",     ["tiktok_client_key", "tiktok_client_secret"]),
+    ("letterboxd", ["letterboxd_api_key", "letterboxd_api_secret"]),
+    ("steam",      ["steam_api_key"]),
+    ("costar",     []),  # credential-based, no env-side OAuth client
+]
+
+
+@router.get("/available")
+async def get_available_connectors():
+    """
+    Public availability map — frontend uses this to disable connectors whose
+    credentials aren't configured on the server, instead of letting users
+    click through and hit a 503 on /<provider>/connect.
+    """
+    settings = get_settings()
+    out: dict[str, bool] = {}
+    for key, reqs in _PROVIDER_REQS:
+        out[key] = all(bool(getattr(settings, attr, "")) for attr in reqs)
+    return {
+        "providers": out,
+        "llm": llm_configured(),
+    }
+
+
 @router.get("/correlations")
 async def get_correlations(
     provider: str = Query(..., description="Provider to find correlations for"),
     user_id: UUID = Depends(get_current_user_id),
 ):
-    """Find cross-connector correlations between the given provider and all others."""
-    settings = get_settings()
+    """Find cross-connector correlations between the given provider and all others.
 
-    if not settings.openai_embed_key:
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="LLM not configured",
-        )
+    Returns [] (200) — not 503 — when the LLM isn't configured, so the calibrate
+    page degrades gracefully instead of throwing console errors.
+    """
+    if not llm_configured():
+        return []
 
     # Validate provider name
     target_col = f"{provider}_data"
@@ -86,7 +121,6 @@ async def get_correlations(
 
     # Build LLM request
     correlations = await _find_correlations(
-        api_key=settings.openai_embed_key,
         target_provider=provider,
         all_data=provider_data,
     )
@@ -94,7 +128,6 @@ async def get_correlations(
 
 
 async def _find_correlations(
-    api_key: str,
     target_provider: str,
     all_data: dict[str, dict],
 ) -> list[dict]:
@@ -130,26 +163,11 @@ Rules:
 - Each correlation must involve {target_provider} as the source
 - Return ONLY the JSON array, nothing else"""
 
-    headers = {
-        "Authorization": f"Bearer {api_key}",
-        "Content-Type": "application/json",
-    }
-    payload = {
-        "model": "gpt-4o-mini",
-        "max_tokens": 1200,
-        "messages": [{"role": "user", "content": prompt}],
-    }
-
-    async with httpx.AsyncClient(timeout=60) as client:
-        resp = await client.post(
-            "https://api.openai.com/v1/chat/completions",
-            json=payload,
-            headers=headers,
-        )
-        if resp.status_code != 200:
-            return []
-
-        content = resp.json()["choices"][0]["message"]["content"]
+    try:
+        content = await chat_completion(prompt, max_tokens=1200)
+    except HTTPException:
+        # Treat upstream failures as "no correlations" so the page stays usable.
+        return []
 
     # Parse the LLM response as JSON
     try:

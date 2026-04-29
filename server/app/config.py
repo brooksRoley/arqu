@@ -98,6 +98,13 @@ class Settings(BaseSettings):
     # Required for user matching and karma mechanics to function.
     openai_embed_key: str = ""
 
+    # ── Chat LLM provider (used by connector /analyze + /correlations) ──
+    # llm_provider: "openai" (default) or "openrouter"
+    # llm_model: optional override; otherwise per-provider default
+    llm_provider: str = "openai"
+    llm_model: str = ""
+    openrouter_api_key: str = ""
+
     # ── CORS ────────────────────────────────────────────────────
     cors_origins: str = "http://localhost:5173"
 

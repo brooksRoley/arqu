@@ -262,20 +262,37 @@ async def get_stored_tokens(
     }
 
 
+_PROVIDER_DATA_COLUMNS = {
+    "spotify_data", "twitter_data", "strava_data", "gcal_data",
+    "github_data", "youtube_data", "reddit_data", "letterboxd_data",
+    "instagram_data", "tiktok_data", "costar_data", "steam_data",
+}
+
+
 async def store_provider_data(
     user_id: str,
     column: str,
     data: dict,
 ) -> None:
-    """Store distilled provider data in the vibe_vectors table."""
+    """Upsert distilled provider data into vibe_vectors.
+
+    Creates the row if intake hasn't run yet — avoids silently dropping
+    OAuth-fetched data for users who connect a provider before completing
+    intake. Requires migration 023 (nullable intake columns).
+    """
     import json
+
+    if column not in _PROVIDER_DATA_COLUMNS:
+        raise ValueError(f"Unknown provider data column: {column}")
 
     async with get_conn() as conn:
         await conn.execute(
             f"""
-            UPDATE vibe_vectors
-            SET {column} = $2, updated_at = now()
-            WHERE user_id = $1
+            INSERT INTO vibe_vectors (user_id, {column})
+            VALUES ($1, $2)
+            ON CONFLICT (user_id) DO UPDATE
+            SET {column} = EXCLUDED.{column},
+                updated_at = now()
             """,
             UUID(user_id), json.dumps(data),
         )

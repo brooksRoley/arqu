@@ -31,9 +31,11 @@ from fastapi.responses import RedirectResponse
 
 from ..auth.deps import get_current_user_id
 from ..auth.service import decode_access_token
+from ..oauth_base import store_provider_data
 from ..config import get_settings
 from ..db import get_conn
 from ..llm.encryption import encrypt_api_key
+from ..llm.chat import chat_completion
 
 router = APIRouter()
 
@@ -191,14 +193,7 @@ async def tiktok_callback(code: str, state: str):
             expires_dt, _SCOPES,
         )
 
-        await conn.execute(
-            """
-            UPDATE vibe_vectors
-            SET tiktok_data = $2, updated_at = now()
-            WHERE user_id = $1
-            """,
-            UUID(user_id), json.dumps(tiktok_profile),
-        )
+    await store_provider_data(user_id, "tiktok_data", tiktok_profile)
 
     await maybe_trigger_synthesis(UUID(user_id))
 
@@ -223,14 +218,11 @@ async def tiktok_analyze(user_id: UUID = Depends(get_current_user_id)):
     data = row["tiktok_data"]
     profile = json.loads(data) if isinstance(data, str) else data
 
-    if not settings.openai_embed_key:
-        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="LLM not configured")
-
-    narrative = await _analyze_tiktok_profile(settings.openai_embed_key, profile)
+    narrative = await _analyze_tiktok_profile(profile)
     return {"narrative": narrative}
 
 
-async def _analyze_tiktok_profile(api_key: str, profile: dict) -> str:
+async def _analyze_tiktok_profile(profile: dict) -> str:
     display_name = profile.get("display_name", "")
     bio = profile.get("bio", "")
     is_verified = profile.get("is_verified", False)
@@ -271,24 +263,7 @@ Write 2-3 paragraphs analyzing:
 
 Be direct, specific, a little poetic. Avoid generic statements. Return only the narrative."""
 
-    headers = {
-        "Authorization": f"Bearer {api_key}",
-        "Content-Type": "application/json",
-    }
-    payload = {
-        "model": "gpt-4o-mini",
-        "max_tokens": 800,
-        "messages": [{"role": "user", "content": prompt}],
-    }
-    async with httpx.AsyncClient(timeout=60) as client:
-        resp = await client.post(
-            "https://api.openai.com/v1/chat/completions",
-            json=payload,
-            headers=headers,
-        )
-        if resp.status_code != 200:
-            raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail="LLM call failed")
-        return resp.json()["choices"][0]["message"]["content"]
+    return await chat_completion(prompt)
 
 
 @router.get("/profile")

@@ -35,8 +35,10 @@ from fastapi.responses import JSONResponse
 
 from ..auth.deps import get_current_user_id
 from ..auth.service import decode_access_token
+from ..oauth_base import store_provider_data
 from ..config import get_settings
 from ..db import get_conn
+from ..llm.chat import chat_completion
 
 router = APIRouter()
 
@@ -203,14 +205,7 @@ async def letterboxd_ingest(
             "UPDATE users SET letterboxd_username = $1, updated_at = now() WHERE id = $2",
             username, UUID(user_id),
         )
-        await conn.execute(
-            """
-            UPDATE vibe_vectors
-            SET letterboxd_data = $2, updated_at = now()
-            WHERE user_id = $1
-            """,
-            UUID(user_id), json.dumps(letterboxd_profile),
-        )
+    await store_provider_data(user_id, "letterboxd_data", letterboxd_profile)
 
     return JSONResponse({"status": "connected", "username": username})
 
@@ -282,14 +277,11 @@ async def letterboxd_analyze(user_id: UUID = Depends(get_current_user_id)):
     data = row["letterboxd_data"]
     profile = json.loads(data) if isinstance(data, str) else data
 
-    if not settings.openai_embed_key:
-        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="LLM not configured")
-
-    narrative = await _analyze_letterboxd_profile(settings.openai_embed_key, profile)
+    narrative = await _analyze_letterboxd_profile(profile)
     return {"narrative": narrative}
 
 
-async def _analyze_letterboxd_profile(api_key: str, profile: dict) -> str:
+async def _analyze_letterboxd_profile(profile: dict) -> str:
     username = profile.get("username", "")
     diary_count = profile.get("diary_count", 0)
     recent_films = ", ".join(profile.get("recent_films", [])[:10])
@@ -316,24 +308,7 @@ Write 2-3 paragraphs analyzing:
 
 Be direct, specific, a little poetic. Avoid generic statements. Return only the narrative."""
 
-    headers = {
-        "Authorization": f"Bearer {api_key}",
-        "Content-Type": "application/json",
-    }
-    payload = {
-        "model": "gpt-4o-mini",
-        "max_tokens": 800,
-        "messages": [{"role": "user", "content": prompt}],
-    }
-    async with httpx.AsyncClient(timeout=60) as client:
-        resp = await client.post(
-            "https://api.openai.com/v1/chat/completions",
-            json=payload,
-            headers=headers,
-        )
-        if resp.status_code != 200:
-            raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail="LLM call failed")
-        return resp.json()["choices"][0]["message"]["content"]
+    return await chat_completion(prompt)
 
 
 @router.get("/profile")

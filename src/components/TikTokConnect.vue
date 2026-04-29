@@ -6,9 +6,10 @@
 
     <button
       @click="initiateTikTokAuth"
-      :disabled="isConnecting || isConnected"
+      :disabled="isConnecting || isConnected || !available"
+      :title="!available ? 'TikTok OAuth not configured on the server yet' : ''"
       class="relative flex items-center justify-between w-full bg-black border border-gray-800 text-gray-200 px-6 py-4 rounded-xl shadow-2xl transition-all overflow-hidden"
-      :class="{ 'opacity-50 cursor-not-allowed': isConnecting, 'border-cyan-500/50': isConnected }"
+      :class="{ 'opacity-50 cursor-not-allowed': isConnecting || !available, 'border-cyan-500/50': isConnected }"
     >
       <div class="flex items-center gap-4 z-10">
         <svg viewBox="0 0 24 24" aria-hidden="true" class="w-6 h-6 fill-current text-white">
@@ -55,26 +56,34 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useAuthStore } from '@/composables/useAuthStore'
 import { useVibeStore } from '@/composables/useVibeStore'
+import { useConnectorAvailability } from '@/composables/useConnectorAvailability'
 
 const { token, logout } = useAuthStore()
 const { oauthState } = useVibeStore()
+const { fetchAvailability, isAvailable } = useConnectorAvailability()
 
 const API = import.meta.env.VITE_API_URL || ''
 const isConnecting = ref(false)
 
 const isConnected = computed(() => oauthState.value.tiktok.connected)
+const available = computed(() => isAvailable('tiktok'))
 
 const buttonText = computed(() => {
+  if (!available.value) return 'TIKTOK UNAVAILABLE'
   if (isConnecting.value) return 'DECODING ALGORITHM...'
   if (isConnected.value) return 'TIKTOK SYNCED'
   return 'CONNECT TIKTOK'
 })
 
+onMounted(() => {
+  fetchAvailability()
+})
+
 async function initiateTikTokAuth() {
-  if (isConnected.value || !token.value) return
+  if (isConnected.value || !token.value || !available.value) return
   isConnecting.value = true
 
   try {

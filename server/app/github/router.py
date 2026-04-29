@@ -27,6 +27,7 @@ from ..auth.deps import get_current_user_id
 from ..config import get_settings
 from ..db import get_conn
 from ..oauth_base import (
+from ..llm.chat import chat_completion
     build_authorize_url,
     make_oauth_state,
     store_oauth_tokens,
@@ -178,14 +179,11 @@ async def github_analyze(user_id: UUID = Depends(get_current_user_id)):
     data = row["github_data"]
     profile = json.loads(data) if isinstance(data, str) else data
 
-    if not settings.openai_embed_key:
-        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="LLM not configured")
-
-    narrative = await _analyze_github_profile(settings.openai_embed_key, profile)
+    narrative = await _analyze_github_profile(profile)
     return {"narrative": narrative}
 
 
-async def _analyze_github_profile(api_key: str, profile: dict) -> str:
+async def _analyze_github_profile(profile: dict) -> str:
     username = profile.get("username", "")
     bio = profile.get("bio", "")
     company = profile.get("company", "")
@@ -226,24 +224,7 @@ Write 2-3 paragraphs analyzing:
 
 Be direct, specific, a little poetic. Avoid generic statements. Return only the narrative."""
 
-    headers = {
-        "Authorization": f"Bearer {api_key}",
-        "Content-Type": "application/json",
-    }
-    payload = {
-        "model": "gpt-4o-mini",
-        "max_tokens": 800,
-        "messages": [{"role": "user", "content": prompt}],
-    }
-    async with httpx.AsyncClient(timeout=60) as client:
-        resp = await client.post(
-            "https://api.openai.com/v1/chat/completions",
-            json=payload,
-            headers=headers,
-        )
-        if resp.status_code != 200:
-            raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail="LLM call failed")
-        return resp.json()["choices"][0]["message"]["content"]
+    return await chat_completion(prompt)
 
 
 # -- Profile endpoint ----------------------------------------------------------

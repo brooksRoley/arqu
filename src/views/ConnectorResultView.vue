@@ -36,7 +36,7 @@
         <div class="h-4 bg-gray-800 rounded w-3/4" />
       </div>
       <div v-else-if="narrativeError" class="text-gray-600 font-mono text-sm">
-        Analysis not available yet. Connect more data to unlock your read.
+        {{ narrativeErrorMsg }}
       </div>
       <div v-else class="space-y-6">
         <p
@@ -60,7 +60,10 @@
         </div>
       </div>
 
-      <div v-else-if="profile" class="space-y-12">
+      <div v-else-if="!profile" class="text-gray-600 font-mono text-sm">
+        No data captured yet. Reconnect this provider to fetch fresh signal.
+      </div>
+      <div v-else class="space-y-12">
         <!-- Hero stats — large number cards -->
         <div v-if="cfg?.heroStats.length" class="grid grid-cols-2 sm:grid-cols-3 gap-6">
           <div
@@ -256,6 +259,7 @@ const profileLoading = ref(false)
 const narrative = ref('')
 const narrativeLoading = ref(false)
 const narrativeError = ref(false)
+const narrativeErrorMsg = ref('Analysis not available yet.')
 const narrativeParagraphs = computed(() =>
   narrative.value.split(/\n\n+/).filter(p => p.trim())
 )
@@ -429,8 +433,18 @@ async function fetchNarrative() {
   try {
     const data = await apiFetch<{ narrative: string }>(analyzeEndpoint(provider.value))
     narrative.value = data.narrative || ''
-  } catch {
+  } catch (e: any) {
     narrativeError.value = true
+    const msg = String(e?.message || '')
+    if (msg.includes('404')) {
+      narrativeErrorMsg.value = 'No data captured yet — try reconnecting this provider.'
+    } else if (msg.includes('503')) {
+      narrativeErrorMsg.value = 'Narrative engine offline (LLM not configured on the server).'
+    } else if (msg.includes('502')) {
+      narrativeErrorMsg.value = 'Narrative engine returned an error. Try again in a moment.'
+    } else {
+      narrativeErrorMsg.value = 'Analysis not available yet.'
+    }
   }
   narrativeLoading.value = false
 }

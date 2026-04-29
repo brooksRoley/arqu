@@ -6,9 +6,10 @@
 
     <button
       @click="initiateInstagramAuth"
-      :disabled="isConnecting || isConnected"
+      :disabled="isConnecting || isConnected || !available"
+      :title="!available ? 'Instagram OAuth not configured on the server yet' : ''"
       class="relative flex items-center justify-between w-full bg-black border border-gray-800 text-gray-200 px-6 py-4 rounded-xl shadow-2xl transition-all overflow-hidden"
-      :class="{ 'opacity-50 cursor-not-allowed': isConnecting, 'border-pink-500/50': isConnected }"
+      :class="{ 'opacity-50 cursor-not-allowed': isConnecting || !available, 'border-pink-500/50': isConnected }"
     >
       <div class="flex items-center gap-4 z-10">
         <svg viewBox="0 0 24 24" aria-hidden="true" class="w-6 h-6 fill-current text-[#E1306C]">
@@ -59,25 +60,29 @@ import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/composables/useAuthStore'
 import { useVibeStore } from '@/composables/useVibeStore'
+import { useConnectorAvailability } from '@/composables/useConnectorAvailability'
 
 const route = useRoute()
 const router = useRouter()
 const { token, logout } = useAuthStore()
 const { oauthState, markConnected } = useVibeStore()
+const { fetchAvailability, isAvailable } = useConnectorAvailability()
 
 const API = import.meta.env.VITE_API_URL || ''
 const isConnecting = ref(false)
 
 const isConnected = computed(() => oauthState.value.instagram.connected)
+const available = computed(() => isAvailable('instagram'))
 
 const buttonText = computed(() => {
+  if (!available.value) return 'INSTAGRAM UNAVAILABLE'
   if (isConnecting.value) return 'SCANNING FEED...'
   if (isConnected.value) return 'INSTAGRAM SYNCED'
   return 'CONNECT INSTAGRAM'
 })
 
 async function initiateInstagramAuth() {
-  if (isConnected.value || !token.value) return
+  if (isConnected.value || !token.value || !available.value) return
   isConnecting.value = true
 
   try {
@@ -101,6 +106,7 @@ async function initiateInstagramAuth() {
 }
 
 onMounted(() => {
+  fetchAvailability()
   // Instagram callback redirects back with ?instagram=connected
   if (route.query.instagram === 'connected' && !isConnected.value) {
     markConnected('instagram')
