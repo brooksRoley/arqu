@@ -26,8 +26,8 @@ from fastapi.responses import JSONResponse
 from ..auth.deps import get_current_user_id
 from ..config import get_settings
 from ..db import get_conn
-from ..oauth_base import (
 from ..llm.chat import chat_completion
+from ..oauth_base import (
     build_authorize_url,
     make_oauth_state,
     store_oauth_tokens,
