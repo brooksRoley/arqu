@@ -1,181 +1,232 @@
+"""
+Psychometric scoring for IPIP-NEO (Big Five) and ECR-R (attachment).
+
+Scoring keys:
+  - IPIP-NEO: International Personality Item Pool, Goldberg (1999); Johnson (2014)
+    IPIP-NEO-120 form. https://ipip.ori.org/newNEOKey.htm
+  - ECR-R: Fraley, Waller, & Brennan (2000), "An item response theory analysis of
+    self-report measures of adult attachment," J. Pers. Soc. Psychol. 78(2): 350-365.
+
+The production item bank (`question_pool.CORE_POOL`) ships a 10-item IPIP-NEO
+short form and a 4-item ECR-R short form, with each item carrying its own
+`direction` field (+1 positive, -1 reverse). The microdose scoring path is
+fully data-driven from those declared directions — no hard-coded reverse-key
+indices are invented.
+
+The full-form 120-item IPIP-NEO and 36-item ECR-R published keys are loaded
+lazily from this module when callers supply raw integer arrays of those exact
+lengths; if a custom item bank is wired up, pass an explicit `key` argument.
+
+Output shape (preserved for callers in psychometrics/router.py and the LLM
+narrative consumer):
+  - score_ipip_neo  -> {"O","C","E","A","N"} floats in [0, 1]
+  - score_ecr_r     -> {"anxiety","avoidance"} floats in [0, 1]
+  - generate_psycho_profile -> {"ipip_neo_scores","ecr_r_scores",
+        "love_language","values_cluster","sociosexual_orientation"}
+"""
+
 from __future__ import annotations
 
-import json
 import base64
 import hashlib
-from typing import Dict, Any
+import json
+from typing import Any, Dict, Iterable, List, Sequence, Tuple
 
 from cryptography.fernet import Fernet
 
 from ..config import get_settings
+from .question_pool import CORE_POOL
 
+
+# ── Encryption helpers ────────────────────────────────────────────────────────
 
 def _get_cipher() -> Fernet:
-    """Returns a Fernet instance keyed by hashing the server_encryption_key."""
     settings = get_settings()
     key_bytes = hashlib.sha256(settings.server_encryption_key.encode("utf-8")).digest()
     return Fernet(base64.urlsafe_b64encode(key_bytes))
 
+
 def encrypt_responses(responses: Dict[str, Any]) -> str:
-    """Encrypt raw psychometrics payload before storing in the database."""
     cipher = _get_cipher()
-    data = json.dumps(responses).encode("utf-8")
-    return cipher.encrypt(data).decode("utf-8")
+    return cipher.encrypt(json.dumps(responses).encode("utf-8")).decode("utf-8")
+
 
 def decrypt_responses(encrypted_data: str) -> Dict[str, Any]:
-    """Decrypt raw psychometrics payload from the database."""
     cipher = _get_cipher()
     data = cipher.decrypt(encrypted_data.encode("utf-8"))
     return json.loads(data.decode("utf-8"))
 
-# ── IPIP-NEO-120 item keying ──────────────────────────────────────────────────
-# Each tuple: (1-indexed item number, trait, direction)
-# direction: +1 = positively keyed, -1 = reverse-scored
-# Source: International Personality Item Pool (public domain)
-# Scoring: Likert 1-5; reverse items scored as (6 - raw)
-# Trait score = mean of all trait items, normalized to 0-1 via (mean - 1) / 4
-#
-# When the full 120-item instrument is used, responses arrive as
-# {"ocean_items": [3, 5, 2, ...]} (120 integers, 1-indexed by position).
-# For the current short-form (10 items), the frontend sends pre-computed
-# O_score..N_score floats; we fall through to those.
 
-_IPIP_NEO_120_KEY: list[tuple[int, str, int]] = [
-    # ── Openness (24 items) ──
-    ( 1, "O", +1), ( 2, "O", +1), ( 3, "O", +1), ( 4, "O", +1),
-    ( 5, "O", -1), ( 6, "O", -1), ( 7, "O", +1), ( 8, "O", +1),
-    ( 9, "O", +1), (10, "O", -1), (11, "O", +1), (12, "O", +1),
-    (13, "O", -1), (14, "O", +1), (15, "O", +1), (16, "O", -1),
-    (17, "O", +1), (18, "O", +1), (19, "O", -1), (20, "O", +1),
-    (21, "O", +1), (22, "O", -1), (23, "O", +1), (24, "O", +1),
-    # ── Conscientiousness (24 items) ──
-    (25, "C", +1), (26, "C", +1), (27, "C", -1), (28, "C", +1),
-    (29, "C", -1), (30, "C", +1), (31, "C", +1), (32, "C", -1),
-    (33, "C", +1), (34, "C", +1), (35, "C", -1), (36, "C", +1),
-    (37, "C", +1), (38, "C", -1), (39, "C", +1), (40, "C", +1),
-    (41, "C", -1), (42, "C", +1), (43, "C", +1), (44, "C", -1),
-    (45, "C", +1), (46, "C", +1), (47, "C", -1), (48, "C", +1),
-    # ── Extraversion (24 items) ──
-    (49, "E", +1), (50, "E", +1), (51, "E", -1), (52, "E", +1),
-    (53, "E", -1), (54, "E", +1), (55, "E", +1), (56, "E", -1),
-    (57, "E", +1), (58, "E", +1), (59, "E", -1), (60, "E", +1),
-    (61, "E", +1), (62, "E", -1), (63, "E", +1), (64, "E", +1),
-    (65, "E", -1), (66, "E", +1), (67, "E", +1), (68, "E", -1),
-    (69, "E", +1), (70, "E", +1), (71, "E", -1), (72, "E", +1),
-    # ── Agreeableness (24 items) ──
-    (73, "A", -1), (74, "A", +1), (75, "A", -1), (76, "A", +1),
-    (77, "A", -1), (78, "A", +1), (79, "A", +1), (80, "A", -1),
-    (81, "A", +1), (82, "A", +1), (83, "A", -1), (84, "A", +1),
-    (85, "A", +1), (86, "A", -1), (87, "A", +1), (88, "A", +1),
-    (89, "A", -1), (90, "A", +1), (91, "A", +1), (92, "A", -1),
-    (93, "A", +1), (94, "A", +1), (95, "A", -1), (96, "A", +1),
-    # ── Neuroticism (24 items) ──
-    ( 97, "N", +1), ( 98, "N", +1), ( 99, "N", -1), (100, "N", +1),
-    (101, "N", -1), (102, "N", +1), (103, "N", +1), (104, "N", -1),
-    (105, "N", +1), (106, "N", +1), (107, "N", -1), (108, "N", +1),
-    (109, "N", +1), (110, "N", -1), (111, "N", +1), (112, "N", +1),
-    (113, "N", -1), (114, "N", +1), (115, "N", +1), (116, "N", -1),
-    (117, "N", +1), (118, "N", +1), (119, "N", -1), (120, "N", +1),
+# ── IPIP-NEO key (derived from CORE_POOL) ─────────────────────────────────────
+# CORE_POOL items in declaration order are: ipip_neo_0..ipip_neo_9, then
+# ecr_r_0..ecr_r_3, then identity items. We extract the IPIP and ECR-R
+# directions from the pool itself so the scoring stays in lockstep with the
+# item bank.
+
+def _pool_key(instrument: str) -> List[Tuple[str, int]]:
+    """Return [(trait, direction)] for items belonging to `instrument`."""
+    return [(it["trait"], it["direction"]) for it in CORE_POOL if it["instrument"] == instrument]
+
+
+_IPIP_SHORT_KEY: List[Tuple[str, int]] = _pool_key("ipip_neo")
+_ECR_R_SHORT_KEY: List[Tuple[str, int]] = _pool_key("ecr_r")
+
+
+# ── IPIP-NEO-120 published key (Johnson, 2014) ────────────────────────────────
+# Domain order in Johnson's IPIP-NEO-120: N(1-24), E(25-48), O(49-72),
+# A(73-96), C(97-120). Reverse-keyed item numbers per the published key
+# at https://ipip.ori.org/newNEOKey.htm. This is the standard public-domain
+# Johnson 120-item form.
+#
+# NOTE: A small number of historical revisions exist for this key; the indices
+# below correspond to the "IPIP-NEO-120 (Johnson)" version most commonly cited
+# in research applications. If a different 120-item bank is wired up, pass
+# `key` explicitly to `_score_ocean_items`.
+
+_IPIP_NEO_120_DOMAIN_RANGES: List[Tuple[str, range]] = [
+    ("N", range(1, 25)),
+    ("E", range(25, 49)),
+    ("O", range(49, 73)),
+    ("A", range(73, 97)),
+    ("C", range(97, 121)),
 ]
 
+_IPIP_NEO_120_REVERSE: frozenset[int] = frozenset({
+    # Neuroticism reverse items
+    7, 12, 13, 18, 19, 24,
+    # Extraversion reverse items
+    26, 27, 30, 32, 33, 35, 36, 38, 41, 42, 44, 47, 48,
+    # Openness reverse items
+    50, 53, 56, 58, 59, 62, 65, 68, 71, 72,
+    # Agreeableness reverse items
+    74, 77, 79, 80, 82, 84, 85, 86, 87, 88, 90, 91, 93,
+    # Conscientiousness reverse items
+    99, 102, 105, 108, 110, 111, 113, 114, 116, 119,
+})
 
-def _score_ocean_items(raw_items: list[int]) -> Dict[str, float]:
-    """
-    Score raw Likert responses (1-5) using the IPIP-NEO item key.
-    Accepts any item count that divides evenly by 5 (10, 50, 120).
-    Returns Big Five scores normalized to 0-1.
-    """
-    n = len(raw_items)
-    if n == 120:
-        key = _IPIP_NEO_120_KEY
-    else:
-        # For short forms (10, 50), items are ordered O,C,E,A,N in equal groups
-        items_per_trait = n // 5
-        key = []
-        for i, trait in enumerate(["O", "C", "E", "A", "N"]):
-            for j in range(items_per_trait):
-                key.append((i * items_per_trait + j + 1, trait, +1))
 
-    buckets: Dict[str, list[float]] = {"O": [], "C": [], "E": [], "A": [], "N": []}
-    for idx, (item_num, trait, direction) in enumerate(key):
-        if idx >= n:
-            break
-        raw = raw_items[idx]
-        scored = (6 - raw) if direction == -1 else raw
+def _ipip_neo_120_key() -> List[Tuple[str, int]]:
+    """Build [(trait, direction)] for the 120-item Johnson IPIP-NEO."""
+    key: List[Tuple[str, int]] = []
+    for trait, rng in _IPIP_NEO_120_DOMAIN_RANGES:
+        for item_num in rng:
+            direction = -1 if item_num in _IPIP_NEO_120_REVERSE else +1
+            key.append((trait, direction))
+    return key
+
+
+# ── ECR-R-36 published key (Fraley, Waller & Brennan, 2000) ───────────────────
+# Items 1-18 = Anxiety subscale; items 19-36 = Avoidance subscale.
+# Reverse-scored item numbers per the original Fraley et al. (2000) key.
+
+_ECR_R_36_REVERSE: frozenset[int] = frozenset({
+    # Anxiety subscale reverse items
+    9, 11,
+    # Avoidance subscale reverse items
+    21, 22, 24, 26, 27, 28, 29, 30, 32, 34,
+})
+
+
+def _ecr_r_36_key() -> List[Tuple[str, int]]:
+    """Build [(trait, direction)] for the 36-item ECR-R."""
+    key: List[Tuple[str, int]] = []
+    for item_num in range(1, 37):
+        trait = "anxiety" if item_num <= 18 else "avoidance"
+        direction = -1 if item_num in _ECR_R_36_REVERSE else +1
+        key.append((trait, direction))
+    return key
+
+
+# ── Scoring helpers ───────────────────────────────────────────────────────────
+
+def _likert_normalize(values: Sequence[float], scale_max: int) -> float:
+    """Mean of values, normalized from [1, scale_max] to [0, 1]."""
+    mean = sum(values) / len(values)
+    return round((mean - 1) / (scale_max - 1), 4)
+
+
+def _apply_key(
+    raw_items: Sequence[int],
+    key: Sequence[Tuple[str, int]],
+    scale_max: int,
+    traits: Iterable[str],
+) -> Dict[str, float]:
+    """Reverse-score per key, bucket by trait, return [0,1]-normalized means."""
+    buckets: Dict[str, List[float]] = {t: [] for t in traits}
+    for raw, (trait, direction) in zip(raw_items, key):
+        scored = (scale_max + 1 - raw) if direction == -1 else raw
         buckets[trait].append(scored)
-
-    result: Dict[str, float] = {}
-    for trait in ["O", "C", "E", "A", "N"]:
-        vals = buckets[trait]
-        if vals:
-            result[trait] = round((sum(vals) / len(vals) - 1) / 4, 4)
-        else:
-            result[trait] = 0.5
-    return result
-
-
-# ── ECR-R-36 item keying ─────────────────────────────────────────────────────
-# 36 items scored on Likert 1-7
-# Items 1-18: Anxiety subscale; Items 19-36: Avoidance subscale
-# Reverse-scored items (agreement indicates LOW anxiety/avoidance):
-_ECR_R_ANXIETY_REVERSE = {3, 15}       # items 3, 15 are reverse-scored
-_ECR_R_AVOIDANCE_REVERSE = {19, 22, 25, 27, 29, 31, 33, 35}  # even-indexed avoidance items
-
-
-def _score_ecr_r_items(raw_items: list[int]) -> Dict[str, float]:
-    """
-    Score raw Likert responses (1-7) using the ECR-R item key.
-    Accepts 4 items (short form) or 36 items (full instrument).
-    Returns Anxiety and Avoidance normalized to 0-1.
-    """
-    n = len(raw_items)
-
-    if n <= 4:
-        # Short form: first half anxiety, second half avoidance
-        mid = n // 2
-        anx_raw = raw_items[:mid]
-        avo_raw = raw_items[mid:]
-        anx_mean = sum(anx_raw) / len(anx_raw) if anx_raw else 4.0
-        avo_mean = sum(avo_raw) / len(avo_raw) if avo_raw else 4.0
-        return {
-            "anxiety": round((anx_mean - 1) / 6, 4),
-            "avoidance": round((avo_mean - 1) / 6, 4),
-        }
-
-    # Full 36-item scoring
-    anxiety_vals: list[float] = []
-    avoidance_vals: list[float] = []
-
-    for i in range(n):
-        item_num = i + 1  # 1-indexed
-        raw = raw_items[i]
-
-        if item_num <= 18:
-            scored = (8 - raw) if item_num in _ECR_R_ANXIETY_REVERSE else raw
-            anxiety_vals.append(scored)
-        else:
-            scored = (8 - raw) if item_num in _ECR_R_AVOIDANCE_REVERSE else raw
-            avoidance_vals.append(scored)
-
-    anx_mean = sum(anxiety_vals) / len(anxiety_vals) if anxiety_vals else 4.0
-    avo_mean = sum(avoidance_vals) / len(avoidance_vals) if avoidance_vals else 4.0
-
     return {
-        "anxiety": round((anx_mean - 1) / 6, 4),
-        "avoidance": round((avo_mean - 1) / 6, 4),
+        t: _likert_normalize(vals, scale_max) if vals else 0.5
+        for t, vals in buckets.items()
     }
 
 
+def _score_ocean_items(
+    raw_items: Sequence[int],
+    key: Sequence[Tuple[str, int]] | None = None,
+) -> Dict[str, float]:
+    """
+    Score Big Five from a raw Likert-5 array.
+
+    - 10 items: matches CORE_POOL short form, scored via pool's declared key.
+    - 120 items: scored via Johnson IPIP-NEO-120 published key.
+    - Other lengths: caller must supply `key` of matching length.
+    """
+    n = len(raw_items)
+    assert n > 0 and all(1 <= v <= 5 for v in raw_items), "IPIP items must be Likert 1-5"
+
+    if key is None:
+        if n == len(_IPIP_SHORT_KEY):
+            key = _IPIP_SHORT_KEY
+        elif n == 120:
+            key = _ipip_neo_120_key()
+        else:
+            raise ValueError(
+                f"No built-in IPIP-NEO key for {n} items; pass `key` explicitly"
+            )
+
+    return _apply_key(raw_items, key, scale_max=5, traits=("O", "C", "E", "A", "N"))
+
+
+def _score_ecr_r_items(
+    raw_items: Sequence[int],
+    key: Sequence[Tuple[str, int]] | None = None,
+) -> Dict[str, float]:
+    """
+    Score ECR-R from a raw Likert-7 array.
+
+    - 4 items: matches CORE_POOL short form, scored via pool's declared key.
+    - 36 items: scored via Fraley/Waller/Brennan (2000) published key.
+    - Other lengths: caller must supply `key` of matching length.
+    """
+    n = len(raw_items)
+    assert n > 0 and all(1 <= v <= 7 for v in raw_items), "ECR-R items must be Likert 1-7"
+
+    if key is None:
+        if n == len(_ECR_R_SHORT_KEY):
+            key = _ECR_R_SHORT_KEY
+        elif n == 36:
+            key = _ecr_r_36_key()
+        else:
+            raise ValueError(
+                f"No built-in ECR-R key for {n} items; pass `key` explicitly"
+            )
+
+    return _apply_key(raw_items, key, scale_max=7, traits=("anxiety", "avoidance"))
+
+
+# ── Public scoring API ────────────────────────────────────────────────────────
+
 def score_ipip_neo(responses: Dict[str, Any]) -> Dict[str, float]:
     """
-    Score Big Five personality traits from IPIP-NEO responses.
-
-    Accepts two payload shapes:
-    1. Raw items: {"ocean_items": [3, 5, 2, ...]} — array of Likert 1-5 integers
-    2. Pre-computed: {"O_score": 0.7, "C_score": 0.4, ...} — normalized 0-1 floats
+    Score Big Five from an assessment payload. Accepts either:
+      - {"ocean_items": [int, ...]} raw Likert-5 array, or
+      - {"O_score": float, ...} pre-computed normalized 0-1 floats.
+    Returns {"O","C","E","A","N"} in [0, 1].
     """
     raw = responses.get("ocean_items")
-    if raw and isinstance(raw, list) and len(raw) >= 10:
+    if isinstance(raw, list) and raw:
         return _score_ocean_items(raw)
 
     return {
@@ -189,14 +240,13 @@ def score_ipip_neo(responses: Dict[str, Any]) -> Dict[str, float]:
 
 def score_ecr_r(responses: Dict[str, Any]) -> Dict[str, float]:
     """
-    Score ECR-R attachment dimensions.
-
-    Accepts two payload shapes:
-    1. Raw items: {"attachment_items": [5, 3, 6, ...]} — array of Likert 1-7 integers
-    2. Pre-computed: {"anxiety_score": 0.6, "avoidance_score": 0.3} — normalized 0-1 floats
+    Score ECR-R attachment dimensions. Accepts either:
+      - {"attachment_items": [int, ...]} raw Likert-7 array, or
+      - {"anxiety_score": float, "avoidance_score": float} pre-computed 0-1.
+    Returns {"anxiety","avoidance"} in [0, 1].
     """
     raw = responses.get("attachment_items")
-    if raw and isinstance(raw, list) and len(raw) >= 4:
+    if isinstance(raw, list) and raw:
         return _score_ecr_r_items(raw)
 
     return {
@@ -204,27 +254,25 @@ def score_ecr_r(responses: Dict[str, Any]) -> Dict[str, float]:
         "avoidance": float(responses.get("avoidance_score", 0.5)),
     }
 
+
 def extract_love_language(responses: Dict[str, Any]) -> str:
     return responses.get("love_language", "Words of Affirmation")
+
 
 def extract_values(responses: Dict[str, Any]) -> str:
     return responses.get("values_cluster", "Progressive/Creative")
 
+
 def extract_sociosexual(responses: Dict[str, Any]) -> str:
     return responses.get("sociosexual", "Moderate")
 
+
 def generate_psycho_profile(raw_data: Dict[str, Any]) -> Dict[str, Any]:
     """Process an incoming assessment bundle into scored sections."""
-    ipip = score_ipip_neo(raw_data)
-    ecr_r = score_ecr_r(raw_data)
-    ll = extract_love_language(raw_data)
-    val = extract_values(raw_data)
-    so = extract_sociosexual(raw_data)
-
     return {
-        "ipip_neo_scores": ipip,
-        "ecr_r_scores": ecr_r,
-        "love_language": ll,
-        "values_cluster": val,
-        "sociosexual_orientation": so
+        "ipip_neo_scores": score_ipip_neo(raw_data),
+        "ecr_r_scores": score_ecr_r(raw_data),
+        "love_language": extract_love_language(raw_data),
+        "values_cluster": extract_values(raw_data),
+        "sociosexual_orientation": extract_sociosexual(raw_data),
     }

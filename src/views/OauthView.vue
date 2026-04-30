@@ -210,7 +210,7 @@
           <div class="flex justify-between items-start mb-4">
             <div>
               <h2 class="text-2xl font-bold text-red-400">Google Calendar</h2>
-              <h3 class="text-sm font-medium text-gray-500 uppercase tracking-wider mt-1">The Temporal Grid</h3>
+              <h3 class="text-sm font-medium text-gray-500 uppercase tracking-wider mt-1">time as behavior</h3>
             </div>
             <router-link to="/calibrate/google" class="text-xs font-medium text-red-400 bg-red-400/10 border border-red-500/30 rounded-full px-3 py-1 hover:bg-red-400/20 transition-colors">View Signal &rarr;</router-link>
           </div>
@@ -224,7 +224,7 @@
           <div class="flex justify-between items-start mb-4">
             <div>
               <h2 class="text-2xl font-bold text-red-400">Google Calendar</h2>
-              <h3 class="text-sm font-medium text-gray-500 uppercase tracking-wider mt-1">The Temporal Grid</h3>
+              <h3 class="text-sm font-medium text-gray-500 uppercase tracking-wider mt-1">time as behavior</h3>
             </div>
             <GCalConnect />
           </div>

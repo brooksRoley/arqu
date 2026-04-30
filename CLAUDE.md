@@ -2,7 +2,7 @@
 
 ## Stack
 - **Frontend**: Vue 3 + Vite + TypeScript + Tailwind — deployed to Vercel (`channelzero.vercel.app`)
-- **Backend**: FastAPI (Python) — deployed to Render (`channelzero-api.onrender.com`)
+- **Backend**: FastAPI (Python) — deployed to Render (`channelzero.onrender.com`)
 - **Database**: Neon PostgreSQL (asyncpg pooled + unpooled connections)
 - **Vector DB**: Pinecone (`channelzero` index) — vibe vectors for user matching
 - **Auth**: JWT HS256, 24hr expiry, stored as `channelzero-jwt` in localStorage

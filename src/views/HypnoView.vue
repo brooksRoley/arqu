@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, watch } from 'vue'
+import * as Tone from 'tone'
 import { useTextOverlay } from '@/composables/useTextOverlay'
 import { useCosmicPhysics } from '@/composables/useCosmicPhysics'
 import { useTranceEngine } from '@/composables/useTranceEngine'
@@ -22,16 +23,6 @@ function handleOverlayClose() {
   clearCompletedSession()
 }
 
-// ── CDN loader (for Tone.js only — Matter.js loaded by composable) ──
-function loadScript(src: string): Promise<void> {
-  return new Promise((resolve, reject) => {
-    if (document.querySelector(`script[src="${src}"]`)) return resolve()
-    const el = document.createElement('script')
-    el.src = src; el.onload = () => resolve(); el.onerror = reject
-    document.head.appendChild(el)
-  })
-}
-
 // ── Canvas + cosmic physics ───────────────────────────────────────
 const canvasRef = ref<HTMLCanvasElement>()
 const { loaded, adapt, init: initCosmic, destroy: destroyCosmic, heatOrb, clickImpulse } = useCosmicPhysics(canvasRef)
@@ -39,7 +30,7 @@ const { loaded, adapt, init: initCosmic, destroy: destroyCosmic, heatOrb, clickI
 // ── Audio state ───────────────────────────────────────────────────
 const audioOn = ref(false)
 const CHIME_NOTES = ['E4', 'G#4', 'B4', 'D5', 'F#4', 'A4']
-let T: any = null
+const T = Tone
 let audio: any = null
 let lastChime = 0
 
@@ -130,12 +121,6 @@ async function handleClick(e: MouseEvent) {
 
 // ── Lifecycle ─────────────────────────────────────────────────────
 onMounted(async () => {
-  // Load Tone.js CDN (Matter.js is loaded inside initCosmic)
-  try {
-    await loadScript('https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.min.js')
-  } catch { /* noop */ }
-  T = (window as any).Tone
-
   await initCosmic()
 })
 
