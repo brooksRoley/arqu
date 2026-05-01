@@ -48,6 +48,15 @@ async def maybe_trigger_synthesis(user_id: UUID) -> None:
             """,
             user_id,
         )
+        psych_row = await conn.fetchrow(
+            """
+            SELECT ipip_neo_scores, ecr_r_scores, love_language,
+                   sociosexual_orientation, values_cluster
+            FROM user_psychometrics
+            WHERE user_id = $1
+            """,
+            user_id,
+        )
 
     if not row:
         return
@@ -71,6 +80,15 @@ async def maybe_trigger_synthesis(user_id: UUID) -> None:
             return json.loads(val)
         return dict(val)
 
+    # Build psychometrics payload from scored assessment data
+    psych_data: dict = {}
+    if psych_row:
+        for key in ("ipip_neo_scores", "ecr_r_scores", "love_language",
+                     "sociosexual_orientation", "values_cluster"):
+            val = psych_row[key]
+            if val is not None:
+                psych_data[key] = json.loads(val) if isinstance(val, str) else val
+
     request = SynthesisRequest(
         spotify=ProviderPayload(data=_parse(row["spotify_data"])),
         twitter=ProviderPayload(data=_parse(row["twitter_data"])),
@@ -84,6 +102,7 @@ async def maybe_trigger_synthesis(user_id: UUID) -> None:
         reddit=ProviderPayload(data=_parse(row["reddit_data"])),
         instagram=ProviderPayload(data=_parse(row["instagram_data"])),
         tiktok=ProviderPayload(data=_parse(row["tiktok_data"])),
+        psychometrics=ProviderPayload(data=psych_data),
     )
 
     logger.info("Auto-triggering Oracle synthesis for %s (%d providers)", user_id, connected)

@@ -1,4 +1,5 @@
 {
+  "buildCommand": "vue-tsc --noEmit && vite build",
   "rewrites": [
     { "source": "/((?!api|assets|audio|_next).*)", "destination": "/index.html" }
   ],

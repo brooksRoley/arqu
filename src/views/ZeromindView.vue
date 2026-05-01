@@ -1,17 +1,9 @@
 <script setup lang="ts">
 import { ref, watch, onMounted, onUnmounted } from 'vue'
+import * as Tone from 'tone'
 import { useStoryStore } from '@/composables/useStoryStore'
 import { useTranceEngine } from '@/composables/useTranceEngine'
 import PostTranceOverlay from '@/components/PostTranceOverlay.vue'
-
-function loadScript(src: string): Promise<void> {
-  return new Promise((resolve, reject) => {
-    if (document.querySelector(`script[src="${src}"]`)) { resolve(); return }
-    const el = document.createElement('script')
-    el.src = src; el.onload = () => resolve(); el.onerror = reject
-    document.head.appendChild(el)
-  })
-}
 
 const { currentWord } = useStoryStore()
 const {
@@ -62,7 +54,7 @@ const AUDIO_MODES: Record<string, AudioModeCfg> = {
 }
 
 // ── Audio state ───────────────────────────────────────────────────
-let T: any = null
+const T = Tone as any
 let audioReady = false
 let masterGain: any = null
 let reverb: any = null
@@ -78,12 +70,7 @@ let bellArpIdx = 0
 
 async function startAudio() {
   if (audioReady) return
-  try {
-    await loadScript('https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.min.js')
-  } catch { return }
-  T = (window as any).Tone
-  if (!T) return
-  try { await T.start() } catch { return }
+  try { await Tone.start() } catch { return }
 
   reverb = new T.Reverb({ decay: 6, wet: 0.45 })
   masterGain = new T.Gain(0.18).toDestination()
