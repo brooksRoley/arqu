@@ -70,7 +70,7 @@ let bellArpIdx = 0
 
 async function startAudio() {
   if (audioReady) return
-  try { await Tone.start() } catch { return }
+  try { await T.start() } catch { return }
 
   reverb = new T.Reverb({ decay: 6, wet: 0.45 })
   masterGain = new T.Gain(0.18).toDestination()
@@ -116,7 +116,7 @@ async function startAudio() {
 }
 
 function applyAudioMode(modeId: string, ramp = 1.2) {
-  if (!audioReady || !T) return
+  if (!audioReady) return
   const cfg = AUDIO_MODES[modeId] ?? AUDIO_MODES.flux
   const now = T.now()
   const r = Math.max(ramp, 0.01)
@@ -135,7 +135,7 @@ function restartBeat(modeId: string, cfg: AudioModeCfg) {
   bellArpIdx = 0
   const intervalMs = Math.round(60000 / cfg.bpm)
   beatTimer = setInterval(() => {
-    if (!audioReady || !T) return
+    if (!audioReady) return
     beatCount++
     if (beatCount % cfg.beatEvery === 0) {
       try {
@@ -175,7 +175,7 @@ function restartBeat(modeId: string, cfg: AudioModeCfg) {
 
 function destroyAudio() {
   if (beatTimer) { clearInterval(beatTimer); beatTimer = null }
-  if (!T || !audioReady) return
+  if (!audioReady) return
   try {
     droneOsc?.triggerRelease()
     noiseSrc?.stop()
