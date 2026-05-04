@@ -142,7 +142,11 @@ async def spotify_sync(user_id: UUID = Depends(get_current_user_id)):
             if features_resp.status_code == 200:
                 audio_features = [f for f in features_resp.json().get("audio_features", []) if f]
 
-    spotify_profile = _distill_profile(artists_data, audio_features, tracks_data)
+        # Supplement genres from track artists (top-artist genres often empty)
+        top_artist_ids = {a["id"] for a in artists_data if a.get("id")}
+        extra_artists = await _fetch_track_artist_genres(client, headers, tracks_data, top_artist_ids)
+
+    spotify_profile = _distill_profile(artists_data, audio_features, tracks_data, extra_artists)
     await store_provider_data(str(user_id), "spotify_data", spotify_profile)
 
     # Re-trigger Oracle synthesis
@@ -244,8 +248,12 @@ async def spotify_callback(code: str, state: str):
         if tracks_resp.status_code == 200:
             tracks_data = tracks_resp.json().get("items", [])
 
+        # 4c. Supplement genres from track artists (top-artist genres often empty)
+        top_artist_ids = {a["id"] for a in artists_data if a.get("id")}
+        extra_artists = await _fetch_track_artist_genres(client, headers, tracks_data, top_artist_ids)
+
     # 5. Distill the audio profile
-    spotify_profile = _distill_profile(artists_data, audio_features, tracks_data)
+    spotify_profile = _distill_profile(artists_data, audio_features, tracks_data, extra_artists)
 
     # 6. Store tokens via shared helper
     await store_oauth_tokens(
@@ -319,12 +327,56 @@ def _infer_valence_from_genres(genres: list[str]) -> float:
     return round(sum(scores) / len(scores), 3) if scores else 0.5
 
 
-def _distill_profile(artists: list[dict], features: list[dict], tracks: list[dict] | None = None) -> dict:
+async def _fetch_track_artist_genres(
+    client: httpx.AsyncClient,
+    headers: dict,
+    tracks_data: list[dict],
+    top_artist_ids: set[str],
+) -> list[dict]:
+    """Fetch artist objects for artists appearing in top tracks but not top artists.
+
+    Spotify increasingly returns empty genres[] on top-artist objects.
+    Track artists are a supplemental source of genre data.
+    """
+    seen_ids: set[str] = set()
+    extra_ids: list[str] = []
+    for track in tracks_data:
+        for artist in track.get("artists", []):
+            aid = artist.get("id")
+            if aid and aid not in top_artist_ids and aid not in seen_ids:
+                seen_ids.add(aid)
+                extra_ids.append(aid)
+
+    if not extra_ids:
+        return []
+
+    # Spotify allows up to 50 IDs per batch request
+    batch = extra_ids[:50]
+    resp = await client.get(
+        f"{_SPOTIFY_API_BASE}/artists",
+        headers=headers,
+        params={"ids": ",".join(batch)},
+    )
+    if resp.status_code != 200:
+        return []
+    return resp.json().get("artists", [])
+
+
+def _distill_profile(
+    artists: list[dict],
+    features: list[dict],
+    tracks: list[dict] | None = None,
+    extra_artists: list[dict] | None = None,
+) -> dict:
     """Reduce raw Spotify data to the essentials we care about."""
     top_artist_names = [a["name"] for a in artists[:5]]
     genres: list[str] = []
     for a in artists[:5]:
         genres.extend(a.get("genres", []))
+    # Supplement with genres from track artists if top artists returned empty genres
+    if extra_artists:
+        for a in extra_artists:
+            genres.extend(a.get("genres", []))
     # Deduplicate while preserving order
     seen: set = set()
     unique_genres = [g for g in genres if not (g in seen or seen.add(g))][:8]  # type: ignore[func-returns-value]
