@@ -62,6 +62,95 @@ async def get_spotify_profile(user_id: UUID = Depends(get_current_user_id)):
     return json.loads(data) if isinstance(data, str) else data
 
 
+@router.post("/sync")
+async def spotify_sync(user_id: UUID = Depends(get_current_user_id)):
+    """Re-fetch Spotify profile using stored refresh token.
+
+    Covers users who connected before data ingestion was wired into the
+    callback, or whose token expired. Refreshes the access token, re-fetches
+    top artists + tracks + audio features, and stores the distilled profile.
+    """
+    from ..oauth_base import get_stored_tokens
+
+    settings = get_settings()
+    tokens = await get_stored_tokens(str(user_id), "spotify")
+    if not tokens or not tokens.get("refresh_token"):
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="No Spotify tokens found — please reconnect on /calibrate",
+        )
+
+    async with httpx.AsyncClient(timeout=20.0) as client:
+        # Refresh the access token
+        refresh_resp = await client.post(
+            _SPOTIFY_TOKEN_URL,
+            data={
+                "grant_type": "refresh_token",
+                "refresh_token": tokens["refresh_token"],
+            },
+            auth=(settings.spotify_client_id, settings.spotify_client_secret),
+        )
+        if refresh_resp.status_code != 200:
+            raise HTTPException(
+                status_code=status.HTTP_502_BAD_GATEWAY,
+                detail="Spotify token refresh failed — please reconnect on /calibrate",
+            )
+        refreshed = refresh_resp.json()
+        access_token = refreshed["access_token"]
+        new_refresh = refreshed.get("refresh_token", tokens["refresh_token"])
+        expires_at = int(time.time()) + refreshed.get("expires_in", 3600)
+
+        # Persist rotated tokens
+        await store_oauth_tokens(
+            str(user_id), "spotify", access_token, new_refresh, expires_at,
+            refreshed.get("scope", ""),
+        )
+
+        headers = {"Authorization": f"Bearer {access_token}"}
+
+        # Fetch top artists
+        artists_data = []
+        artists_resp = await client.get(
+            f"{_SPOTIFY_API_BASE}/me/top/artists",
+            headers=headers,
+            params={"limit": 10, "time_range": "medium_term"},
+        )
+        if artists_resp.status_code == 200:
+            artists_data = artists_resp.json().get("items", [])
+
+        # Fetch top tracks
+        track_ids: list[str] = []
+        tracks_data: list[dict] = []
+        tracks_resp = await client.get(
+            f"{_SPOTIFY_API_BASE}/me/top/tracks",
+            headers=headers,
+            params={"limit": 20, "time_range": "medium_term"},
+        )
+        if tracks_resp.status_code == 200:
+            items = tracks_resp.json().get("items", [])
+            track_ids = [t["id"] for t in items]
+            tracks_data = items
+
+        # Fetch audio features (may be deprecated)
+        audio_features: list[dict] = []
+        if track_ids:
+            features_resp = await client.get(
+                f"{_SPOTIFY_API_BASE}/audio-features",
+                headers=headers,
+                params={"ids": ",".join(track_ids)},
+            )
+            if features_resp.status_code == 200:
+                audio_features = [f for f in features_resp.json().get("audio_features", []) if f]
+
+    spotify_profile = _distill_profile(artists_data, audio_features, tracks_data)
+    await store_provider_data(str(user_id), "spotify_data", spotify_profile)
+
+    # Re-trigger Oracle synthesis
+    await maybe_trigger_synthesis(user_id)
+
+    return {"status": "synced", "profile": spotify_profile}
+
+
 @router.get("/connect")
 async def spotify_connect(token: str = Query(..., description="Frontend JWT")):
     """

@@ -728,6 +728,11 @@ async function fetchSpotifyProfile() {
   spotifyLoading.value = true
   try {
     spotifyProfile.value = await apiFetch<SpotifyProfile>('/api/spotify/profile')
+    // If connected but no profile data, auto-sync (covers pre-ingestion connections)
+    if (!spotifyProfile.value && oauthState.value.spotify.connected) {
+      const result = await apiFetch<{ profile: SpotifyProfile }>('/api/spotify/sync', { method: 'POST' })
+      if (result?.profile) spotifyProfile.value = result.profile
+    }
   } catch { /* non-blocking */ }
   spotifyLoading.value = false
 }
