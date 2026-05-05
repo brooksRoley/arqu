@@ -36,8 +36,17 @@
         <div class="h-4 bg-gray-800 rounded w-full" />
         <div class="h-4 bg-gray-800 rounded w-3/4" />
       </div>
-      <div v-else-if="narrativeError" class="text-gray-600 font-mono text-sm">
-        {{ narrativeErrorMsg }}
+      <div v-else-if="narrativeError" class="text-gray-600 font-mono text-sm space-y-4">
+        <p>{{ narrativeErrorMsg }}</p>
+        <button
+          v-if="hasSyncEndpoint && narrativeErrorMsg.includes('No data')"
+          :disabled="syncing"
+          @click="syncProvider"
+          class="text-xs font-mono px-4 py-2 rounded-full border border-gray-700 hover:border-gray-500 hover:text-gray-300 transition-colors disabled:opacity-40 disabled:cursor-wait"
+          :style="syncing ? {} : { borderColor: cfg?.color + '60', color: cfg?.color }"
+        >
+          {{ syncing ? 'Syncing…' : 'Resync from ' + (cfg?.label ?? 'provider') }}
+        </button>
       </div>
       <div v-else class="space-y-6">
         <p
@@ -61,8 +70,17 @@
         </div>
       </div>
 
-      <div v-else-if="!profile" class="text-gray-600 font-mono text-sm">
-        No data captured yet. Reconnect this provider to fetch fresh signal.
+      <div v-else-if="!profile" class="text-gray-600 font-mono text-sm space-y-4">
+        <p>No data captured yet. Reconnect this provider to fetch fresh signal.</p>
+        <button
+          v-if="hasSyncEndpoint"
+          :disabled="syncing"
+          @click="syncProvider"
+          class="text-xs font-mono px-4 py-2 rounded-full border border-gray-700 hover:border-gray-500 hover:text-gray-300 transition-colors disabled:opacity-40 disabled:cursor-wait"
+          :style="syncing ? {} : { borderColor: cfg?.color + '60', color: cfg?.color }"
+        >
+          {{ syncing ? 'Syncing…' : 'Resync from ' + (cfg?.label ?? 'provider') }}
+        </button>
       </div>
       <div v-else class="space-y-12">
         <!-- Hero stats — large number cards -->
@@ -284,6 +302,34 @@ const visibleNarratives = ref(new Set<number>())
 const statCardRefs = ref<HTMLElement[]>([])
 const visibleStats = ref(new Set<number>())
 const animatedStatValues = ref<Record<number, string>>({})
+
+// ── Resync ───────────────────────────────────────────────────────────────────
+const syncing = ref(false)
+const syncEndpoints: Record<string, string> = { spotify: '/api/spotify/sync' }
+const hasSyncEndpoint = computed(() => provider.value in syncEndpoints)
+
+async function syncProvider() {
+  const endpoint = syncEndpoints[provider.value]
+  if (!endpoint || syncing.value) return
+  syncing.value = true
+  try {
+    await apiFetch(endpoint, { method: 'POST' })
+    // Re-fetch everything after successful sync
+    await fetchProfile()
+    narrativeError.value = false
+    narrativeErrorMsg.value = 'Analysis not available yet.'
+    fetchNarrative()
+    fetchCorrelations()
+    observeElements()
+  } catch (e: any) {
+    const msg = String(e?.message || '')
+    if (msg.includes('404')) {
+      narrativeError.value = true
+      narrativeErrorMsg.value = 'No tokens stored — please reconnect on /calibrate.'
+    }
+  }
+  syncing.value = false
+}
 
 // ── Raw JSON ─────────────────────────────────────────────────────────────────
 const rawExpanded = ref(false)
