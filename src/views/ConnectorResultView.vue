@@ -447,7 +447,7 @@ async function fetchNarrative() {
     if (msg.includes('404')) {
       narrativeErrorMsg.value = 'No data captured yet — try reconnecting this provider.'
     } else if (msg.includes('503')) {
-      narrativeErrorMsg.value = 'Narrative engine offline (LLM not configured on the server).'
+      narrativeErrorMsg.value = 'Narrative engine offline — LLM unavailable or not configured.'
     } else if (msg.includes('502')) {
       narrativeErrorMsg.value = 'Narrative engine returned an error. Try again in a moment.'
     } else {

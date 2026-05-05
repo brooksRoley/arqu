@@ -73,18 +73,6 @@ async def get_available_connectors():
     }
 
 
-@router.get("/llm-status")
-async def get_llm_status():
-    """Diagnostic endpoint — returns LLM configuration state (no keys exposed)."""
-    settings = get_settings()
-    provider = (settings.llm_provider or "openai").lower()
-    return {
-        "configured": llm_configured(),
-        "provider": provider,
-        "model": settings.llm_model or ("gpt-4o-mini" if provider == "openai" else "openai/gpt-4o-mini"),
-    }
-
-
 @router.get("/correlations")
 async def get_correlations(
     provider: str = Query(..., description="Provider to find correlations for"),
