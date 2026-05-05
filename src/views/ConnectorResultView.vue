@@ -8,8 +8,9 @@
     >
       <canvas
         ref="canvasRef"
-        class="absolute inset-0 w-full h-full transition-opacity duration-700"
+        class="absolute inset-0 w-full h-full transition-opacity duration-700 cursor-crosshair"
         :style="{ opacity: canvasOpacity }"
+        @click="onCanvasClick"
       />
       <div class="relative z-10 text-center pointer-events-none select-none">
         <h1
@@ -200,18 +201,40 @@
         &#8592; Calibrate
       </router-link>
     </div>
+
+    <!-- Audio controls -->
+    <div v-if="synthHandle" class="fixed bottom-6 right-6 z-20 flex items-center gap-3">
+      <input
+        type="range"
+        min="0"
+        max="1"
+        step="0.05"
+        :value="audioVolume"
+        @input="(e) => { audioVolume = Number((e.target as HTMLInputElement).value); synthHandle?.setVolume(audioVolume) }"
+        class="w-20 h-1 appearance-none bg-gray-700 rounded-full cursor-pointer accent-gray-500 opacity-60 hover:opacity-100 transition-opacity"
+      />
+      <button
+        @click="synthHandle?.toggle()"
+        class="w-9 h-9 flex items-center justify-center rounded-full border border-gray-700 bg-gray-900/80 text-gray-400 hover:text-gray-200 hover:border-gray-500 transition-colors text-xs font-mono"
+        :title="synthHandle?.isStarted.value ? 'Mute' : 'Unmute'"
+      >
+        <span v-if="synthHandle?.isStarted.value">&#9834;</span>
+        <span v-else>&#9835;</span>
+      </button>
+    </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue'
+import { ref, shallowRef, computed, onMounted, onUnmounted, watch, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/composables/useAuthStore'
 import { useVibeStore } from '@/composables/useVibeStore'
 import { connectorConfigs, resolveField, profileEndpoint, analyzeEndpoint } from '@/config/connectorConfig'
 import type { ProviderConfig } from '@/config/connectorConfig'
 import type { OAuthState } from '@/composables/useVibeStore'
-import { useCosmicPhysics, type OrbDef } from '@/composables/useCosmicPhysics'
+import { useDataDrivenPhysics } from '@/composables/useDataDrivenPhysics'
+import { useSignalSynth, type AudioMetrics } from '@/composables/useSignalSynth'
 
 const route = useRoute()
 const router = useRouter()
@@ -239,19 +262,8 @@ const canvasRef = ref<HTMLCanvasElement>()
 const heroRef = ref<HTMLElement>()
 const canvasOpacity = ref(1)
 
-function hexToOrbDefs(hex: string): OrbDef[] {
-  const r = parseInt(hex.slice(1, 3), 16)
-  const g = parseInt(hex.slice(3, 5), 16)
-  const b = parseInt(hex.slice(5, 7), 16)
-  return [
-    { r, g, b },
-    { r: Math.max(0, r - 40), g: Math.max(0, g - 20), b: Math.min(255, b + 30) },
-    { r: Math.min(255, r + 30), g: Math.max(0, g - 30), b: Math.max(0, b - 20) },
-    { r: Math.max(0, r - 20), g: Math.min(255, g + 40), b: Math.min(255, b + 20) },
-  ]
-}
-
-let cosmicHandle: ReturnType<typeof useCosmicPhysics> | null = null
+const cosmicHandle = shallowRef<ReturnType<typeof useDataDrivenPhysics> | null>(null)
+const synthHandle = shallowRef<ReturnType<typeof useSignalSynth> | null>(null)
 
 // ── Profile data ─────────────────────────────────────────────────────────────
 const profile = ref<Record<string, unknown> | null>(null)
@@ -275,6 +287,9 @@ const animatedStatValues = ref<Record<number, string>>({})
 
 // ── Raw JSON ─────────────────────────────────────────────────────────────────
 const rawExpanded = ref(false)
+
+// ── Audio controls ──────────────────────────────────────────────────────────
+const audioVolume = ref(0.7)
 
 // ── Correlations ─────────────────────────────────────────────────────────────
 interface CorrelationEndpoint {
@@ -415,6 +430,50 @@ function onScroll() {
   const rect = heroRef.value.getBoundingClientRect()
   const scrolled = -rect.top / rect.height
   canvasOpacity.value = Math.max(0.15, 1 - scrolled * 1.2)
+
+  // Fade audio volume with scroll
+  if (synthHandle.value?.isStarted.value) {
+    const volumeFade = Math.max(0.05, 1 - scrolled * 0.8)
+    synthHandle.value.setVolume(audioVolume.value * volumeFade)
+  }
+}
+
+// ── Mouse → audio coupling ──────────────────────────────────────────────────
+let lastMouseX = 0
+let lastMouseY = 0
+let lastMouseTime = 0
+
+function onMouseMoveAudio(e: MouseEvent) {
+  if (!synthHandle.value?.isStarted.value) return
+
+  const now = performance.now()
+  const W = window.innerWidth
+
+  // Pan based on X position
+  synthHandle.value.setPan(((e.clientX / W) * 2 - 1) * 0.6)
+
+  // Velocity → resonance spike
+  if (lastMouseTime > 0) {
+    const dt = Math.max(1, now - lastMouseTime)
+    const dx = e.clientX - lastMouseX
+    const dy = e.clientY - lastMouseY
+    const velocity = Math.sqrt(dx * dx + dy * dy) / dt
+    if (velocity > 1.5) {
+      synthHandle.value.spikeResonance(Math.min(1, velocity / 5))
+    }
+  }
+
+  lastMouseX = e.clientX
+  lastMouseY = e.clientY
+  lastMouseTime = now
+}
+
+function onCanvasClick(e: MouseEvent) {
+  synthHandle.value?.triggerHit()
+  if (canvasRef.value) {
+    const rect = canvasRef.value.getBoundingClientRect()
+    cosmicHandle.value?.clickImpulse(e.clientX - rect.left, e.clientY - rect.top)
+  }
 }
 
 // ── Data fetching ────────────────────────────────────────────────────────────
@@ -480,19 +539,10 @@ onMounted(async () => {
   window.addEventListener('scroll', onScroll, { passive: true })
   setupObservers()
 
-  // Init physics canvas
+  // Init physics canvas with placeholder colors
   if (canvasRef.value && cfg.value) {
-    const orbDefs = hexToOrbDefs(cfg.value.color)
-    cosmicHandle = useCosmicPhysics(canvasRef, {
-      orbDefs,
-      particleCount: 180,
-      starCount: 120,
-      enableKeyboard: false,
-      enableMouseInteract: true,
-      clearAlpha: 0.08,
-      mouseAttractForce: 0.6,
-    })
-    await cosmicHandle.init()
+    cosmicHandle.value = useDataDrivenPhysics(canvasRef, null, cfg.value.physics, cfg.value.color)
+    await cosmicHandle.value.init()
   }
 
   // Check LLM availability
@@ -501,8 +551,29 @@ onMounted(async () => {
     llmAvailable.value = avail.llm
   } catch { /* assume available */ }
 
-  // Fetch all data
+  // Fetch profile, then re-init physics + synth with real data
   await fetchProfile()
+
+  if (profile.value && canvasRef.value && cfg.value) {
+    cosmicHandle.value?.destroy()
+    cosmicHandle.value = useDataDrivenPhysics(canvasRef, profile.value, cfg.value.physics, cfg.value.color)
+    await cosmicHandle.value.init()
+
+    // Init audio synth from profile
+    const audio = profile.value.audio_avg as Record<string, number> | undefined
+    if (audio) {
+      synthHandle.value = useSignalSynth({
+        tempo: audio.tempo ?? 120,
+        energy: audio.energy ?? 0.5,
+        valence: audio.valence ?? 0.5,
+        danceability: audio.danceability ?? 0.5,
+        acousticness: audio.acousticness ?? 0.5,
+      })
+    }
+  }
+
+  window.addEventListener('mousemove', onMouseMoveAudio)
+
   fetchNarrative()
   fetchCorrelations()
 
@@ -521,7 +592,9 @@ watch(profile, () => {
 
 onUnmounted(() => {
   window.removeEventListener('scroll', onScroll)
-  cosmicHandle?.destroy()
+  window.removeEventListener('mousemove', onMouseMoveAudio)
+  synthHandle.value?.dispose()
+  cosmicHandle.value?.destroy()
   narrativeObserver?.disconnect()
   statObserver?.disconnect()
 })
