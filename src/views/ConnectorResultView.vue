@@ -157,7 +157,9 @@
       </div>
 
       <div v-else-if="!correlations.length" class="text-center py-12">
-        <p class="text-gray-600 font-mono text-sm">Connect more services to see correlations.</p>
+        <p class="text-gray-600 font-mono text-sm">
+          {{ !llmAvailable ? 'Cross-signal analysis requires an LLM key on the server.' : 'Connect more services to see correlations.' }}
+        </p>
       </div>
 
       <div v-else class="space-y-4">
@@ -288,6 +290,7 @@ interface Correlation {
 }
 const correlations = ref<Correlation[]>([])
 const correlationsLoading = ref(false)
+const llmAvailable = ref(true)
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 function isNormalized(val: unknown): boolean {
@@ -428,6 +431,11 @@ async function fetchProfile() {
 
 async function fetchNarrative() {
   if (!provider.value || !cfg.value) return
+  if (!llmAvailable.value) {
+    narrativeError.value = true
+    narrativeErrorMsg.value = 'Narrative engine offline — LLM not configured on the server.'
+    return
+  }
   narrativeLoading.value = true
   narrativeError.value = false
   try {
@@ -451,6 +459,10 @@ async function fetchNarrative() {
 
 async function fetchCorrelations() {
   if (!provider.value) return
+  if (!llmAvailable.value) {
+    correlations.value = []
+    return
+  }
   correlationsLoading.value = true
   try {
     const data = await apiFetch<Correlation[]>(
@@ -482,6 +494,12 @@ onMounted(async () => {
     })
     await cosmicHandle.init()
   }
+
+  // Check LLM availability
+  try {
+    const avail = await apiFetch<{ providers: Record<string, boolean>; llm: boolean }>('/api/connectors/available')
+    llmAvailable.value = avail.llm
+  } catch { /* assume available */ }
 
   // Fetch all data
   await fetchProfile()
