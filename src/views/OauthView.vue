@@ -549,7 +549,10 @@
           <div v-for="src in connectedSources" :key="src.key">
             <div class="flex items-center gap-2 text-sm text-gray-400 mb-2">
               <span class="w-2 h-2 rounded-full bg-green-500"></span>
-              {{ src.label }}
+              <router-link :to="`/calibrate/${src.key}`" class="hover:text-green-400 transition-colors">
+                {{ src.label }}
+                <span class="text-xs opacity-60 ml-1">&rarr;</span>
+              </router-link>
               <span v-if="src.lastSync" class="text-gray-600 text-xs">{{ new Date(src.lastSync).toLocaleDateString() }}</span>
             </div>
 
