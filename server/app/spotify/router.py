@@ -329,7 +329,7 @@ def _infer_valence_from_genres(genres: list[str]) -> float:
 
 async def _fetch_track_artist_genres(
     client: httpx.AsyncClient,
-    headers: dict,
+    headers: dict[str, str],
     tracks_data: list[dict],
     top_artist_ids: set[str],
 ) -> list[dict]:
@@ -350,7 +350,7 @@ async def _fetch_track_artist_genres(
     if not extra_ids:
         return []
 
-    # Spotify allows up to 50 IDs per batch request
+    # Fetch only the first 50 — artists beyond this are low-signal collaborators
     batch = extra_ids[:50]
     resp = await client.get(
         f"{_SPOTIFY_API_BASE}/artists",
@@ -373,7 +373,7 @@ def _distill_profile(
     genres: list[str] = []
     for a in artists[:5]:
         genres.extend(a.get("genres", []))
-    # Supplement with genres from track artists if top artists returned empty genres
+    # Supplement with genres from track artists (always additive, deduped below)
     if extra_artists:
         for a in extra_artists:
             genres.extend(a.get("genres", []))
