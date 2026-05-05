@@ -12,8 +12,12 @@ Default model per provider is overridable via LLM_MODEL.
 
 from __future__ import annotations
 
+import logging
+
 import httpx
 from fastapi import HTTPException, status
+
+logger = logging.getLogger(__name__)
 
 from ..config import get_settings
 
@@ -25,8 +29,8 @@ _PROVIDERS = {
     },
     "openrouter": {
         "url": "https://openrouter.ai/api/v1/chat/completions",
-        # Cheap-and-fast default; user can override via LLM_MODEL.
-        "default_model": "openai/gpt-4o-mini",
+        # Free default; user can override via LLM_MODEL.
+        "default_model": "meta-llama/llama-3.1-8b-instruct:free",
     },
 }
 
@@ -101,9 +105,15 @@ async def chat_completion(
         resp = await client.post(url, json=payload, headers=headers)
 
     if resp.status_code != 200:
+        # Log the upstream body for debugging (truncated)
+        try:
+            err_body = resp.text[:300]
+        except Exception:
+            err_body = ""
+        logger.error("LLM upstream error: %s %s — %s", provider, resp.status_code, err_body)
         raise HTTPException(
             status_code=status.HTTP_502_BAD_GATEWAY,
-            detail=f"LLM call failed ({provider} {resp.status_code})",
+            detail=f"LLM call failed ({provider} {resp.status_code}): {err_body[:120]}",
         )
 
     data = resp.json()
