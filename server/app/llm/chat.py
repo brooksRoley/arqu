@@ -30,7 +30,7 @@ _PROVIDERS = {
     "openrouter": {
         "url": "https://openrouter.ai/api/v1/chat/completions",
         # Free default; user can override via LLM_MODEL.
-        "default_model": "meta-llama/llama-3.1-8b-instruct:free",
+        "default_model": "google/gemma-4-31b-it:free",
     },
 }
 

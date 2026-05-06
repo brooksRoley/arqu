@@ -216,7 +216,7 @@ class TestChatCompletion:
 
     @pytest.mark.asyncio
     async def test_model_override(self):
-        settings = self._make_settings(llm_model="meta-llama/llama-3-8b-instruct:free")
+        settings = self._make_settings(llm_model="nvidia/nemotron-3-super-120b-a12b:free")
         mock_response = MagicMock()
         mock_response.status_code = 200
         mock_response.json.return_value = {
@@ -234,4 +234,4 @@ class TestChatCompletion:
 
                 call_kwargs = mock_client.post.call_args
                 payload = call_kwargs.kwargs.get("json") or call_kwargs[1].get("json")
-                assert payload["model"] == "meta-llama/llama-3-8b-instruct:free"
+                assert payload["model"] == "nvidia/nemotron-3-super-120b-a12b:free"
