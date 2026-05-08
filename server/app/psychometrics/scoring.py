@@ -19,8 +19,10 @@ lengths; if a custom item bank is wired up, pass an explicit `key` argument.
 
 Output shape (preserved for callers in psychometrics/router.py and the LLM
 narrative consumer):
-  - score_ipip_neo  -> {"O","C","E","A","N"} floats in [0, 1]
-  - score_ecr_r     -> {"anxiety","avoidance"} floats in [0, 1]
+  - score_ipip_neo  -> {"O","C","E","A","N"} floats in [0, 1], norm-referenced
+  - score_ecr_r     -> {"anxiety","avoidance"} floats in [0, 1] norm-referenced,
+        plus "attachment_style" label (Secure, Preoccupied, Dismissive-Avoidant,
+        Fearful-Avoidant)
   - generate_psycho_profile -> {"ipip_neo_scores","ecr_r_scores",
         "love_language","values_cluster","sociosexual_orientation"}
 """
@@ -30,6 +32,7 @@ from __future__ import annotations
 import base64
 import hashlib
 import json
+import math
 from typing import Any, Dict, Iterable, List, Sequence, Tuple
 
 from cryptography.fernet import Fernet
@@ -137,12 +140,44 @@ def _ecr_r_36_key() -> List[Tuple[str, int]]:
     return key
 
 
+# ── Normative data ────────────────────────────────────────────────────────────
+# IPIP-NEO adult norms: Johnson (2014), "Measuring thirty facets of the Five
+# Factor Model with a 120-item public domain inventory," SAPA project combined
+# adult sample (N≈307,000). Per-item means and SDs on Likert 1-5 scale.
+
+_IPIP_NEO_NORMS: Dict[str, Tuple[float, float]] = {
+    "N": (2.73, 0.68),
+    "E": (3.26, 0.63),
+    "O": (3.64, 0.54),
+    "A": (3.62, 0.53),
+    "C": (3.48, 0.59),
+}
+
+# ECR-R adult norms: Fraley, Waller & Brennan (2000) and subsequent large-
+# sample validations. Per-item means and SDs on Likert 1-7 scale.
+
+_ECR_R_NORMS: Dict[str, Tuple[float, float]] = {
+    "anxiety":   (3.56, 1.12),
+    "avoidance": (2.93, 1.18),
+}
+
+
 # ── Scoring helpers ───────────────────────────────────────────────────────────
 
-def _likert_normalize(values: Sequence[float], scale_max: int) -> float:
-    """Mean of values, normalized from [1, scale_max] to [0, 1]."""
-    mean = sum(values) / len(values)
-    return round((mean - 1) / (scale_max - 1), 4)
+def _phi(z: float) -> float:
+    """Standard normal CDF via error function."""
+    return 0.5 * (1.0 + math.erf(z / math.sqrt(2.0)))
+
+
+def _norm_score(raw_mean: float, norm_mean: float, norm_sd: float) -> float:
+    """Convert a raw per-item mean to a norm-referenced percentile in [0, 1].
+
+    The output is a cumulative-normal percentile: 0.5 = population average,
+    values near 0 or 1 indicate extreme deviation. Clamped to [0.001, 0.999]
+    to avoid degenerate edge values.
+    """
+    z = (raw_mean - norm_mean) / norm_sd
+    return round(max(0.001, min(0.999, _phi(z))), 4)
 
 
 def _apply_key(
@@ -150,16 +185,30 @@ def _apply_key(
     key: Sequence[Tuple[str, int]],
     scale_max: int,
     traits: Iterable[str],
+    norms: Dict[str, Tuple[float, float]] | None = None,
 ) -> Dict[str, float]:
-    """Reverse-score per key, bucket by trait, return [0,1]-normalized means."""
+    """Reverse-score per key, bucket by trait, return [0,1]-normalized means.
+
+    If `norms` is provided, scores are normalized against population norms
+    (percentile rank). Otherwise falls back to linear Likert normalization.
+    """
     buckets: Dict[str, List[float]] = {t: [] for t in traits}
     for raw, (trait, direction) in zip(raw_items, key):
         scored = (scale_max + 1 - raw) if direction == -1 else raw
         buckets[trait].append(scored)
-    return {
-        t: _likert_normalize(vals, scale_max) if vals else 0.5
-        for t, vals in buckets.items()
-    }
+
+    result: Dict[str, float] = {}
+    for t, vals in buckets.items():
+        if not vals:
+            result[t] = 0.5
+            continue
+        raw_mean = sum(vals) / len(vals)
+        if norms and t in norms:
+            norm_mean, norm_sd = norms[t]
+            result[t] = _norm_score(raw_mean, norm_mean, norm_sd)
+        else:
+            result[t] = round((raw_mean - 1) / (scale_max - 1), 4)
+    return result
 
 
 def _score_ocean_items(
@@ -186,7 +235,7 @@ def _score_ocean_items(
                 f"No built-in IPIP-NEO key for {n} items; pass `key` explicitly"
             )
 
-    return _apply_key(raw_items, key, scale_max=5, traits=("O", "C", "E", "A", "N"))
+    return _apply_key(raw_items, key, scale_max=5, traits=("O", "C", "E", "A", "N"), norms=_IPIP_NEO_NORMS)
 
 
 def _score_ecr_r_items(
@@ -213,7 +262,7 @@ def _score_ecr_r_items(
                 f"No built-in ECR-R key for {n} items; pass `key` explicitly"
             )
 
-    return _apply_key(raw_items, key, scale_max=7, traits=("anxiety", "avoidance"))
+    return _apply_key(raw_items, key, scale_max=7, traits=("anxiety", "avoidance"), norms=_ECR_R_NORMS)
 
 
 # ── Public scoring API ────────────────────────────────────────────────────────
@@ -238,21 +287,40 @@ def score_ipip_neo(responses: Dict[str, Any]) -> Dict[str, float]:
     }
 
 
-def score_ecr_r(responses: Dict[str, Any]) -> Dict[str, float]:
+def classify_attachment_style(anxiety: float, avoidance: float) -> str:
+    """Map ECR-R anxiety/avoidance scores to a 4-quadrant attachment label.
+
+    Uses 0.5 (population median equivalent) as the cutoff, following
+    Bartholomew & Horowitz (1991) two-dimensional model.
+    """
+    if anxiety < 0.5 and avoidance < 0.5:
+        return "Secure"
+    elif anxiety >= 0.5 and avoidance < 0.5:
+        return "Preoccupied"
+    elif anxiety < 0.5 and avoidance >= 0.5:
+        return "Dismissive-Avoidant"
+    else:
+        return "Fearful-Avoidant"
+
+
+def score_ecr_r(responses: Dict[str, Any]) -> Dict[str, Any]:
     """
     Score ECR-R attachment dimensions. Accepts either:
       - {"attachment_items": [int, ...]} raw Likert-7 array, or
       - {"anxiety_score": float, "avoidance_score": float} pre-computed 0-1.
-    Returns {"anxiety","avoidance"} in [0, 1].
+    Returns {"anxiety","avoidance"} in [0, 1] plus "attachment_style" label.
     """
     raw = responses.get("attachment_items")
     if isinstance(raw, list) and raw:
-        return _score_ecr_r_items(raw)
+        scores = _score_ecr_r_items(raw)
+    else:
+        scores = {
+            "anxiety": float(responses.get("anxiety_score", 0.5)),
+            "avoidance": float(responses.get("avoidance_score", 0.5)),
+        }
 
-    return {
-        "anxiety": float(responses.get("anxiety_score", 0.5)),
-        "avoidance": float(responses.get("avoidance_score", 0.5)),
-    }
+    scores["attachment_style"] = classify_attachment_style(scores["anxiety"], scores["avoidance"])
+    return scores
 
 
 def extract_love_language(responses: Dict[str, Any]) -> str:
