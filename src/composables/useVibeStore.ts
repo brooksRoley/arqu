@@ -253,6 +253,12 @@ function connectSpotify() {
   window.location.href = `${API}/api/spotify/connect?token=${token.value}`
 }
 
+function connectYouTube() {
+  const { token } = useAuthStore()
+  if (!token.value) return
+  window.location.href = `${API}/api/youtube/connect?token=${token.value}`
+}
+
 /**
  * Fetch the 3 nearest psychological neighbors from Pinecone via the backend.
  */
@@ -353,6 +359,7 @@ export function useVibeStore() {
     syncConnectors,
     fetchOracleCoordinate,
     connectSpotify,
+    connectYouTube,
     triggerSynthesis,
     fetchMatches,
     interactWithMatch,

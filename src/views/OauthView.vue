@@ -376,7 +376,7 @@
           <div v-else class="space-y-4">
             <div>
               <p class="text-xs text-gray-500 uppercase tracking-wider mb-1">Channel</p>
-              <p class="text-sm text-red-300 font-semibold">{{ youtubeProfile.channel_title }}</p>
+              <p class="text-sm text-red-300 font-semibold">{{ youtubeProfile.channel_name }}</p>
             </div>
             <div class="grid grid-cols-3 gap-4">
               <div>
@@ -677,11 +677,11 @@ interface GitHubProfile {
 }
 
 interface YouTubeProfile {
-  channel_title: string
+  channel_name: string
   subscriber_count: number
   video_count: number
   view_count: number
-  subscriptions: string[]
+  top_subscriptions: string[]
   subscription_categories: Record<string, number>
 }
 

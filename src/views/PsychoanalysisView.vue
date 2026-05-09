@@ -307,6 +307,14 @@
       <!-- Left column -->
       <div class="space-y-8">
 
+        <!-- OCEAN Cosmic Radar (canvas) -->
+        <section class="border border-lime-800 p-6 bg-black/30">
+          <h2 class="text-lg mb-4 text-white uppercase tracking-widest text-center">Personality Observatory</h2>
+          <div class="flex justify-center py-4">
+            <RadarCanvas :size="320" />
+          </div>
+        </section>
+
         <!-- OCEAN Radar -->
         <section class="border border-lime-800 p-6 bg-black/30">
           <h2 class="text-lg mb-4 text-white uppercase tracking-widest text-center">OCEAN Signature</h2>
@@ -468,6 +476,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { useVibeStore } from '@/composables/useVibeStore'
+import RadarCanvas from '@/components/RadarCanvas.vue'
 
 // ── Constants ──────────────────────────────────────────────────────
 const STEP_LABELS = ['Personality', 'Attachment', 'Identity']

@@ -5,10 +5,10 @@
     ></div>
 
     <button
-      @click="initiateYouTubeAuth"
-      :disabled="isConnecting || isConnected"
+      @click="connectYouTube"
+      :disabled="isConnected"
       class="relative flex items-center justify-between w-full bg-black border border-gray-800 text-gray-200 px-6 py-4 rounded-xl shadow-2xl transition-all overflow-hidden"
-      :class="{ 'opacity-50 cursor-not-allowed': isConnecting, 'border-red-500/50': isConnected }"
+      :class="{ 'border-red-500/50': isConnected }"
     >
       <div class="flex items-center gap-4 z-10">
         <svg viewBox="0 0 24 24" aria-hidden="true" class="w-6 h-6 fill-current text-[#FF0000]">
@@ -31,11 +31,6 @@
         </div>
       </div>
 
-      <div
-        v-if="isConnecting"
-        class="z-10 animate-spin w-5 h-5 border-2 border-gray-500 border-t-white rounded-full"
-      ></div>
-
       <svg
         v-if="isConnected"
         class="z-10 w-5 h-5 text-red-500"
@@ -55,53 +50,22 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { useAuthStore } from '@/composables/useAuthStore'
 import { useVibeStore } from '@/composables/useVibeStore'
 
 const route = useRoute()
 const router = useRouter()
-const { token, logout } = useAuthStore()
-const { oauthState, markConnected } = useVibeStore()
-
-const API = import.meta.env.VITE_API_URL || ''
-const isConnecting = ref(false)
+const { oauthState, markConnected, connectYouTube } = useVibeStore()
 
 const isConnected = computed(() => oauthState.value.youtube.connected)
 
 const buttonText = computed(() => {
-  if (isConnecting.value) return 'SCANNING SUBSCRIPTIONS...'
   if (isConnected.value) return 'YOUTUBE SYNCED'
   return 'CONNECT YOUTUBE'
 })
 
-async function initiateYouTubeAuth() {
-  if (isConnected.value || !token.value) return
-  isConnecting.value = true
-
-  try {
-    const response = await fetch(`${API}/api/youtube/connect?token=${token.value}`)
-    if (response.status === 401) {
-      logout()
-      window.location.href = '/login'
-      return
-    }
-    const data = await response.json()
-
-    if (data.auth_url) {
-      window.location.href = data.auth_url
-    } else {
-      throw new Error('YouTube OAuth failed to initialize')
-    }
-  } catch (error) {
-    console.error('Attention decode failed:', error)
-    isConnecting.value = false
-  }
-}
-
 onMounted(() => {
-  // YouTube callback redirects back with ?youtube=connected
   if (route.query.youtube === 'connected' && !isConnected.value) {
     markConnected('youtube')
     router.replace({ path: '/calibrate' })

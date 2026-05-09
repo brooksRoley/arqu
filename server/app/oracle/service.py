@@ -215,7 +215,22 @@ async def synthesize_and_upsert(user_id: str, data: SynthesisRequest) -> None:
     2. LLM synthesizes psychological coordinate from 12 provider streams
     3. Coordinate JSON is embedded into 1,536-dim vector (server key)
     4. Vector + metadata upserted into Pinecone users namespace
+
+    Wrapped so background-task failures surface as structured ERROR logs in
+    Render rather than dying silently as unobserved asyncio exceptions.
     """
+    try:
+        await _synthesize_and_upsert_inner(user_id, data)
+    except httpx.HTTPStatusError as e:
+        logger.error(
+            "oracle_llm_http_error: %d from LLM provider for user=%s body=%s",
+            e.response.status_code, user_id, e.response.text[:500],
+        )
+    except Exception:
+        logger.exception("oracle_synthesis_failed for user=%s", user_id)
+
+
+async def _synthesize_and_upsert_inner(user_id: str, data: SynthesisRequest) -> None:
     logger.info("Oracle synthesis initiated for %s", user_id)
 
     # 1. Resolve which LLM provider + key to use
@@ -242,15 +257,24 @@ async def synthesize_and_upsert(user_id: str, data: SynthesisRequest) -> None:
 
     # 3. Embed the synthesized coordinate (not the raw data)
     synthesis_text = json.dumps(coordinate.model_dump())
-    vector = await _embed(synthesis_text)
+    vector = await _embed(synthesis_text, user_id=user_id, caller="oracle_synthesize")
     if not vector:
-        logger.error("Embedding failed for %s — skipping Pinecone upsert", user_id)
+        logger.error(
+            "oracle_pipeline_aborted: embedding failed for user=%s — "
+            "coordinate persisted to DB but Pinecone upsert skipped. "
+            "Check OPENAI_EMBED_KEY in Render env vars.",
+            user_id,
+        )
         return
 
     # 4. Upsert into Pinecone
     index = await asyncio.to_thread(_get_index_sync)
     if index is None:
-        logger.error("Pinecone index unavailable — skipping upsert for %s", user_id)
+        logger.error(
+            "oracle_pipeline_aborted: Pinecone index unavailable for user=%s — "
+            "check PINECONE_API_KEY in Render env vars.",
+            user_id,
+        )
         return
 
     metadata = {

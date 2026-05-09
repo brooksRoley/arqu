@@ -64,19 +64,63 @@ def _get_index_sync():
 
 # ── Embedding ────────────────────────────────────────────────────────────────
 
-async def _embed(text: str) -> list[float]:
-    """Call OpenAI text-embedding-3-small. Returns [] if key not configured."""
+EMBEDDING_ENDPOINT = "https://api.openai.com/v1/embeddings"
+
+
+async def _embed(
+    text: str,
+    *,
+    user_id: str | None = None,
+    caller: str = "unknown",
+) -> list[float]:
+    """
+    Call OpenAI text-embedding-3-small. Returns [] on any failure (missing key,
+    auth error, transport error, malformed response) so callers' `if not vector`
+    branches fire instead of the exception bubbling into a silent background task.
+
+    Auth errors (401/403) are logged at ERROR with endpoint, model, status, and
+    user_id so they surface in Render logs — these typically indicate a rotated
+    or revoked OPENAI_EMBED_KEY and require operator action.
+    """
     key = get_settings().openai_embed_key
     if not key:
-        return []
-    async with httpx.AsyncClient(timeout=30.0) as client:
-        resp = await client.post(
-            "https://api.openai.com/v1/embeddings",
-            headers={"Authorization": f"Bearer {key}", "Content-Type": "application/json"},
-            json={"model": EMBEDDING_MODEL, "input": text},
+        logger.error(
+            "embed_skipped: OPENAI_EMBED_KEY not configured "
+            "(caller=%s user_id=%s endpoint=%s model=%s)",
+            caller, user_id, EMBEDDING_ENDPOINT, EMBEDDING_MODEL,
         )
-        resp.raise_for_status()
-    return resp.json()["data"][0]["embedding"]
+        return []
+    try:
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            resp = await client.post(
+                EMBEDDING_ENDPOINT,
+                headers={"Authorization": f"Bearer {key}", "Content-Type": "application/json"},
+                json={"model": EMBEDDING_MODEL, "input": text},
+            )
+            resp.raise_for_status()
+        return resp.json()["data"][0]["embedding"]
+    except httpx.HTTPStatusError as e:
+        status_code = e.response.status_code
+        body = e.response.text[:500]
+        if status_code in (401, 403):
+            logger.error(
+                "embed_auth_error: %d from OpenAI — OPENAI_EMBED_KEY likely revoked/rotated "
+                "(caller=%s user_id=%s endpoint=%s model=%s body=%s)",
+                status_code, caller, user_id, EMBEDDING_ENDPOINT, EMBEDDING_MODEL, body,
+            )
+        else:
+            logger.error(
+                "embed_http_error: %d from OpenAI "
+                "(caller=%s user_id=%s endpoint=%s model=%s body=%s)",
+                status_code, caller, user_id, EMBEDDING_ENDPOINT, EMBEDDING_MODEL, body,
+            )
+        return []
+    except Exception:
+        logger.exception(
+            "embed_failed: unexpected error (caller=%s user_id=%s endpoint=%s model=%s)",
+            caller, user_id, EMBEDDING_ENDPOINT, EMBEDDING_MODEL,
+        )
+        return []
 
 
 # ── User vibe vectors ────────────────────────────────────────────────────────
@@ -94,11 +138,13 @@ async def upsert_user_vector(
     Returns True on success.
     """
     try:
-        vector = await _embed(confession_text)
+        vector = await _embed(confession_text, user_id=user_id, caller="upsert_user_vector")
         if not vector:
+            logger.error("upsert_user_vector aborted: embed returned empty for %s", user_id)
             return False
         index = await asyncio.to_thread(_get_index_sync)
         if index is None:
+            logger.error("upsert_user_vector aborted: Pinecone index unavailable for %s", user_id)
             return False
         await asyncio.to_thread(
             index.upsert,
@@ -228,7 +274,7 @@ async def embed_and_upsert_journal(
     if not text.strip():
         return
     try:
-        vector = await _embed(text)
+        vector = await _embed(text, user_id=user_id, caller="embed_and_upsert_journal")
         if not vector:
             return
         index = await asyncio.to_thread(_get_index_sync)
@@ -253,7 +299,7 @@ async def embed_and_upsert_journal(
 async def query_relevant_journal(user_id: str, query_text: str, top_k: int = 5) -> list[dict]:
     """Return metadata of top-K journal entries semantically closest to query_text."""
     try:
-        vector = await _embed(query_text)
+        vector = await _embed(query_text, user_id=user_id, caller="query_relevant_journal")
         if not vector:
             return []
         index = await asyncio.to_thread(_get_index_sync)

@@ -34,6 +34,7 @@ from ..db import get_conn
 from ..oauth_base import store_provider_data
 from ..llm.encryption import encrypt_api_key
 from ..llm.chat import chat_completion
+from ..vector.service import upsert_user_vector
 
 router = APIRouter()
 
@@ -86,7 +87,7 @@ async def _verify_state(state: str) -> str:
 @router.get("/connect")
 async def youtube_connect(token: str = Query(..., description="Frontend JWT")):
     """
-    Return the YouTube authorization URL for the authenticated user.
+    Redirect the authenticated user to Google's YouTube authorization page.
     Accepts the JWT as a query param because browser redirects can't set headers.
     """
     settings = get_settings()
@@ -106,7 +107,7 @@ async def youtube_connect(token: str = Query(..., description="Frontend JWT")):
         "access_type": "offline",
         "prompt": "consent",
     }
-    return {"auth_url": f"{_GOOGLE_AUTH_URL}?{urlencode(params)}"}
+    return RedirectResponse(f"{_GOOGLE_AUTH_URL}?{urlencode(params)}")
 
 
 @router.get("/callback")
@@ -231,12 +232,51 @@ async def youtube_callback(code: str, state: str):
     # 7. Store YouTube profile (upserts into vibe_vectors).
     await store_provider_data(user_id, "youtube_data", youtube_profile)
 
-    # Auto-trigger Oracle synthesis if enough providers connected
+    # 7.5 Auto-trigger Oracle synthesis if enough providers connected
     await maybe_trigger_synthesis(UUID(user_id))
 
-    # 8. Redirect to frontend
+    # 8. Fetch intake row to re-embed with YouTube context blended in
+    async with get_conn() as conn:
+        row = await conn.fetchrow(
+            "SELECT attachment_style, defense_mechanism, readiness_score FROM vibe_vectors WHERE user_id = $1",
+            UUID(user_id),
+        )
+
+    # 9. Re-embed with YouTube data so attention signal participates in matching.
+    # Skip if intake hasn't been completed (attachment_style is null).
+    if row and row["attachment_style"] and row["defense_mechanism"]:
+        youtube_summary = _build_embedding_text(youtube_profile)
+        confession_base = (
+            f"Attachment: {row['attachment_style']}. "
+            f"Defense: {row['defense_mechanism']}. "
+            f"Readiness: {row['readiness_score']}."
+        )
+        await upsert_user_vector(
+            user_id=user_id,
+            confession_text=f"{confession_base} {youtube_summary}",
+            attachment_style=row["attachment_style"],
+            defense_mechanism=row["defense_mechanism"],
+            readiness_score=row["readiness_score"],
+        )
+
+    # 10. Redirect to frontend
     frontend = settings.cors_origin_list[0] if settings.cors_origin_list else "http://localhost:5173"
     return RedirectResponse(f"{frontend}/calibrate?youtube=connected")
+
+
+def _build_embedding_text(profile: dict) -> str:
+    """Convert YouTube profile to natural-language text for blending into embedding."""
+    top_subs = ", ".join(profile.get("top_subscriptions", [])[:10])
+    cats = profile.get("subscription_categories", {})
+    cats_sorted = sorted(cats.items(), key=lambda kv: -kv[1])[:5]
+    cats_str = ", ".join(f"{k} ({v})" for k, v in cats_sorted)
+    total = profile.get("total_subscriptions", 0)
+    liked = profile.get("liked_videos_count", 0)
+    return (
+        f"YouTube subscriptions: {top_subs}. "
+        f"Attention categories: {cats_str}. "
+        f"Total subscriptions: {total}, liked videos: {liked}."
+    )
 
 
 # ── Psychoanalysis ────────────────────────────────────────────────────────────

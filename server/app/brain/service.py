@@ -78,7 +78,7 @@ async def embed_and_upsert_image(
 ) -> bool:
     """Embed image description and upsert to Pinecone images namespace."""
     try:
-        vector = await _embed(description)
+        vector = await _embed(description, user_id=user_id, caller="embed_and_upsert_image")
         if not vector:
             return False
         index = await asyncio.to_thread(_get_index_sync)
