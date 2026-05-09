@@ -311,7 +311,14 @@
         <section class="border border-lime-800 p-6 bg-black/30">
           <h2 class="text-lg mb-4 text-white uppercase tracking-widest text-center">Personality Observatory</h2>
           <div class="flex justify-center py-4">
-            <RadarCanvas :size="320" />
+            <div
+              v-if="isLoadingScores"
+              class="animate-pulse rounded-full bg-white/10"
+              style="width: 320px; height: 320px;"
+              role="status"
+              aria-label="Loading personality scores"
+            ></div>
+            <RadarCanvas v-else :size="320" :scores="radarCanvasScores" />
           </div>
         </section>
 
@@ -692,6 +699,22 @@ const radarPoints = computed(() => {
     return `${100 + r * Math.cos(rad)},${100 + r * Math.sin(rad)}`
   })
   return pts.join(' ')
+})
+
+// True while we don't yet have norm-scored IPIP-NEO data — drives the
+// observatory loading placeholder so the radar canvas isn't blank.
+const isLoadingScores = computed(() => loading.value || !profile.value?.ipip_neo_scores)
+
+const radarCanvasScores = computed(() => {
+  const s = profile.value?.ipip_neo_scores
+  if (!s) return undefined
+  return {
+    O: Math.round((s.O ?? 0) * 100),
+    C: Math.round((s.C ?? 0) * 100),
+    E: Math.round((s.E ?? 0) * 100),
+    A: Math.round((s.A ?? 0) * 100),
+    N: Math.round((s.N ?? 0) * 100),
+  }
 })
 
 const oceanTraits = computed(() => {

@@ -62,6 +62,9 @@ onUnmounted(() => {
     <div
       v-if="visible && matches.length > 0"
       class="fixed top-4 right-4 z-50 max-w-sm"
+      aria-live="polite"
+      aria-atomic="true"
+      role="status"
     >
       <div
         class="bg-gray-900 border border-purple-500/40 rounded-xl p-4 shadow-lg shadow-purple-500/10 cursor-pointer"

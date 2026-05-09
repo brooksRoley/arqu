@@ -166,6 +166,17 @@ async function acceptMatch() {
   }
 }
 
+function onMatchCardKeydown(e: KeyboardEvent) {
+  if (interactLoading.value) return
+  if (e.key === 'ArrowLeft' || e.key === 'Enter') {
+    e.preventDefault()
+    acceptMatch()
+  } else if (e.key === 'ArrowRight' || e.key === 'Escape') {
+    e.preventDefault()
+    passMatch()
+  }
+}
+
 async function passMatch() {
   if (!currentMatch.value || interactLoading.value) return
   interactLoading.value = true
@@ -337,7 +348,13 @@ onMounted(() => {
     <div v-if="phase === 'matched' && currentMatch" class="split-panel">
       <!-- Left: Match card -->
       <div class="match-panel">
-        <div class="match-card">
+        <div
+          class="match-card"
+          role="group"
+          tabindex="0"
+          :aria-label="`Match ${currentMatchIdx + 1} of ${matches.length}: ${currentMatch.display_name}, ${compatPercent}% vibe alignment. Press left arrow to accept, right arrow to pass.`"
+          @keydown="onMatchCardKeydown"
+        >
           <div class="match-top">
             <div class="match-accent-bar" :style="{ background: accent }" />
             <div class="match-identity">

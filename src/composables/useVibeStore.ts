@@ -198,6 +198,7 @@ const matchesLoading = ref(false)
 const matchesError = ref<string | null>(null)
 const mutualMatchUserId = ref<string | null>(null)
 const oracleCoordinate = ref<OracleCoordinate | null>(null)
+const oracleSynthesizing = ref(false)
 
 // ── Derived ──────────────────────────────────────────────────────────────────
 
@@ -253,8 +254,31 @@ function markConnected(provider: keyof OAuthState) {
     }
     if (connectedCount === 2) {
       logEvent('connected_2plus', { provider })
+      autoSynthesize()
     }
   }
+}
+
+/**
+ * Fire Oracle synthesis with a UI-visible synthesizing state. Triggered
+ * automatically on the 1→2 connector transition. The overlay listens to
+ * `oracleSynthesizing` and runs its own ~8s timeline; we also poll the
+ * coordinate endpoint so the next page render has fresh data.
+ */
+async function autoSynthesize() {
+  if (oracleSynthesizing.value) return
+  oracleSynthesizing.value = true
+  try {
+    await triggerSynthesis()
+    // Poll for the coordinate (background task on backend may take a few seconds).
+    for (let i = 0; i < 6; i++) {
+      await new Promise((r) => setTimeout(r, 1500))
+      await fetchOracleCoordinate()
+      if (oracleCoordinate.value?.synthesized) break
+    }
+  } catch { /* non-blocking — overlay still completes its timeline */ }
+  // The overlay manages its own dismissal via the "See your signal" button,
+  // so we leave oracleSynthesizing true until the user routes away.
 }
 
 /**
@@ -360,6 +384,10 @@ function clearMutualMatch() {
   mutualMatchUserId.value = null
 }
 
+function dismissOracleSynthesis() {
+  oracleSynthesizing.value = false
+}
+
 function disconnectAll() {
   oauthState.value = defaultOAuthState()
   matches.value = []
@@ -378,6 +406,7 @@ export function useVibeStore() {
 
     mutualMatchUserId: readonly(mutualMatchUserId),
     oracleCoordinate: readonly(oracleCoordinate),
+    oracleSynthesizing: readonly(oracleSynthesizing),
 
     markConnected,
     syncConnectors,
@@ -388,6 +417,7 @@ export function useVibeStore() {
     fetchMatches,
     interactWithMatch,
     clearMutualMatch,
+    dismissOracleSynthesis,
     disconnectAll,
   }
 }

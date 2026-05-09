@@ -1,5 +1,68 @@
 <template>
-  <div class="min-h-screen bg-gray-900 text-gray-100 p-8 flex flex-col items-center">
+  <div class="min-h-screen bg-gray-900 text-gray-100 p-8 flex flex-col items-center relative">
+
+    <!-- Oracle synthesis overlay -->
+    <div
+      v-if="oracleSynthesizing"
+      class="fixed inset-0 z-50 bg-gray-950/95 backdrop-blur-sm flex flex-col items-center justify-center px-6"
+      role="dialog"
+      aria-live="polite"
+      aria-label="Oracle synthesis in progress"
+    >
+      <!-- Expanding ring pulse -->
+      <div class="relative w-72 h-72 flex items-center justify-center mb-10">
+        <div
+          v-for="i in 3"
+          :key="i"
+          class="absolute inset-0 rounded-full border border-purple-400/40 animate-ping"
+          :style="{ animationDuration: '2s', animationDelay: `${(i - 1) * 0.5}s` }"
+        ></div>
+        <div class="relative w-24 h-24 rounded-full bg-purple-500/20 border border-purple-400/60 backdrop-blur-md flex items-center justify-center text-purple-200 text-xs font-mono uppercase tracking-widest">
+          Oracle
+        </div>
+      </div>
+
+      <!-- Connected provider chips, sequential pulse -->
+      <div class="flex flex-wrap justify-center gap-2 mb-10 max-w-xl">
+        <span
+          v-for="(key, idx) in synthProviderKeys"
+          :key="key"
+          class="text-xs px-3 py-1 rounded-full border border-purple-500/40 text-purple-200 bg-purple-500/10 transition-all duration-700"
+          :class="synthStage >= 2 ? 'opacity-100' : 'opacity-30'"
+          :style="{
+            animation: synthStage >= 2 ? `synth-card-pulse 1.4s ease-out ${idx * 0.25}s 1` : 'none',
+          }"
+        >
+          {{ PROVIDER_LABELS[key as string] || key }}
+        </span>
+      </div>
+
+      <!-- Dimension labels staggered -->
+      <div class="flex flex-col items-center gap-3 mb-10 min-h-[6rem]">
+        <p class="text-xs text-gray-500 uppercase tracking-[0.3em] mb-2">Synthesizing your coordinate</p>
+        <div class="flex flex-wrap justify-center gap-3">
+          <span
+            v-for="(dim, i) in ORACLE_DIMENSIONS"
+            :key="dim.key"
+            class="text-sm text-purple-100 font-mono tracking-wide transition-all duration-700"
+            :class="synthStage >= 3 ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2'"
+            :style="{ transitionDelay: `${i * 250}ms` }"
+          >
+            · {{ dim.label }} ·
+          </span>
+        </div>
+      </div>
+
+      <!-- CTA -->
+      <button
+        v-if="synthStage >= 4"
+        @click="goToUniverse"
+        class="bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 px-8 rounded-full shadow-[0_0_30px_rgba(147,51,234,0.5)] transition-all animate-fade-in"
+      >
+        See your signal &rarr;
+      </button>
+    </div>
+
     <div class="max-w-3xl w-full space-y-12">
 
       <div class="text-center space-y-4">
@@ -630,7 +693,60 @@ const FEEDBACK_TAGS = ['felt_relevant', 'didnt_add_value', 'surprised_me', 'want
 
 const router = useRouter()
 const route = useRoute()
-const { oauthState, markConnected } = useVibeStore()
+const { oauthState, markConnected, oracleSynthesizing, dismissOracleSynthesis } = useVibeStore()
+
+// Stagger reveals for the synthesis overlay
+const synthStage = ref(0) // 0 hidden, 1 ring, 2 cards pulsing, 3 dims revealed, 4 cta
+let synthTimers: number[] = []
+
+function clearSynthTimers() {
+  synthTimers.forEach((t) => window.clearTimeout(t))
+  synthTimers = []
+}
+
+watch(oracleSynthesizing, (active) => {
+  clearSynthTimers()
+  if (active) {
+    synthStage.value = 1
+    synthTimers.push(window.setTimeout(() => (synthStage.value = 2), 1200))
+    synthTimers.push(window.setTimeout(() => (synthStage.value = 3), 3500))
+    synthTimers.push(window.setTimeout(() => (synthStage.value = 4), 7800))
+  } else {
+    synthStage.value = 0
+  }
+})
+
+const ORACLE_DIMENSIONS = [
+  { key: 'empathy', label: 'Empathy Index' },
+  { key: 'isolation', label: 'Isolation Metric' },
+  { key: 'fatalism', label: 'Fatalism Score' },
+  { key: 'masochism', label: 'Masochism Curve' },
+]
+
+const synthProviderKeys = computed(() =>
+  (Object.keys(oauthState.value) as (keyof typeof oauthState.value)[])
+    .filter((k) => oauthState.value[k].connected),
+)
+
+const PROVIDER_LABELS: Record<string, string> = {
+  spotify: 'Spotify',
+  twitter: 'X / Twitter',
+  google: 'Google Calendar',
+  strava: 'Strava',
+  costar: 'Co-Star',
+  letterboxd: 'Letterboxd',
+  steam: 'Steam',
+  github: 'GitHub',
+  youtube: 'YouTube',
+  reddit: 'Reddit',
+  instagram: 'Instagram',
+  tiktok: 'TikTok',
+}
+
+function goToUniverse() {
+  dismissOracleSynthesis()
+  router.push('/universe')
+}
 const { apiFetch } = useAuthStore()
 const { submitConnectorFeedback } = useAdminStore()
 
@@ -914,3 +1030,18 @@ function proceed() {
   router.push('/intake')
 }
 </script>
+
+<style scoped>
+@keyframes synth-card-pulse {
+  0%   { box-shadow: 0 0 0 0 rgba(168, 85, 247, 0.6); transform: scale(1); }
+  50%  { box-shadow: 0 0 18px 4px rgba(168, 85, 247, 0.45); transform: scale(1.06); }
+  100% { box-shadow: 0 0 0 0 rgba(168, 85, 247, 0); transform: scale(1); }
+}
+@keyframes synth-fade-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.animate-fade-in {
+  animation: synth-fade-in 600ms ease-out both;
+}
+</style>

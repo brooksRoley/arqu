@@ -462,7 +462,12 @@ function startJourney() {
 
 <template>
   <div class="universe-wrap">
-    <canvas ref="canvas" class="universe-canvas"></canvas>
+    <canvas
+      ref="canvas"
+      class="universe-canvas"
+      role="img"
+      :aria-label="`Signal universe with ${planets.length} signal${planets.length === 1 ? '' : 's'} active.`"
+    ></canvas>
 
     <!-- Welcome overlay -->
     <div class="welcome-overlay">
