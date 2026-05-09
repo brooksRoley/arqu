@@ -14,8 +14,9 @@
 
     <!-- No data -->
     <div v-if="loaded && !profile" class="scene-hud scene-hud--center">
-      <p class="hud-mono">no spotify data yet —</p>
-      <router-link to="/calibrate" class="hud-link">connect spotify on calibrate</router-link>
+      <p class="hud-mono">{{ syncing ? 'syncing your sonic data...' : 'no spotify data yet —' }}</p>
+      <button v-if="!syncing" class="hud-link hud-btn" @click="syncSpotify">sync from spotify</button>
+      <router-link v-if="!syncing" to="/calibrate" class="hud-link hud-sub">or reconnect on calibrate</router-link>
     </div>
 
     <!-- Audio stats HUD (bottom left) -->
@@ -81,6 +82,7 @@ const overlayCanvas = ref<HTMLCanvasElement>()
 const profile       = ref<SpotifyPhysicsProfile | null>(null)
 const loaded        = ref(false)
 const legendOpen    = ref(false)
+const syncing       = ref(false)
 
 // ── Lazy-init physics after profile loads ────────────────────────────────────
 let physics: ReturnType<typeof useSpotifyPhysics> | null = null
@@ -108,17 +110,34 @@ function valenceColor(v: number) {
   return '#c084fc'
 }
 
+async function initPhysics() {
+  if (profile.value && cosmicCanvas.value && overlayCanvas.value) {
+    physics = useSpotifyPhysics(cosmicCanvas, overlayCanvas, profile.value)
+    await physics.init()
+  }
+}
+
+async function syncSpotify() {
+  syncing.value = true
+  try {
+    const result = await apiFetch<{ profile: SpotifyPhysicsProfile }>('/api/spotify/sync', { method: 'POST' })
+    if (result?.profile) {
+      profile.value = result.profile
+      await initPhysics()
+    }
+  } catch {
+    // Sync failed — tokens may be revoked, fall through to calibrate link
+  }
+  syncing.value = false
+}
+
 onMounted(async () => {
   try {
     const data = await apiFetch<SpotifyPhysicsProfile | null>('/api/spotify/profile')
     profile.value = data
   } catch { /* no data */ }
 
-  if (profile.value) {
-    physics = useSpotifyPhysics(cosmicCanvas, overlayCanvas, profile.value)
-    await physics.init()
-  }
-
+  await initPhysics()
   loaded.value = true
 })
 
@@ -249,6 +268,25 @@ onUnmounted(() => {
   font-size: 0.75rem;
   color: #6366f1;
   text-decoration: none;
+  pointer-events: auto;
+}
+
+.hud-btn {
+  background: rgba(99, 102, 241, 0.15);
+  border: 1px solid rgba(99, 102, 241, 0.3);
+  border-radius: 100px;
+  padding: 0.4rem 1.2rem;
+  cursor: pointer;
+  font-family: monospace;
+  transition: background 0.15s;
+}
+.hud-btn:hover {
+  background: rgba(99, 102, 241, 0.25);
+}
+
+.hud-sub {
+  font-size: 0.65rem;
+  color: #475569;
 }
 
 .stat-row {

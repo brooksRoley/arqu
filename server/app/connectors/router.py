@@ -5,6 +5,7 @@ Cross-connector correlations — finds meaningful patterns across provider data.
 from __future__ import annotations
 
 import json
+import logging
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
@@ -15,6 +16,7 @@ from ..db import get_conn
 from ..llm.chat import chat_completion, llm_configured
 
 router = APIRouter()
+logger = logging.getLogger(__name__)
 
 # All *_data columns in vibe_vectors
 _DATA_COLUMNS = [
@@ -165,7 +167,8 @@ Rules:
 
     try:
         content = await chat_completion(prompt, max_tokens=1200)
-    except HTTPException:
+    except HTTPException as exc:
+        logger.warning("Correlations LLM call failed for %s: %s", target_provider, exc.detail)
         # Treat upstream failures as "no correlations" so the page stays usable.
         return []
 
@@ -179,5 +182,6 @@ Rules:
                 text = text[:-3]
             text = text.strip()
         return json.loads(text)
-    except (json.JSONDecodeError, KeyError, IndexError):
+    except (json.JSONDecodeError, KeyError, IndexError) as exc:
+        logger.warning("Failed to parse correlations LLM response: %s", exc)
         return []

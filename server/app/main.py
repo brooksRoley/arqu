@@ -6,8 +6,11 @@ from __future__ import annotations
 
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+import logging
+
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 
 from .config import get_settings
 from .db import init_pool, close_pool
@@ -106,6 +109,15 @@ def create_app() -> FastAPI:
     app.include_router(analytics_router, prefix=f"{prefix}/analytics", tags=["analytics"])
     app.include_router(brain_router, prefix=f"{prefix}/brain", tags=["brain"])
     app.include_router(vector_router, prefix=f"{prefix}/vector", tags=["vector"])
+
+    # ── Global exception handler (ensures CORS headers on 500s) ──
+    @app.exception_handler(Exception)
+    async def unhandled_exception_handler(request: Request, exc: Exception):
+        logging.getLogger("channelzero").exception("Unhandled error on %s %s", request.method, request.url.path)
+        return JSONResponse(
+            status_code=500,
+            content={"detail": str(exc)[:500]},
+        )
 
     # ── Health ──────────────────────────────────────────────────
     @app.get("/health")

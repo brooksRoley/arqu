@@ -189,8 +189,11 @@ async def submit_microdose(
 
         ecr_scores = None
         if len(ecr_values) >= 4:
-            from .scoring import _score_ecr_r_items
+            from .scoring import _score_ecr_r_items, classify_attachment_style
             ecr_scores = _score_ecr_r_items(ecr_values)
+            ecr_scores["attachment_style"] = classify_attachment_style(
+                ecr_scores["anxiety"], ecr_scores["avoidance"]
+            )
 
         # Upsert into user_psychometrics if we have anything to store
         if ipip_scores or ecr_scores or love_language or values_cluster or sociosexual:

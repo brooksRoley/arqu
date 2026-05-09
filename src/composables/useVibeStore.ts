@@ -1,5 +1,6 @@
 import { ref, computed, readonly } from 'vue'
 import { useAuthStore } from './useAuthStore'
+import { useAdminStore } from './useAdminStore'
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -236,11 +237,24 @@ async function syncConnectors() {
  * The backend has already stored the tokens — we just update local state.
  */
 function markConnected(provider: keyof OAuthState) {
+  const wasConnected = oauthState.value[provider].connected
   oauthState.value[provider] = {
     connected: true,
     lastSync: new Date().toISOString(),
   }
   persist()
+
+  // Fire funnel events for connector milestones
+  if (!wasConnected) {
+    const { logEvent } = useAdminStore()
+    const connectedCount = Object.values(oauthState.value).filter(s => s.connected).length
+    if (connectedCount === 1) {
+      logEvent('connected_any', { provider })
+    }
+    if (connectedCount === 2) {
+      logEvent('connected_2plus', { provider })
+    }
+  }
 }
 
 /**
@@ -302,10 +316,20 @@ async function triggerSynthesis() {
     }
   }
 
-  return apiFetch<{ status: string; message: string }>('/api/oracle/synthesize', {
+  const result = await apiFetch<{ status: string; message: string }>('/api/oracle/synthesize', {
     method: 'POST',
     body: JSON.stringify(payload),
   })
+
+  // Fire funnel event when Oracle synthesis completes
+  if (result?.status === 'success') {
+    const { logEvent } = useAdminStore()
+    logEvent('has_vibe_vector', {
+      providers: providers.filter(p => oauthState.value[p].connected),
+    })
+  }
+
+  return result
 }
 
 /**

@@ -14,6 +14,7 @@ Flow:
 from __future__ import annotations
 
 import json
+import logging
 import time
 from urllib.parse import urlencode
 from uuid import UUID
@@ -32,8 +33,9 @@ from ..auth.service import decode_access_token
 from ..config import get_settings
 from ..db import get_conn
 from ..oauth_base import store_provider_data
-from ..llm.encryption import encrypt_api_key
 from ..llm.chat import chat_completion
+
+logger = logging.getLogger(__name__)
 from ..vector.service import upsert_user_vector
 
 router = APIRouter()
@@ -119,121 +121,108 @@ async def youtube_callback(code: str, state: str):
     user_id = await _verify_state(state)
     settings = get_settings()
 
-    async with httpx.AsyncClient(timeout=20.0) as client:
-        # 1. Exchange authorization code for access + refresh tokens
-        token_resp = await client.post(
-            _GOOGLE_TOKEN_URL,
-            data={
-                "client_id": settings.google_client_id,
-                "client_secret": settings.google_client_secret,
-                "code": code,
-                "grant_type": "authorization_code",
-                "redirect_uri": settings.youtube_redirect_uri,
-            },
-        )
-        if token_resp.status_code != 200:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"YouTube token exchange failed: {token_resp.text}",
+    try:
+        async with httpx.AsyncClient(timeout=20.0) as client:
+            # 1. Exchange authorization code for access + refresh tokens
+            token_resp = await client.post(
+                _GOOGLE_TOKEN_URL,
+                data={
+                    "client_id": settings.google_client_id,
+                    "client_secret": settings.google_client_secret,
+                    "code": code,
+                    "grant_type": "authorization_code",
+                    "redirect_uri": settings.youtube_redirect_uri,
+                },
             )
-        tokens = token_resp.json()
+            if token_resp.status_code != 200:
+                logger.error("YouTube token exchange failed (%d): %s", token_resp.status_code, token_resp.text)
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"YouTube token exchange failed: {token_resp.text}",
+                )
+            tokens = token_resp.json()
 
-        access_token = tokens["access_token"]
-        refresh_token = tokens.get("refresh_token", "")
-        expires_in = tokens.get("expires_in", 3600)
-        expires_at = int(time.time()) + expires_in
+            access_token = tokens["access_token"]
+            refresh_token = tokens.get("refresh_token", "")
+            expires_in = tokens.get("expires_in", 3600)
+            expires_at = int(time.time()) + expires_in
 
-        headers = {"Authorization": f"Bearer {access_token}"}
+            headers = {"Authorization": f"Bearer {access_token}"}
 
-        # 2. Fetch authenticated user's channel info
-        channel_resp = await client.get(
-            f"{_YOUTUBE_API_BASE}/channels",
-            headers=headers,
-            params={"part": "snippet,statistics", "mine": "true"},
-        )
-        channel_data = {}
-        if channel_resp.status_code == 200:
-            items = channel_resp.json().get("items", [])
-            if items:
-                channel_data = items[0]
-
-        # 3. Fetch subscriptions (up to 50)
-        subs_resp = await client.get(
-            f"{_YOUTUBE_API_BASE}/subscriptions",
-            headers=headers,
-            params={"part": "snippet", "mine": "true", "maxResults": 50, "order": "relevance"},
-        )
-        subs_data = []
-        if subs_resp.status_code == 200:
-            subs_data = subs_resp.json().get("items", [])
-
-        # 4. Fetch liked videos playlist (contentDetails has relatedPlaylists.likes)
-        liked_count = 0
-        if channel_data:
-            # Channel statistics includes the likeCount indirectly;
-            # fetch the "likes" playlist to get count
-            content_resp = await client.get(
+            # 2. Fetch authenticated user's channel info
+            channel_resp = await client.get(
                 f"{_YOUTUBE_API_BASE}/channels",
                 headers=headers,
-                params={"part": "contentDetails", "mine": "true"},
+                params={"part": "snippet,statistics", "mine": "true"},
             )
-            if content_resp.status_code == 200:
-                content_items = content_resp.json().get("items", [])
-                if content_items:
-                    likes_playlist = (
-                        content_items[0]
-                        .get("contentDetails", {})
-                        .get("relatedPlaylists", {})
-                        .get("likes", "")
-                    )
-                    if likes_playlist:
-                        likes_resp = await client.get(
-                            f"{_YOUTUBE_API_BASE}/playlists",
-                            headers=headers,
-                            params={"part": "contentDetails", "id": likes_playlist},
+            channel_data = {}
+            if channel_resp.status_code == 200:
+                items = channel_resp.json().get("items", [])
+                if items:
+                    channel_data = items[0]
+
+            # 3. Fetch subscriptions (up to 50)
+            subs_resp = await client.get(
+                f"{_YOUTUBE_API_BASE}/subscriptions",
+                headers=headers,
+                params={"part": "snippet", "mine": "true", "maxResults": 50, "order": "relevance"},
+            )
+            subs_data = []
+            if subs_resp.status_code == 200:
+                subs_data = subs_resp.json().get("items", [])
+
+            # 4. Fetch liked videos playlist (contentDetails has relatedPlaylists.likes)
+            liked_count = 0
+            if channel_data:
+                content_resp = await client.get(
+                    f"{_YOUTUBE_API_BASE}/channels",
+                    headers=headers,
+                    params={"part": "contentDetails", "mine": "true"},
+                )
+                if content_resp.status_code == 200:
+                    content_items = content_resp.json().get("items", [])
+                    if content_items:
+                        likes_playlist = (
+                            content_items[0]
+                            .get("contentDetails", {})
+                            .get("relatedPlaylists", {})
+                            .get("likes", "")
                         )
-                        if likes_resp.status_code == 200:
-                            pl_items = likes_resp.json().get("items", [])
-                            if pl_items:
-                                liked_count = pl_items[0].get("contentDetails", {}).get("itemCount", 0)
+                        if likes_playlist:
+                            likes_resp = await client.get(
+                                f"{_YOUTUBE_API_BASE}/playlists",
+                                headers=headers,
+                                params={"part": "contentDetails", "id": likes_playlist},
+                            )
+                            if likes_resp.status_code == 200:
+                                pl_items = likes_resp.json().get("items", [])
+                                if pl_items:
+                                    liked_count = pl_items[0].get("contentDetails", {}).get("itemCount", 0)
 
-    # 5. Distill the attention profile
-    youtube_profile = _distill_profile(channel_data, subs_data, liked_count)
+        # 5. Distill the attention profile
+        youtube_profile = _distill_profile(channel_data, subs_data, liked_count)
 
-    # 6. Encrypt and store tokens
-    enc_access, access_nonce = encrypt_api_key(access_token)
-    enc_refresh, refresh_nonce = encrypt_api_key(refresh_token) if refresh_token else (None, None)
-
-    from datetime import datetime, timezone
-    expires_dt = datetime.fromtimestamp(expires_at, tz=timezone.utc)
-
-    async with get_conn() as conn:
-        await conn.execute(
-            """
-            INSERT INTO oauth_tokens
-                (user_id, provider, encrypted_access_token, access_nonce,
-                 encrypted_refresh_token, refresh_nonce, expires_at, scope)
-            VALUES ($1, 'youtube', $2, $3, $4, $5, $6, $7)
-            ON CONFLICT (user_id, provider) DO UPDATE SET
-                encrypted_access_token  = EXCLUDED.encrypted_access_token,
-                access_nonce            = EXCLUDED.access_nonce,
-                encrypted_refresh_token = EXCLUDED.encrypted_refresh_token,
-                refresh_nonce           = EXCLUDED.refresh_nonce,
-                expires_at              = EXCLUDED.expires_at,
-                scope                   = EXCLUDED.scope,
-                updated_at              = now()
-            """,
-            UUID(user_id),
-            enc_access, access_nonce,
-            enc_refresh, refresh_nonce,
-            expires_dt, _SCOPES,
+        # 6. Store tokens using shared helper
+        from ..oauth_base import store_oauth_tokens
+        await store_oauth_tokens(
+            user_id, "youtube", access_token, refresh_token,
+            int(time.time()) + expires_in, _SCOPES,
         )
 
-    # 7. Store YouTube profile (upserts into vibe_vectors).
-    await store_provider_data(user_id, "youtube_data", youtube_profile)
+        # 7. Store YouTube profile (upserts into vibe_vectors).
+        await store_provider_data(user_id, "youtube_data", youtube_profile)
 
-    # 7.5 Auto-trigger Oracle synthesis if enough providers connected
-    await maybe_trigger_synthesis(UUID(user_id))
+        # 7.5 Auto-trigger Oracle synthesis if enough providers connected
+        await maybe_trigger_synthesis(UUID(user_id))
+
+    except HTTPException:
+        raise
+    except Exception:
+        logger.exception("YouTube callback failed for user %s", user_id)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="YouTube callback failed — check server logs",
+        )
 
     # 8. Fetch intake row to re-embed with YouTube context blended in
     async with get_conn() as conn:

@@ -20,9 +20,13 @@ from uuid import UUID
 
 from ..oracle.trigger import maybe_trigger_synthesis
 
+import logging
+
 import httpx
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from fastapi.responses import RedirectResponse
+
+logger = logging.getLogger(__name__)
 
 from ..auth.deps import get_current_user_id
 from ..config import get_settings
@@ -60,6 +64,112 @@ async def get_spotify_profile(user_id: UUID = Depends(get_current_user_id)):
         return None
     data = row["spotify_data"]
     return json.loads(data) if isinstance(data, str) else data
+
+
+@router.post("/sync")
+async def spotify_sync(user_id: UUID = Depends(get_current_user_id)):
+    """Re-fetch Spotify profile using stored refresh token.
+
+    Covers users who connected before data ingestion was wired into the
+    callback, or whose token expired. Refreshes the access token, re-fetches
+    top artists + tracks + audio features, and stores the distilled profile.
+    """
+    from ..oauth_base import get_stored_tokens
+
+    settings = get_settings()
+    tokens = await get_stored_tokens(str(user_id), "spotify")
+    if not tokens or not tokens.get("refresh_token"):
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="No Spotify tokens found — please reconnect on /calibrate",
+        )
+
+    try:
+        async with httpx.AsyncClient(timeout=20.0) as client:
+            # Refresh the access token
+            refresh_resp = await client.post(
+                _SPOTIFY_TOKEN_URL,
+                data={
+                    "grant_type": "refresh_token",
+                    "refresh_token": tokens["refresh_token"],
+                },
+                auth=(settings.spotify_client_id, settings.spotify_client_secret),
+            )
+            if refresh_resp.status_code != 200:
+                logger.warning("Spotify token refresh failed: %s %s", refresh_resp.status_code, refresh_resp.text[:200])
+                raise HTTPException(
+                    status_code=status.HTTP_502_BAD_GATEWAY,
+                    detail="Spotify token refresh failed — please reconnect on /calibrate",
+                )
+            refreshed = refresh_resp.json()
+            access_token = refreshed["access_token"]
+            new_refresh = refreshed.get("refresh_token", tokens["refresh_token"])
+            expires_at = int(time.time()) + refreshed.get("expires_in", 3600)
+
+            # Persist rotated tokens
+            await store_oauth_tokens(
+                str(user_id), "spotify", access_token, new_refresh, expires_at,
+                refreshed.get("scope", ""),
+            )
+
+            headers = {"Authorization": f"Bearer {access_token}"}
+
+            # Fetch top artists
+            artists_data = []
+            artists_resp = await client.get(
+                f"{_SPOTIFY_API_BASE}/me/top/artists",
+                headers=headers,
+                params={"limit": 10, "time_range": "medium_term"},
+            )
+            if artists_resp.status_code == 200:
+                artists_data = artists_resp.json().get("items", [])
+
+            # Fetch top tracks
+            track_ids: list[str] = []
+            tracks_data: list[dict] = []
+            tracks_resp = await client.get(
+                f"{_SPOTIFY_API_BASE}/me/top/tracks",
+                headers=headers,
+                params={"limit": 20, "time_range": "medium_term"},
+            )
+            if tracks_resp.status_code == 200:
+                items = tracks_resp.json().get("items", [])
+                track_ids = [t["id"] for t in items]
+                tracks_data = items
+
+            # Fetch audio features (may be deprecated)
+            audio_features: list[dict] = []
+            if track_ids:
+                features_resp = await client.get(
+                    f"{_SPOTIFY_API_BASE}/audio-features",
+                    headers=headers,
+                    params={"ids": ",".join(track_ids)},
+                )
+                if features_resp.status_code == 200:
+                    audio_features = [f for f in features_resp.json().get("audio_features", []) if f]
+
+            # Supplement genres from track artists (top-artist genres often empty)
+            top_artist_ids = {a["id"] for a in artists_data if a.get("id")}
+            extra_artists = await _fetch_track_artist_genres(client, headers, tracks_data, top_artist_ids)
+
+    except HTTPException:
+        raise
+    except httpx.TimeoutException:
+        raise HTTPException(status_code=504, detail="Spotify API timed out — try again")
+    except Exception as exc:
+        logger.exception("Spotify sync failed for user %s", user_id)
+        raise HTTPException(status_code=502, detail=f"Spotify sync error: {exc}")
+
+    spotify_profile = _distill_profile(artists_data, audio_features, tracks_data, extra_artists)
+    await store_provider_data(str(user_id), "spotify_data", spotify_profile)
+
+    # Re-trigger Oracle synthesis (non-blocking)
+    try:
+        await maybe_trigger_synthesis(user_id)
+    except Exception:
+        logger.exception("Oracle synthesis trigger failed for user %s (non-blocking)", user_id)
+
+    return {"status": "synced", "profile": spotify_profile}
 
 
 @router.get("/connect")
@@ -155,8 +265,12 @@ async def spotify_callback(code: str, state: str):
         if tracks_resp.status_code == 200:
             tracks_data = tracks_resp.json().get("items", [])
 
+        # 4c. Supplement genres from track artists (top-artist genres often empty)
+        top_artist_ids = {a["id"] for a in artists_data if a.get("id")}
+        extra_artists = await _fetch_track_artist_genres(client, headers, tracks_data, top_artist_ids)
+
     # 5. Distill the audio profile
-    spotify_profile = _distill_profile(artists_data, audio_features, tracks_data)
+    spotify_profile = _distill_profile(artists_data, audio_features, tracks_data, extra_artists)
 
     # 6. Store tokens via shared helper
     await store_oauth_tokens(
@@ -230,12 +344,56 @@ def _infer_valence_from_genres(genres: list[str]) -> float:
     return round(sum(scores) / len(scores), 3) if scores else 0.5
 
 
-def _distill_profile(artists: list[dict], features: list[dict], tracks: list[dict] | None = None) -> dict:
+async def _fetch_track_artist_genres(
+    client: httpx.AsyncClient,
+    headers: dict[str, str],
+    tracks_data: list[dict],
+    top_artist_ids: set[str],
+) -> list[dict]:
+    """Fetch artist objects for artists appearing in top tracks but not top artists.
+
+    Spotify increasingly returns empty genres[] on top-artist objects.
+    Track artists are a supplemental source of genre data.
+    """
+    seen_ids: set[str] = set()
+    extra_ids: list[str] = []
+    for track in tracks_data:
+        for artist in track.get("artists", []):
+            aid = artist.get("id")
+            if aid and aid not in top_artist_ids and aid not in seen_ids:
+                seen_ids.add(aid)
+                extra_ids.append(aid)
+
+    if not extra_ids:
+        return []
+
+    # Fetch only the first 50 — artists beyond this are low-signal collaborators
+    batch = extra_ids[:50]
+    resp = await client.get(
+        f"{_SPOTIFY_API_BASE}/artists",
+        headers=headers,
+        params={"ids": ",".join(batch)},
+    )
+    if resp.status_code != 200:
+        return []
+    return resp.json().get("artists", [])
+
+
+def _distill_profile(
+    artists: list[dict],
+    features: list[dict],
+    tracks: list[dict] | None = None,
+    extra_artists: list[dict] | None = None,
+) -> dict:
     """Reduce raw Spotify data to the essentials we care about."""
     top_artist_names = [a["name"] for a in artists[:5]]
     genres: list[str] = []
     for a in artists[:5]:
         genres.extend(a.get("genres", []))
+    # Supplement with genres from track artists (always additive, deduped below)
+    if extra_artists:
+        for a in extra_artists:
+            genres.extend(a.get("genres", []))
     # Deduplicate while preserving order
     seen: set = set()
     unique_genres = [g for g in genres if not (g in seen or seen.add(g))][:8]  # type: ignore[func-returns-value]

@@ -549,7 +549,10 @@
           <div v-for="src in connectedSources" :key="src.key">
             <div class="flex items-center gap-2 text-sm text-gray-400 mb-2">
               <span class="w-2 h-2 rounded-full bg-green-500"></span>
-              {{ src.label }}
+              <router-link :to="`/calibrate/${src.key}`" class="hover:text-green-400 transition-colors">
+                {{ src.label }}
+                <span class="text-xs opacity-60 ml-1">&rarr;</span>
+              </router-link>
               <span v-if="src.lastSync" class="text-gray-600 text-xs">{{ new Date(src.lastSync).toLocaleDateString() }}</span>
             </div>
 
@@ -728,6 +731,11 @@ async function fetchSpotifyProfile() {
   spotifyLoading.value = true
   try {
     spotifyProfile.value = await apiFetch<SpotifyProfile>('/api/spotify/profile')
+    // If connected but no profile data, auto-sync (covers pre-ingestion connections)
+    if (!spotifyProfile.value && oauthState.value.spotify.connected) {
+      const result = await apiFetch<{ profile: SpotifyProfile }>('/api/spotify/sync', { method: 'POST' })
+      if (result?.profile) spotifyProfile.value = result.profile
+    }
   } catch { /* non-blocking */ }
   spotifyLoading.value = false
 }
