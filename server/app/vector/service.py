@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import weakref
 from contextlib import asynccontextmanager
 
 import httpx
@@ -204,13 +205,17 @@ async def find_nearest_users(user_id: str, top_k: int = 3) -> list[dict]:
 # ── Per-user lock for read-modify-write on Pinecone vectors ───────────────────
 # Pinecone has no native CAS/transactions, so we use an in-process asyncio lock
 # keyed by user_id to serialize concurrent penalty operations for the same user.
-_user_locks: dict[str, asyncio.Lock] = {}
+# WeakValueDictionary: locks are collected as soon as no coroutine holds them,
+# so the registry can't grow unboundedly on a long-running Render worker.
+_user_locks: "weakref.WeakValueDictionary[str, asyncio.Lock]" = weakref.WeakValueDictionary()
 
 
 def _get_user_lock(user_id: str) -> asyncio.Lock:
-    if user_id not in _user_locks:
-        _user_locks[user_id] = asyncio.Lock()
-    return _user_locks[user_id]
+    lock = _user_locks.get(user_id)
+    if lock is None:
+        lock = asyncio.Lock()
+        _user_locks[user_id] = lock
+    return lock
 
 
 async def apply_karma_penalty(user_id: str, karma_delta: float) -> None:

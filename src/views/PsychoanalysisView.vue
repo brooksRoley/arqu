@@ -85,6 +85,7 @@
                 <span
                   v-for="n in 5"
                   :key="n"
+                  :aria-label="`Rate ${n} of 5 — ${item.text}`"
                   :class="[
                     'w-7 h-7 flex items-center justify-center border text-[10px]',
                     oceanAnswers[i] === n
@@ -101,6 +102,7 @@
                 <button
                   v-for="n in 5"
                   :key="n"
+                  :aria-label="`Rate ${n} of 5 — ${item.text}`"
                   :class="[
                     'w-9 h-9 border text-xs transition-all',
                     oceanAnswers[i] === n
@@ -156,6 +158,7 @@
                 <span
                   v-for="n in 7"
                   :key="n"
+                  :aria-label="`Rate ${n} of 7 — ${item.text}`"
                   :class="[
                     'w-6 h-6 flex items-center justify-center border text-[9px]',
                     attachAnswers[i] === n
@@ -172,6 +175,7 @@
                 <button
                   v-for="n in 7"
                   :key="n"
+                  :aria-label="`Rate ${n} of 7 — ${item.text}`"
                   :class="[
                     'w-9 h-9 border text-xs transition-all',
                     attachAnswers[i] === n
@@ -474,6 +478,7 @@
           <p v-else class="text-xs text-lime-800 italic relative z-10">
             No synthesis available. Click Initiate to construct a personalized narrative.
           </p>
+          <p v-if="narrativeError" class="text-red-500 text-xs mt-2 font-mono italic">{{ narrativeError }}</p>
         </section>
       </div>
     </div>
@@ -607,6 +612,7 @@ const profile    = ref<any>(null)
 const loading    = ref(true)
 const submitting = ref(false)
 const generating = ref(false)
+const narrativeError = ref<string | null>(null)
 
 // Progress tracking from backend
 const microdosedItems = ref<Record<string, { value: number; from_trance: boolean }>>({})
@@ -874,6 +880,7 @@ const submitAssessment = async () => {
 
 const generateNarrative = async () => {
   generating.value = true
+  narrativeError.value = null
   try {
     const API = import.meta.env.VITE_API_URL || 'http://localhost:8000'
     const res = await fetch(`${API}/api/psychometrics/narrative`, {
@@ -885,7 +892,7 @@ const generateNarrative = async () => {
       profile.value.narrative = data.narrative
     } else {
       const err = await res.json().catch(() => ({}))
-      alert(err.detail || 'Error generating narrative. Do you have an API key set?')
+      narrativeError.value = err.detail || 'Error generating narrative. Check your API key.'
     }
   } catch { /* noop */ } finally {
     generating.value = false

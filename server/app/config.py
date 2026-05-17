@@ -94,9 +94,15 @@ class Settings(BaseSettings):
     letterboxd_redirect_uri: str = "http://localhost:8000/api/letterboxd/callback"
 
     # ── Embeddings (server-level OpenAI key — NOT stored per-user) ──
-    # Used exclusively for generating vibe vectors and journal embeddings.
-    # Required for user matching and karma mechanics to function.
+    # Used exclusively for generating vibe vectors and journal embeddings via
+    # text-embedding-3-small. Separated from openai_api_key so an embed-key
+    # outage cannot also take down Oracle synthesis.
     openai_embed_key: str = ""
+
+    # ── Server-level OpenAI completion key (independent of embed key) ──
+    # Used for Oracle GPT-4o synthesis fallback when a user has no BYOK key.
+    # Kept separate so rotation/revocation of one key does not break the other.
+    openai_api_key: str = ""
 
     # ── Chat LLM provider (used by connector /analyze + /correlations) ──
     # llm_provider: "openai" (default) or "openrouter"

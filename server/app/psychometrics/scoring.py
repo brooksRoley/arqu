@@ -223,7 +223,8 @@ def _score_ocean_items(
     - Other lengths: caller must supply `key` of matching length.
     """
     n = len(raw_items)
-    assert n > 0 and all(1 <= v <= 5 for v in raw_items), "IPIP items must be Likert 1-5"
+    if n == 0 or not all(1 <= v <= 5 for v in raw_items):
+        raise ValueError("IPIP items must be a non-empty array of Likert 1-5 integers")
 
     if key is None:
         if n == len(_IPIP_SHORT_KEY):
@@ -250,7 +251,8 @@ def _score_ecr_r_items(
     - Other lengths: caller must supply `key` of matching length.
     """
     n = len(raw_items)
-    assert n > 0 and all(1 <= v <= 7 for v in raw_items), "ECR-R items must be Likert 1-7"
+    if n == 0 or not all(1 <= v <= 7 for v in raw_items):
+        raise ValueError("ECR-R items must be a non-empty array of Likert 1-7 integers")
 
     if key is None:
         if n == len(_ECR_R_SHORT_KEY):

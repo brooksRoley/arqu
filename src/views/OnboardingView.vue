@@ -156,11 +156,26 @@ function skipAll() {
             </div>
             <p class="step-desc">{{ step.description }}</p>
             <div v-if="i === currentStepIndex && !state[step.key]" class="step-actions">
-              <button class="btn-primary" @click="goToStep(step)">Start</button>
-              <button class="btn-ghost" @click="skipStep(step)">Skip</button>
+              <button
+                class="btn-primary"
+                :aria-disabled="i > currentStepIndex ? 'true' : undefined"
+                :tabindex="i > currentStepIndex ? -1 : 0"
+                @click="goToStep(step)"
+              >Start</button>
+              <button
+                class="btn-ghost"
+                :aria-disabled="i > currentStepIndex ? 'true' : undefined"
+                :tabindex="i > currentStepIndex ? -1 : 0"
+                @click="skipStep(step)"
+              >Skip</button>
             </div>
             <div v-else-if="state[step.key]" class="step-actions">
-              <button class="btn-ghost btn-sm" @click="goToStep(step)">Redo</button>
+              <button
+                class="btn-ghost btn-sm"
+                :aria-disabled="i > currentStepIndex ? 'true' : undefined"
+                :tabindex="i > currentStepIndex ? -1 : 0"
+                @click="goToStep(step)"
+              >Redo</button>
             </div>
           </div>
         </div>

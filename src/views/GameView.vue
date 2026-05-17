@@ -350,7 +350,7 @@ onMounted(() => {
       <div class="match-panel">
         <div
           class="match-card"
-          role="group"
+          role="article"
           tabindex="0"
           :aria-label="`Match ${currentMatchIdx + 1} of ${matches.length}: ${currentMatch.display_name}, ${compatPercent}% vibe alignment. Press left arrow to accept, right arrow to pass.`"
           @keydown="onMatchCardKeydown"
@@ -438,8 +438,10 @@ onMounted(() => {
           </div>
         </div>
 
-        <div class="oracle-input-row">
+        <div class="oracle-input-row relative">
+          <label class="sr-only" for="oracle-input">Message the Oracle</label>
           <input
+            id="oracle-input"
             v-model="oracleInput"
             type="text"
             class="oracle-input"
