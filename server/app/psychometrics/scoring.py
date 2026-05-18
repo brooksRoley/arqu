@@ -273,19 +273,28 @@ def score_ipip_neo(responses: Dict[str, Any]) -> Dict[str, float]:
     """
     Score Big Five from an assessment payload. Accepts either:
       - {"ocean_items": [int, ...]} raw Likert-5 array, or
-      - {"O_score": float, ...} pre-computed normalized 0-1 floats.
+      - {"O_score", "C_score", "E_score", "A_score", "N_score"} pre-computed 0-1 floats
+        (ALL five must be present — partial bundles are rejected so we never
+        push median-defaulted vectors into the matching pipeline).
     Returns {"O","C","E","A","N"} in [0, 1].
     """
     raw = responses.get("ocean_items")
     if isinstance(raw, list) and raw:
         return _score_ocean_items(raw)
 
+    required = ("O_score", "C_score", "E_score", "A_score", "N_score")
+    if not all(k in responses for k in required):
+        missing = [k for k in required if k not in responses]
+        raise ValueError(
+            f"IPIP-NEO scoring requires either `ocean_items` or all of {required}; "
+            f"missing: {missing}"
+        )
     return {
-        "O": float(responses.get("O_score", 0.5)),
-        "C": float(responses.get("C_score", 0.5)),
-        "E": float(responses.get("E_score", 0.5)),
-        "A": float(responses.get("A_score", 0.5)),
-        "N": float(responses.get("N_score", 0.5)),
+        "O": float(responses["O_score"]),
+        "C": float(responses["C_score"]),
+        "E": float(responses["E_score"]),
+        "A": float(responses["A_score"]),
+        "N": float(responses["N_score"]),
     }
 
 
@@ -309,17 +318,23 @@ def score_ecr_r(responses: Dict[str, Any]) -> Dict[str, Any]:
     """
     Score ECR-R attachment dimensions. Accepts either:
       - {"attachment_items": [int, ...]} raw Likert-7 array, or
-      - {"anxiety_score": float, "avoidance_score": float} pre-computed 0-1.
+      - {"anxiety_score", "avoidance_score"} pre-computed 0-1 floats
+        (both required — partial bundles rejected to avoid silent medians).
     Returns {"anxiety","avoidance"} in [0, 1] plus "attachment_style" label.
     """
     raw = responses.get("attachment_items")
     if isinstance(raw, list) and raw:
         scores = _score_ecr_r_items(raw)
-    else:
+    elif "anxiety_score" in responses and "avoidance_score" in responses:
         scores = {
-            "anxiety": float(responses.get("anxiety_score", 0.5)),
-            "avoidance": float(responses.get("avoidance_score", 0.5)),
+            "anxiety": float(responses["anxiety_score"]),
+            "avoidance": float(responses["avoidance_score"]),
         }
+    else:
+        raise ValueError(
+            "ECR-R scoring requires either `attachment_items` or both "
+            "`anxiety_score` and `avoidance_score`"
+        )
 
     scores["attachment_style"] = classify_attachment_style(scores["anxiety"], scores["avoidance"])
     return scores
@@ -330,7 +345,9 @@ def extract_love_language(responses: Dict[str, Any]) -> str:
 
 
 def extract_values(responses: Dict[str, Any]) -> str:
-    return responses.get("values_cluster", "Progressive/Creative")
+    # Default must be one of CORE_POOL identity_values options so downstream
+    # cluster lookups in compatibility scoring match a known key.
+    return responses.get("values_cluster", "Creative")
 
 
 def extract_sociosexual(responses: Dict[str, Any]) -> str:
