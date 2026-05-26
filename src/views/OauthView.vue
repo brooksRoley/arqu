@@ -273,12 +273,44 @@
           <div class="flex justify-between items-start mb-4">
             <div>
               <h2 class="text-2xl font-bold text-red-400">Google Calendar</h2>
-              <h3 class="text-sm font-medium text-gray-500 uppercase tracking-wider mt-1">time as behavior</h3>
+              <h3 class="text-sm font-medium text-gray-500 uppercase tracking-wider mt-1">Time as Behavior</h3>
             </div>
             <router-link to="/calibrate/google" class="text-xs font-medium text-red-400 bg-red-400/10 border border-red-500/30 rounded-full px-3 py-1 hover:bg-red-400/20 transition-colors">View Signal &rarr;</router-link>
           </div>
-          <div class="space-y-3 text-gray-300">
-            <p>Your temporal patterns are being mapped. Event density, free/busy windows, and scheduling rhythms feed the Oracle's understanding of your co-regulation capacity.</p>
+          <!-- Loading skeleton -->
+          <div v-if="gcalLoading || !gcalProfile" class="space-y-3 animate-pulse">
+            <div class="h-4 bg-gray-700 rounded w-3/4"></div>
+            <div class="h-4 bg-gray-700 rounded w-1/2"></div>
+            <div class="h-4 bg-gray-700 rounded w-2/3"></div>
+          </div>
+          <!-- Data mirror -->
+          <div v-else class="space-y-4">
+            <div v-if="gcalProfile.peak_hours.length">
+              <p class="text-xs text-gray-500 uppercase tracking-wider mb-1">Peak Scheduling Window</p>
+              <p class="text-sm text-gray-300">{{ gcalProfile.peak_hours.map(h => `${h % 12 || 12}${h < 12 ? 'am' : 'pm'}`).join(' · ') }}</p>
+            </div>
+            <div class="grid grid-cols-2 gap-4">
+              <div>
+                <p class="text-xs text-gray-500 uppercase tracking-wider mb-1">Overcommitment Ratio</p>
+                <div class="w-full bg-gray-700 rounded-full h-2">
+                  <div class="bg-red-400 h-2 rounded-full transition-all" :style="{ width: (gcalProfile.overcommitment_ratio * 100) + '%' }"></div>
+                </div>
+                <p class="text-xs text-gray-500 mt-1">{{ (gcalProfile.overcommitment_ratio * 100).toFixed(0) }}%</p>
+              </div>
+              <div>
+                <p class="text-xs text-gray-500 uppercase tracking-wider mb-1">Avg Events / Week</p>
+                <p class="text-lg font-bold text-red-300">{{ gcalProfile.avg_events_per_week.toFixed(1) }}</p>
+              </div>
+            </div>
+            <div>
+              <p class="text-xs text-gray-500 uppercase tracking-wider mb-1">Meeting Density</p>
+              <p class="text-sm font-semibold" :class="{
+                'text-green-400': gcalProfile.meeting_density === 'sparse',
+                'text-amber-400': gcalProfile.meeting_density === 'moderate',
+                'text-red-400': gcalProfile.meeting_density === 'dense',
+                'text-red-300': gcalProfile.meeting_density === 'overwhelming',
+              }">{{ gcalProfile.meeting_density.charAt(0).toUpperCase() + gcalProfile.meeting_density.slice(1) }}</p>
+            </div>
           </div>
           <p class="mt-4 text-xs text-gray-600 font-mono italic">Your schedule is a confession you write every morning.</p>
         </div>
@@ -287,7 +319,7 @@
           <div class="flex justify-between items-start mb-4">
             <div>
               <h2 class="text-2xl font-bold text-red-400">Google Calendar</h2>
-              <h3 class="text-sm font-medium text-gray-500 uppercase tracking-wider mt-1">time as behavior</h3>
+              <h3 class="text-sm font-medium text-gray-500 uppercase tracking-wider mt-1">Time as Behavior</h3>
             </div>
             <GCalConnect />
           </div>
@@ -360,8 +392,36 @@
           <p class="mt-4 text-xs text-gray-600 font-mono italic">We already know you cried during that one.</p>
         </div>
 
-        <!-- Steam (commented out — no profile endpoint yet) -->
-        <!-- <div v-if="oauthState.steam.connected" ... > ... </div> -->
+        <!-- Steam -->
+        <div v-if="oauthState.steam.connected"
+             class="bg-gray-800 border border-slate-500/50 rounded-2xl p-6 shadow-xl">
+          <div class="flex justify-between items-start mb-4">
+            <div>
+              <h2 class="text-2xl font-bold text-slate-400">Steam</h2>
+              <h3 class="text-sm font-medium text-gray-500 uppercase tracking-wider mt-1">The Isolation Metric</h3>
+            </div>
+            <router-link to="/calibrate/steam" class="text-xs font-medium text-slate-400 bg-slate-400/10 border border-slate-500/30 rounded-full px-3 py-1 hover:bg-slate-400/20 transition-colors">View Signal &rarr;</router-link>
+          </div>
+          <div class="space-y-3 text-gray-300">
+            <p>Your game library has been ingested. Playtime patterns, genre obsessions, and late-night session clusters feed the Oracle's understanding of your escapism architecture.</p>
+          </div>
+          <p class="mt-4 text-xs text-gray-600 font-mono italic">Your Steam library is a map of every world you chose over this one.</p>
+        </div>
+        <div v-else
+             class="bg-gray-800 border border-gray-700 rounded-2xl p-6 shadow-xl transition-transform hover:-translate-y-1">
+          <div class="flex justify-between items-start mb-4">
+            <div>
+              <h2 class="text-2xl font-bold text-slate-400">Steam</h2>
+              <h3 class="text-sm font-medium text-gray-500 uppercase tracking-wider mt-1">The Isolation Metric</h3>
+            </div>
+            <SteamConnect />
+          </div>
+          <div class="space-y-3 text-gray-300">
+            <p><strong>Data Collected:</strong> Game library, total playtime, recent sessions, genre distribution, late-night activity patterns.</p>
+            <p><strong>Correlation Engine:</strong> Maps your <span class="text-slate-400 font-semibold">Isolation Metric</span> — which worlds you retreat to, how long you stay, and what that says about what you're avoiding.</p>
+          </div>
+          <p class="mt-4 text-xs text-gray-600 font-mono italic">Your Steam library is a map of every world you chose over this one.</p>
+        </div>
 
         <!-- GitHub -->
         <div v-if="oauthState.github.connected"
@@ -626,6 +686,7 @@
                   v-for="n in 5"
                   :key="n"
                   @click="setRating(src.key, n)"
+                  :aria-label="`Rate ${src.label} ${n} out of 5 stars`"
                   class="text-xl transition-transform hover:scale-110"
                   :class="(pendingRating[src.key] || 0) >= n ? 'text-yellow-400' : 'text-gray-700'"
                 >★</button>
@@ -635,6 +696,7 @@
                   v-for="tag in FEEDBACK_TAGS"
                   :key="tag"
                   @click="toggleTag(src.key, tag)"
+                  :aria-label="`Select feedback tag: ${tag.replace(/_/g, ' ')}`"
                   class="text-xs px-2.5 py-1 rounded-full border transition-colors"
                   :class="selectedTags[src.key]?.includes(tag)
                     ? 'border-purple-500 text-purple-400 bg-purple-900/20'
@@ -681,7 +743,7 @@ import TwitterConnect from '@/components/TwitterConnect.vue'
 import StravaConnect from '@/components/StravaConnect.vue'
 import CoStarConnect from '@/components/CoStarConnect.vue'
 import LetterboxdConnect from '@/components/LetterboxdConnect.vue'
-// import SteamConnect from '@/components/SteamConnect.vue'  // commented out — no profile endpoint yet
+import SteamConnect from '@/components/SteamConnect.vue'
 import GCalConnect from '@/components/GCalConnect.vue'
 import GitHubConnect from '@/components/GitHubConnect.vue'
 import YouTubeConnect from '@/components/YouTubeConnect.vue'
@@ -804,6 +866,13 @@ interface YouTubeProfile {
   subscription_categories: Record<string, number>
 }
 
+interface GCalProfile {
+  peak_hours: number[]
+  overcommitment_ratio: number
+  meeting_density: string
+  avg_events_per_week: number
+}
+
 interface RedditProfile {
   username: string
   total_karma: number
@@ -826,6 +895,8 @@ const githubProfile = ref<GitHubProfile | null>(null)
 const githubLoading = ref(false)
 const youtubeProfile = ref<YouTubeProfile | null>(null)
 const youtubeLoading = ref(false)
+const gcalProfile = ref<GCalProfile | null>(null)
+const gcalLoading = ref(false)
 const redditProfile = ref<RedditProfile | null>(null)
 const redditLoading = ref(false)
 
@@ -882,6 +953,15 @@ async function fetchTwitterProfile() {
 //   } catch { /* non-blocking */ }
 //   steamLoading.value = false
 // }
+
+async function fetchGCalProfile() {
+  if (gcalProfile.value || gcalLoading.value) return
+  gcalLoading.value = true
+  try {
+    gcalProfile.value = await apiFetch<GCalProfile>('/api/gcal/profile')
+  } catch { /* non-blocking */ }
+  gcalLoading.value = false
+}
 
 async function fetchGitHubProfile() {
   if (githubProfile.value || githubLoading.value) return
@@ -965,6 +1045,10 @@ watch(() => oauthState.value.strava.connected, (connected) => {
 
 watch(() => oauthState.value.twitter.connected, (connected) => {
   if (connected) fetchTwitterProfile()
+}, { immediate: true })
+
+watch(() => oauthState.value.google.connected, (connected) => {
+  if (connected) fetchGCalProfile()
 }, { immediate: true })
 
 // watch(() => oauthState.value.steam.connected, (connected) => {

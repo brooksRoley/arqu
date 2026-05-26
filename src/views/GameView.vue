@@ -89,6 +89,7 @@ const oracleResponses = [
   },
   () => `Your hesitation is noted and expected. The vibe vector accounts for approach anxiety — it's already factored into the compatibility score. The question isn't whether you're ready. The question is whether you'll let the data be smarter than your doubt.`,
   () => `I've seen your journal entries. You write about wanting connection while systematically avoiding it. This match is the algorithm calling your bluff. The rest is up to you.`,
+  () => `Analysis complete. I've shown you everything the data can reveal — the rest lives outside the vector space. Accept or pass. The Oracle has nothing left to add.`,
 ]
 
 let oracleResponseIdx = 0
@@ -101,10 +102,19 @@ async function sendToOracle() {
   oracleInput.value = ''
   await scrollOracle()
 
+  // Typing indicator
+  const typingId = Date.now() + 1
+  oracleLog.value.push({ id: typingId, role: 'oracle', text: '...' })
+  await scrollOracle()
+
   await new Promise((r) => setTimeout(r, 600 + Math.random() * 500))
 
+  // Replace typing indicator with real response
+  const idx = oracleLog.value.findIndex((m) => m.id === typingId)
   const responseFn = oracleResponses[Math.min(oracleResponseIdx, oracleResponses.length - 1)]
-  oracleLog.value.push({ id: Date.now() + 1, role: 'oracle', text: responseFn() })
+  if (idx !== -1) {
+    oracleLog.value[idx] = { id: typingId, role: 'oracle', text: responseFn() }
+  }
   oracleResponseIdx++
   await scrollOracle()
 }
@@ -153,7 +163,7 @@ async function acceptMatch() {
   try {
     const result = await interactWithMatch(currentMatch.value.user_id, 'accept')
     if (result.mutual_match) {
-      router.push(`/fitting/${currentMatch.value.user_id}`)
+      phase.value = 'mutual'
       return
     } else {
       advanceToNext()
@@ -168,10 +178,10 @@ async function acceptMatch() {
 
 function onMatchCardKeydown(e: KeyboardEvent) {
   if (interactLoading.value) return
-  if (e.key === 'ArrowLeft' || e.key === 'Enter') {
+  if (e.key === 'ArrowRight' || e.key === 'Enter') {
     e.preventDefault()
     acceptMatch()
-  } else if (e.key === 'ArrowRight' || e.key === 'Escape') {
+  } else if (e.key === 'ArrowLeft' || e.key === 'Escape') {
     e.preventDefault()
     passMatch()
   }
@@ -352,7 +362,7 @@ onMounted(() => {
           class="match-card"
           role="article"
           tabindex="0"
-          :aria-label="`Match ${currentMatchIdx + 1} of ${matches.length}: ${currentMatch.display_name}, ${compatPercent}% vibe alignment. Press left arrow to accept, right arrow to pass.`"
+          :aria-label="`Match ${currentMatchIdx + 1} of ${matches.length}: ${currentMatch.display_name}, ${compatPercent}% vibe alignment. Press right arrow or Enter to accept, left arrow or Escape to pass.`"
           @keydown="onMatchCardKeydown"
         >
           <div class="match-top">
@@ -470,9 +480,9 @@ onMounted(() => {
             v-if="currentMatch"
             class="action-btn action-btn--primary"
             :style="{ background: accent }"
-            @click="router.push(`/messages/${currentMatch.user_id}`)"
+            @click="router.push(`/fitting/${currentMatch.user_id}`)"
           >
-            Open Chat
+            Begin Reveal
           </button>
           <button class="action-btn action-btn--ghost" @click="acknowledgeMutual">
             Continue
