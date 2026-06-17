@@ -329,7 +329,7 @@ async function fetchOracleCoordinate() {
  */
 async function triggerSynthesis() {
   const { apiFetch } = useAuthStore()
-  const providers = ['spotify', 'twitter', 'google', 'strava', 'costar', 'letterboxd', 'steam'] as const
+  const providers = ['spotify', 'twitter', 'google', 'strava', 'costar', 'letterboxd', 'steam', 'github', 'youtube', 'reddit', 'instagram', 'tiktok'] as const
   const payload: Record<string, { data: Record<string, unknown> }> = {}
 
   for (const p of providers) {
