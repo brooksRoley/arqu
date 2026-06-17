@@ -42,9 +42,48 @@ from .brain.router import router as brain_router
 from .vector.router import router as vector_router
 
 
+logger = logging.getLogger("channelzero")
+
+
+async def _probe_embed_key_on_boot() -> None:
+    """
+    Fire-and-forget startup probe: make one cheap embedding call so an invalid
+    OPENAI_EMBED_KEY (revoked, wrong scope, or — as of 2026-06 — an exhausted
+    billing quota returning 429 insufficient_quota) surfaces in Render logs on
+    every deploy instead of failing silently inside background synthesis tasks.
+
+    Never blocks or crashes boot — any failure is logged, not raised.
+    """
+    settings = get_settings()
+    if not settings.openai_embed_key:
+        logger.error("BOOT embed check: OPENAI_EMBED_KEY not configured — matching pipeline is dead")
+        return
+    try:
+        import httpx
+        from .vector.service import EMBEDDING_MODEL, EMBEDDING_ENDPOINT
+        async with httpx.AsyncClient(timeout=15.0) as client:
+            resp = await client.post(
+                EMBEDDING_ENDPOINT,
+                headers={"Authorization": f"Bearer {settings.openai_embed_key}", "Content-Type": "application/json"},
+                json={"model": EMBEDDING_MODEL, "input": "boot health check"},
+            )
+        if resp.status_code == 200:
+            logger.info("BOOT embed check: OPENAI_EMBED_KEY healthy (%s)", EMBEDDING_MODEL)
+        else:
+            logger.error(
+                "BOOT embed check: OPENAI_EMBED_KEY UNHEALTHY — status=%d body=%s "
+                "→ matching/Oracle/journal embeddings will silently no-op until fixed",
+                resp.status_code, resp.text[:300],
+            )
+    except Exception:
+        logger.exception("BOOT embed check: probe failed (transport error)")
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Startup: connect to DB. Shutdown: drain pool."""
+    """Startup: connect to DB + probe embed key. Shutdown: drain pool."""
+    import asyncio
+
     settings = get_settings()
     pool = await init_pool()
 
@@ -55,6 +94,9 @@ async def lifespan(app: FastAPI):
         )
         if not exists and settings.debug:
             print("⚠  Tables not found. Run: python -m server.migrate")
+
+    # Non-blocking embed-key probe — surfaces a dead matching pipeline on deploy.
+    asyncio.create_task(_probe_embed_key_on_boot())
 
     yield
 
@@ -116,7 +158,7 @@ def create_app() -> FastAPI:
         logging.getLogger("channelzero").exception("Unhandled error on %s %s", request.method, request.url.path)
         return JSONResponse(
             status_code=500,
-            content={"detail": str(exc)[:500]},
+            content={"detail": "Internal server error"},
         )
 
     # ── Health ──────────────────────────────────────────────────

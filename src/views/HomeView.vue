@@ -476,11 +476,15 @@ onUnmounted(() => {
           <div
             class="featured-card"
             ref="featuredCardEl"
+            role="button"
+            tabindex="0"
             :style="featuredStyle"
             @pointermove="onFeaturedMove"
             @pointerenter="onFeaturedEnter"
             @pointerleave="onFeaturedLeave"
             @click="handleFeaturedClick"
+            @keydown.enter="handleFeaturedClick"
+            @keydown.space.prevent="handleFeaturedClick"
           >
             <span class="card-icon featured-icon">✦</span>
             <span class="card-title featured-title">{{ featuredTitle }}</span>
@@ -554,14 +558,14 @@ onUnmounted(() => {
   border-radius: 50%;
   width: 2rem;
   height: 2rem;
-  color: rgba(148, 163, 184, 0.4);
+  color: rgba(148, 163, 184, 0.7);
   font-size: 0.85rem;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
   transition: color 0.2s, border-color 0.2s, opacity 0.2s;
-  opacity: 0.4;
+  opacity: 0.65;
 }
 .zen-btn:hover {
   color: rgba(148, 163, 184, 0.9);

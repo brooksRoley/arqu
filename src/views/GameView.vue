@@ -352,7 +352,7 @@ onMounted(() => {
           class="match-card"
           role="article"
           tabindex="0"
-          :aria-label="`Match ${currentMatchIdx + 1} of ${matches.length}: ${currentMatch.display_name}, ${compatPercent}% vibe alignment. Press left arrow to accept, right arrow to pass.`"
+          :aria-label="`Match ${currentMatchIdx + 1} of ${matches.length}: ${currentMatch.display_name}, ${compatPercent}% vibe alignment. Press left arrow to accept, right arrow to pass.${currentMatch.they_accepted ? ' They have already accepted you.' : ''}`"
           @keydown="onMatchCardKeydown"
         >
           <div class="match-top">
@@ -1186,6 +1186,11 @@ onMounted(() => {
   border: none;
   color: #0f0f1a;
   width: 100%;
+}
+
+/* ── Tablet: give oracle chat more room on iPad-width viewports ── */
+@media (max-width: 900px) {
+  .oracle-panel { height: 320px; }
 }
 
 /* ── Mobile: stack panels ── */

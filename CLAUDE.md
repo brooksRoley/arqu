@@ -1,10 +1,30 @@
 # ChannelZero — Claude Code Guide
 
+## Creative Direction (read first — overrides older "matching engine" framing)
+ChannelZero is a suite of **immersive self-expression and hypnosis experiences** with an
+embedded psychoanalysis layer. The product is, in priority order:
+1. **Self-expression** — journal (text/draw/audio), glass video studio, speed reader, check-in.
+2. **Hypnosis / entrainment** — binaural & trance audio, spiral, star-tunnel breath journey,
+   generative visuals (Tone.js + Web Audio + Canvas).
+3. **Routine / ritual building** — daily loops the user returns to.
+4. **Embedded gaming** — small introspective games/rituals (no swipe/match mechanics).
+5. **Psychoanalysis insights from OAuth connections** — per-connector LLM narratives over the
+   user's OWN data (Spotify→sonic psyche, GitHub→maker's mind, etc.). Runs on **user-supplied
+   LLM keys**, needs **no embeddings and no Pinecone**.
+
+**Shelved / aspirational — do NOT build on these without an explicit ask:**
+- The Pinecone **vibe-vector matching network** (ANN "three shadows", mutual-match swiping,
+  karma ledger). The paid OpenAI embed key is intentionally **unfunded** — `/api/health/embeddings`
+  returns 429 `insufficient_quota` and Pinecone is empty. Embedding/matching code degrades
+  gracefully and should stay dormant. Grow **OAuth insights** instead of embeddings.
+- Prefer work that runs entirely on **already-installed packages** (Tone.js, Matter.js, Web
+  Audio, Canvas). Avoid anything that needs a paid API to function.
+
 ## Stack
 - **Frontend**: Vue 3 + Vite + TypeScript + Tailwind — deployed to Vercel (`channelzero.vercel.app`)
 - **Backend**: FastAPI (Python) — deployed to Render (`channelzero.onrender.com`)
 - **Database**: Neon PostgreSQL (asyncpg pooled + unpooled connections)
-- **Vector DB**: Pinecone (`channelzero` index) — vibe vectors for user matching
+- **Vector DB**: Pinecone (`channelzero` index) — vibe vectors for user matching (**SHELVED**, see Creative Direction)
 - **Auth**: JWT HS256, 24hr expiry, stored as `channelzero-jwt` in localStorage
 
 ## Project Structure

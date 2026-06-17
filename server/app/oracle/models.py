@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 
-from pydantic import BaseModel, field_validator
+from pydantic import BaseModel, Field, field_validator
 
 
 _MAX_PROVIDER_PAYLOAD_BYTES = 50_000  # 50KB per provider
@@ -43,12 +43,12 @@ class SynthesisRequest(BaseModel):
 
 class PsychCoordinate(BaseModel):
     """The LLM-synthesized psychological coordinate."""
-    empathy_index: float
-    isolation_metric: float
-    fatalism_score: float
-    masochism_curve: float
-    oracle_rationale: str
-    suggested_community_action: str
+    empathy_index: float = Field(ge=0.0, le=1.0)
+    isolation_metric: float = Field(ge=0.0, le=1.0)
+    fatalism_score: float = Field(ge=0.0, le=1.0)
+    masochism_curve: float = Field(ge=0.0, le=1.0)
+    oracle_rationale: str = Field(max_length=1000)
+    suggested_community_action: str = Field(max_length=1000)
 
 
 class SynthesisResponse(BaseModel):

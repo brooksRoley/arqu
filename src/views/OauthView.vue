@@ -17,24 +17,44 @@
           class="absolute inset-0 rounded-full border border-purple-400/40 animate-ping"
           :style="{ animationDuration: '2s', animationDelay: `${(i - 1) * 0.5}s` }"
         ></div>
-        <div class="relative w-24 h-24 rounded-full bg-purple-500/20 border border-purple-400/60 backdrop-blur-md flex items-center justify-center text-purple-200 text-xs font-mono uppercase tracking-widest">
-          Oracle
+        <div class="relative w-24 h-24 rounded-full bg-purple-500/20 border border-purple-400/60 backdrop-blur-md flex items-center justify-center text-purple-200 font-mono uppercase">
+          <span v-if="synthStage >= 3" class="text-3xl tracking-tight tabular-nums">{{ synthCount }}</span>
+          <span v-else class="text-xs tracking-widest">Oracle</span>
+        </div>
+
+        <!-- Coordinates locked flash -->
+        <div
+          v-if="coordinatesLocked"
+          class="absolute inset-0 flex items-center justify-center pointer-events-none animate-fade-in"
+        >
+          <span class="text-lg font-mono uppercase tracking-[0.25em] text-center" style="color: #22c55e">Coordinates locked</span>
         </div>
       </div>
 
       <!-- Connected provider chips, sequential pulse -->
-      <div class="flex flex-wrap justify-center gap-2 mb-10 max-w-xl">
-        <span
+      <div class="flex flex-wrap justify-center gap-x-3 gap-y-4 mb-10 max-w-xl">
+        <div
           v-for="(key, idx) in synthProviderKeys"
           :key="key"
-          class="text-xs px-3 py-1 rounded-full border border-purple-500/40 text-purple-200 bg-purple-500/10 transition-all duration-700"
-          :class="synthStage >= 2 ? 'opacity-100' : 'opacity-30'"
-          :style="{
-            animation: synthStage >= 2 ? `synth-card-pulse 1.4s ease-out ${idx * 0.25}s 1` : 'none',
-          }"
+          class="flex flex-col items-center gap-1"
         >
-          {{ PROVIDER_LABELS[key as string] || key }}
-        </span>
+          <span
+            class="text-xs px-3 py-1 rounded-full border border-purple-500/40 text-purple-200 bg-purple-500/10 transition-all duration-700"
+            :class="synthStage >= 2 ? 'opacity-100' : 'opacity-30'"
+            :style="{
+              animation: synthStage >= 2 ? `synth-card-pulse 1.4s ease-out ${idx * 0.25}s 1` : 'none',
+            }"
+          >
+            {{ PROVIDER_LABELS[key as string] || key }}
+          </span>
+          <span
+            class="text-[0.625rem] font-mono uppercase tracking-wider text-purple-300/60 transition-opacity duration-500"
+            :class="synthStage >= 2 ? 'opacity-100' : 'opacity-0'"
+            :style="{ transitionDelay: `${idx * 0.25 + 0.2}s` }"
+          >
+            {{ SIGNAL_LABELS[key as string] || '' }}
+          </span>
+        </div>
       </div>
 
       <!-- Dimension labels staggered -->
@@ -557,17 +577,17 @@
           <p class="mt-4 text-xs text-gray-600 font-mono italic">The grid is a mirror, not a window.</p>
         </div>
         <div v-else
-             class="bg-gray-800 border border-gray-700 rounded-2xl p-6 shadow-xl transition-transform hover:-translate-y-1">
+             class="bg-gray-800/60 border border-gray-700/60 rounded-2xl p-6 shadow-xl opacity-60 cursor-not-allowed select-none"
+             aria-disabled="true">
           <div class="flex justify-between items-start mb-4">
             <div>
-              <h2 class="text-2xl font-bold text-pink-400">Instagram</h2>
+              <h2 class="text-2xl font-bold text-pink-400/70">Instagram</h2>
               <h3 class="text-sm font-medium text-gray-500 uppercase tracking-wider mt-1">The Curated Self</h3>
             </div>
-            <InstagramConnect />
+            <span class="text-xs font-medium text-gray-400 bg-gray-700/40 border border-gray-600/40 rounded-full px-3 py-1 whitespace-nowrap">Coming soon</span>
           </div>
-          <div class="space-y-3 text-gray-300">
-            <p><strong>Data Collected:</strong> Visual aesthetics, posting frequency, engagement patterns, story behavior.</p>
-            <p><strong>Correlation Engine:</strong> The Oracle reads your curated identity and measures the distance between your projected self and your signal fingerprint.</p>
+          <div class="space-y-3 text-gray-400">
+            <p>Instagram isn't a live connection yet. The Oracle will soon read the gap between your curated grid and your signal fingerprint.</p>
           </div>
           <p class="mt-4 text-xs text-gray-600 font-mono italic">The grid is a mirror, not a window.</p>
         </div>
@@ -588,17 +608,17 @@
           <p class="mt-4 text-xs text-gray-600 font-mono italic">Your FYP is a Rorschach test you take every night.</p>
         </div>
         <div v-else
-             class="bg-gray-800 border border-gray-700 rounded-2xl p-6 shadow-xl transition-transform hover:-translate-y-1">
+             class="bg-gray-800/60 border border-gray-700/60 rounded-2xl p-6 shadow-xl opacity-60 cursor-not-allowed select-none"
+             aria-disabled="true">
           <div class="flex justify-between items-start mb-4">
             <div>
-              <h2 class="text-2xl font-bold text-cyan-400">TikTok</h2>
+              <h2 class="text-2xl font-bold text-cyan-400/70">TikTok</h2>
               <h3 class="text-sm font-medium text-gray-500 uppercase tracking-wider mt-1">The Dopamine Map</h3>
             </div>
-            <TikTokConnect />
+            <span class="text-xs font-medium text-gray-400 bg-gray-700/40 border border-gray-600/40 rounded-full px-3 py-1 whitespace-nowrap">Coming soon</span>
           </div>
-          <div class="space-y-3 text-gray-300">
-            <p><strong>Data Collected:</strong> Content preferences, scroll duration, engagement triggers, creator affinity.</p>
-            <p><strong>Correlation Engine:</strong> Maps your dopamine architecture — what makes you stop scrolling reveals your deepest attention patterns.</p>
+          <div class="space-y-3 text-gray-400">
+            <p>TikTok isn't a live connection yet. The Oracle will soon map the dopamine architecture behind what makes you stop scrolling.</p>
           </div>
           <p class="mt-4 text-xs text-gray-600 font-mono italic">Your FYP is a Rorschach test you take every night.</p>
         </div>
@@ -686,8 +706,6 @@ import GCalConnect from '@/components/GCalConnect.vue'
 import GitHubConnect from '@/components/GitHubConnect.vue'
 import YouTubeConnect from '@/components/YouTubeConnect.vue'
 import RedditConnect from '@/components/RedditConnect.vue'
-import InstagramConnect from '@/components/InstagramConnect.vue'
-import TikTokConnect from '@/components/TikTokConnect.vue'
 
 const FEEDBACK_TAGS = ['felt_relevant', 'didnt_add_value', 'surprised_me', 'want_more_like_this']
 
@@ -697,22 +715,47 @@ const { oauthState, markConnected, oracleSynthesizing, dismissOracleSynthesis } 
 
 // Stagger reveals for the synthesis overlay
 const synthStage = ref(0) // 0 hidden, 1 ring, 2 cards pulsing, 3 dims revealed, 4 cta
+const synthCount = ref(0) // center-orb counter, animates 0 -> connected provider count
+const coordinatesLocked = ref(false) // green "Coordinates locked" flash before dismiss
 let synthTimers: number[] = []
+let synthCountRaf = 0
 
 function clearSynthTimers() {
   synthTimers.forEach((t) => window.clearTimeout(t))
   synthTimers = []
+  if (synthCountRaf) cancelAnimationFrame(synthCountRaf)
+  synthCountRaf = 0
+}
+
+// Ramp the orb counter 0 -> N over 1.2s with a mono readout.
+function animateSynthCount() {
+  const target = synthProviderKeys.value.length
+  const duration = 1200
+  const start = performance.now()
+  const step = (now: number) => {
+    const t = Math.min(1, (now - start) / duration)
+    synthCount.value = Math.round(t * target)
+    if (t < 1) synthCountRaf = requestAnimationFrame(step)
+  }
+  synthCountRaf = requestAnimationFrame(step)
 }
 
 watch(oracleSynthesizing, (active) => {
   clearSynthTimers()
   if (active) {
     synthStage.value = 1
+    synthCount.value = 0
+    coordinatesLocked.value = false
     synthTimers.push(window.setTimeout(() => (synthStage.value = 2), 1200))
-    synthTimers.push(window.setTimeout(() => (synthStage.value = 3), 3500))
+    synthTimers.push(window.setTimeout(() => {
+      synthStage.value = 3
+      animateSynthCount()
+    }, 3500))
     synthTimers.push(window.setTimeout(() => (synthStage.value = 4), 7800))
   } else {
     synthStage.value = 0
+    synthCount.value = 0
+    coordinatesLocked.value = false
   }
 })
 
@@ -744,8 +787,12 @@ const PROVIDER_LABELS: Record<string, string> = {
 }
 
 function goToUniverse() {
-  dismissOracleSynthesis()
-  router.push('/universe')
+  // Flash "Coordinates locked" for 500ms before dismissing the overlay.
+  coordinatesLocked.value = true
+  window.setTimeout(() => {
+    dismissOracleSynthesis()
+    router.push('/universe')
+  }, 500)
 }
 const { apiFetch } = useAuthStore()
 const { submitConnectorFeedback } = useAdminStore()

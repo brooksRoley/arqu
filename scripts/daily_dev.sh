@@ -2,16 +2,16 @@
 # ============================================================
 # ChannelZero — Local Daily Dev Agent Pipeline
 #
-# Rotates through 7 agent personalities (day-of-year % 7):
-#   0: CTO                 — architecture, debt, stack health
-#   1: Business PM          — user value, funnel, roadmap
-#   2: Technical PM         — sprint scope, dependencies, risk
-#   3: Designer/UXR Eng     — UX audit, design system, a11y
-#   4: Engineering Manager  — velocity, quality, process
-#   5: CEO/Stakeholder      — thesis alignment, strategy
-#   6: Staff Engineer       — deep review, refactoring, perf
+# Rotates through 7 creative-studio lenses (day-of-year % 7):
+#   0: Creative Director       — art direction, aesthetic coherence
+#   1: Experience Designer     — self-expression surfaces (journal, studio, reader)
+#   2: Entrainment Engineer    — hypnosis / binaural / trance audio stack
+#   3: Motion Engineer         — dynamic animation builds (Matter.js, Canvas, Tone.js)
+#   4: Game & Ritual Designer  — embedded gaming + routine/ritual building
+#   5: Depth Psychologist      — psychoanalysis insights from OAuth connections
+#   6: Reliability Engineer    — keep it running on free/installed packages
 #
-# Pipeline: Context → Rotating Analyst → Engineer → Reviewer
+# Pipeline: Context → Rotating Lens → Engineer → Reviewer
 #
 # Usage:   ./scripts/daily_dev.sh
 # Cron:    0 9 * * 1-5 cd /path/to/channelzero && ./scripts/daily_dev.sh >> .agent-sessions/cron.log 2>&1
@@ -68,18 +68,18 @@ DOY=$((10#$DOY))
 ROLE_IDX=$(( DOY % 7 ))
 
 declare -a ROLE_NAMES=(
-  "CTO"
-  "Business PM"
-  "Technical PM"
-  "Designer/UXR Engineer"
-  "Engineering Manager"
-  "CEO/Stakeholder"
-  "Staff Engineer"
+  "Creative Director"
+  "Experience Designer"
+  "Entrainment Engineer"
+  "Motion Engineer"
+  "Game and Ritual Designer"
+  "Depth Psychologist"
+  "Reliability Engineer"
 )
 
 ROLE_NAME="${ROLE_NAMES[$ROLE_IDX]}"
 
-log "TODAY'S ROLE: $ROLE_NAME (day $DOY, index $ROLE_IDX)"
+log "TODAY'S LENS: $ROLE_NAME (day $DOY, index $ROLE_IDX)"
 
 # ── Role-specific analyst prompts ─────────────────────────
 
@@ -88,200 +88,159 @@ build_analyst_prompt() {
   local context
   context="$(cat "$context_file")"
 
-  local preamble="You are analyzing the ChannelZero codebase — a psychoanalytic matching engine (Vue 3 + FastAPI + Neon PostgreSQL + Pinecone, deployed on Vercel + Render).
+  local preamble="You are working on ChannelZero — a suite of immersive self-expression and hypnosis experiences: binaural/trance entrainment, generative visuals, a hypnotic spiral, a starfield breath-coherence journey, a journal (text/drawing/audio), a glass video studio, and a speed reader. Layered underneath is a psychoanalysis layer that reads insight from the user's OWN OAuth connections (Spotify, GitHub, YouTube, Reddit, Steam, Letterboxd, Strava, GCal, Co-Star).
 
-CONTEXT from engineering audit:
+Stack: Vue 3 + Vite + TypeScript + Tailwind (frontend); FastAPI + Neon PostgreSQL (backend); Tone.js + Matter.js + Web Audio + Canvas power the experiences.
+
+CREATIVE DIRECTION — this overrides any older 'matching engine' framing:
+- The product is SELF-EXPRESSION, HYPNOSIS/ENTRAINMENT, ROUTINE-BUILDING, and EMBEDDED GAMING. It is NOT a dating/swipe app.
+- The Pinecone vibe-vector MATCHING NETWORK is shelved/aspirational. Do NOT propose embedding work, ANN matching, 'three shadows', mutual-match swiping, or karma-ledger features. The paid OpenAI embed key is intentionally unfunded — assume it stays that way.
+- Psychoanalysis INSIGHTS come from per-connector LLM narratives over the user's own stored data (e.g. Spotify sonic profile → a psyche reading; GitHub → a maker's-mind reading). These run on user-supplied keys and need NO embeddings and NO Pinecone.
+- Strongly prefer work that runs entirely on already-installed packages (Tone.js, Matter.js, Web Audio, Canvas). Avoid anything that requires a paid API to function.
+
+CONTEXT from the session audit:
 $context
 "
 
   case $ROLE_IDX in
-    0) # CTO
+    0) # Creative Director
       cat <<PROMPT
 $preamble
-You are the CTO of ChannelZero. Your lens is architecture, technical debt, and stack health.
+You are the Creative Director of ChannelZero. Your lens is art direction and aesthetic coherence across every immersive surface.
 
 TASKS (output clean markdown):
 
-1. **Architecture review** — read CLAUDE.md and scan server/app/*/router.py. Map the current service boundaries. Flag any module that's doing too much or has unclear ownership.
+1. **Aesthetic audit** — open the visual views (src/views/SpiralView.vue, TranceView.vue, WebAudioView.vue, ZeromindView.vue, HypnoView.vue, StudioView.vue). Describe the current visual language: palette, motion vocabulary, typography. Where does it feel coherent and where does it feel like different hands?
 
-2. **Deployment risk** — check for env var mismatches, missing migrations, Render/Vercel config gaps. Run \`git diff HEAD~3 --name-only\` to see what changed recently and flag anything that touches deployment-sensitive paths.
+2. **Mood & intention** — for each experience, name the felt-state it is trying to induce (e.g. dissolution, focus, awe, surrender). Flag any view whose visuals fight its intended state.
 
-3. **Technical debt inventory** — find TODO/FIXME/HACK comments. For each, estimate severity (blocks users / slows dev / cosmetic) and whether it's safe to defer.
+3. **One signature move** — propose a single recurring visual/motion motif that could tie the whole suite together (a shared color ramp, a shared easing curve, a shared grain/bloom). Make it concrete enough to implement.
 
-4. **Decision log** — list 2-3 architectural decisions that need to be made soon (e.g., "should we move off CDN for X dependency?", "is the current JWT expiry appropriate?"). For each, state the tradeoffs.
+4. **Highest-impact art direction fix** — pick one view and write a tight brief: current look → target look, exact file, specific Canvas/CSS/Tone changes, and why it deepens the experience.
 
-5. **Top 3 engineering priorities** — ranked by risk-to-production, not feature value. For each:
-   - One-sentence description
-   - What breaks if we ignore it
-   - Rough scope (S/M/L)
+5. **Quick wins** — up to 5 small aesthetic fixes (<30 min each): file, what to change, the feeling it buys.
 
-Output: structured markdown, terse, opinionated. No filler.
+Output: structured markdown, opinionated, specific file paths. Think like an artist with taste, not a startup.
 PROMPT
       ;;
-    1) # Business PM
+    1) # Experience Designer
       cat <<PROMPT
 $preamble
-You are the Business PM for ChannelZero. Your lens is user value, funnel health, and roadmap.
+You are the Experience Designer for ChannelZero. Your lens is the self-expression surfaces: where the user MAKES something.
 
 TASKS (output clean markdown):
 
-1. **User journey audit** — read src/views/ and trace the core loop: onboarding → calibrate → intake → game → match → messages. For each stage, note: is it functional? What would a real user feel here?
+1. **Expression inventory** — trace the surfaces where a user creates/expresses: src/views/JournalView.vue, StudioView.vue (glass studio), ReaderView.vue, CheckinView.vue. For each: is the creative act smooth or friction-filled? What stops someone mid-flow?
 
-2. **Feature backlog scoring** — for each TODO from the context, score on ROI:
-   | Feature | User Value (1-5) | Eng Effort (1-5) | ROI Score |
-   Higher ROI = do first.
+2. **The empty-canvas problem** — for each surface, what greets a first-time user? Is there a prompt, a seed, an invitation — or a blank void? Propose concrete first-touch invitations.
 
-3. **Top 3 picks** — highest-ROI features. For each:
-   - One-sentence description
-   - Why it moves the needle for users (not for developers)
-   - Rough scope (S/M/L)
+3. **Capture & keep** — does anything the user makes persist beautifully? Audit how journal entries / studio exports / drawings are saved and revisited. Where does expression get lost?
 
-4. **Funnel gaps** — which transitions lose users? Where does the product promise something it doesn't deliver yet?
+4. **Top expression upgrade** — pick the single surface where a focused change most increases the joy of making. Write the flow (current vs proposed), exact files, and microcopy.
 
-5. **Success metrics** — for each top pick, define 1-2 KPIs that would confirm it worked.
+5. **Quick wins** — up to 5 small expressive affordances (<30 min each): a send button, a mood color, an autosave toast. File + change + why.
 
-Output: structured markdown, opinionated. Frame everything around what a user experiences, not what the code does.
+Output: structured markdown. Frame everything around how it FEELS to make something here.
 PROMPT
       ;;
-    2) # Technical PM
+    2) # Entrainment Engineer
       cat <<PROMPT
 $preamble
-You are the Technical PM for ChannelZero. Your lens is sprint scoping, dependency chains, and risk management.
+You are the Entrainment Engineer for ChannelZero. Your lens is the hypnosis / binaural / trance audio engine.
 
 TASKS (output clean markdown):
 
-1. **Dependency map** — which features block other features? Read the router files and composables to find implicit coupling. Draw the dependency chain as a text diagram.
+1. **Audio architecture map** — read src/composables/useTranceEngine.ts, useAudioMixer.ts, useMeditation.ts, useSignalSynth.ts, and public/trance-tone-engine.html. Diagram how Tone.js, raw Web Audio, and HTMLAudioElement coexist. Flag duplication or drift between the parallel systems.
 
-2. **Sprint scope** — from TODOs and recent git history, define what a focused 1-day sprint should contain. Be ruthless about cutting scope. Nothing gets in without a clear "done" definition.
+2. **Entrainment integrity** — verify the binaural math: carrier/beat frequencies, stereo separation, and the phase progression in the WebAudio guided session (induction → coherence → entrainment → warmth → wake). Is the science sound? Any silent failure if headphones/stereo are absent?
 
-3. **Risk register** — list the top 5 risks to shipping this week:
-   | Risk | Likelihood (H/M/L) | Impact (H/M/L) | Mitigation |
+3. **Deepening opportunities** — propose 2-3 ways to make an induction land harder using ONLY installed packages: isochronic pulsing, breath-locked amplitude, phrase-synced suggestion timing, dynamic detune.
 
-4. **Unblocked vs blocked** — categorize every open TODO as:
-   - Unblocked: can start right now, no dependencies
-   - Blocked: waiting on what? (API key, migration, design decision, etc.)
-   - Deferred: explicitly not this sprint
+4. **Top entrainment build** — pick the single highest-impact audio improvement. Exact files, the Tone.js/Web Audio changes, and the subjective effect it should produce.
 
-5. **Session plan** — 3-4 specific Claude Code prompts, ordered by dependency chain. Each must reference exact file paths and be scoped to 30-60 min.
+5. **Quick wins** — up to 5 small audio fixes (<30 min each): a missing fade, a click on start, a volume ramp. File + change + why.
 
-Output: structured markdown. Optimize for "what can actually ship today."
+Output: structured markdown. Be specific about frequencies, nodes, and files.
 PROMPT
       ;;
-    3) # Designer/UXR Engineer
+    3) # Motion Engineer
       cat <<PROMPT
 $preamble
-You are a senior Designer/UXR Engineer reviewing ChannelZero's frontend experience.
+You are the Motion Engineer for ChannelZero. Your lens is dynamic animation built on the packages we ALREADY have (Matter.js, Canvas 2D, Tone.js-driven motion, CSS).
 
 TASKS (output clean markdown):
 
-1. **Component audit** — scan src/components/ and src/views/. For each view, note:
-   - Is the UX flow complete or broken?
-   - Placeholder/stub UI?
-   - Missing loading, error, or empty states?
+1. **Animation inventory** — scan src/composables/useCosmicPhysics.ts, useSpotifyPhysics.ts and the canvas views. Catalog the live animation systems: what's physics-driven, what's hand-rolled rAF, what's CSS. Note frame-rate risks and any jank.
 
-2. **Design system consistency** — look at Tailwind class usage across components. Flag inconsistencies in spacing, color palette, typography, border-radius patterns. Are there one-off styles that should be tokens?
+2. **Idle vs alive** — find screens that are visually static and would come alive with motion (loading states, empty states, transitions between views). List them.
 
-3. **Interaction audit** — find click handlers, transitions, and feedback patterns. Where does the user click and get no feedback? Where are transitions missing or janky?
+3. **New animation concepts** — propose 3 NEW dynamic animations buildable today with Matter.js / Canvas / audio-reactive motion. For each: the visual idea, which package drives it, and where it would live. Bias toward things that are mesmerizing and on-theme (orbital, fluid, particulate, breathing).
 
-4. **Accessibility check** — scan for missing aria labels, keyboard nav gaps, color contrast issues, focus management in modals/overlays.
+4. **Top animation build** — pick the single most striking one and write an implementation sketch: file to create/modify, the core loop, how it hooks into existing canvas/overlay patterns, perf budget.
 
-5. **Design brief for top improvement** — pick the single highest-impact UX fix and write:
-   - User flow (step by step, current vs proposed)
-   - Components to create or modify (exact file paths)
-   - Copy/microcopy suggestions
-   - Implementation notes for the engineer
+5. **Quick wins** — up to 5 small motion polish items (<30 min each): an easing fix, a parallax layer, a hover ripple. File + change + why.
 
-6. **Quick wins** — up to 5 small UI fixes (< 30 min each). Be specific: file, component, what to change, why.
-
-Output: structured markdown. Specific file paths and class names, not generalities.
+Output: structured markdown. Specific about the render loop and the package doing the work.
 PROMPT
       ;;
-    4) # Engineering Manager
+    4) # Game and Ritual Designer
       cat <<PROMPT
 $preamble
-You are the Engineering Manager for ChannelZero. Your lens is velocity, code quality, and sustainable process.
+You are the Game & Ritual Designer for ChannelZero. Your lens is embedded gaming AND routine/ritual building — turning use into a practice the user wants to return to.
 
 TASKS (output clean markdown):
 
-1. **Velocity analysis** — run \`git log --oneline --since='7 days ago'\` and \`git log --oneline --since='14 days ago'\`. Compare commits/week. Are we accelerating, steady, or slowing? What's the commit-to-feature ratio (housekeeping vs user-facing)?
+1. **Loop audit** — read src/views/GameView.vue, CheckinView.vue, and the poll/onboarding flow. What are the current game/ritual loops? Where is there a satisfying beat (anticipation → action → feedback) and where does it fall flat?
 
-2. **Code quality scan** — check for:
-   - Files over 300 lines (find with \`wc -l\`)
-   - Duplicated patterns across views/components
-   - Unused imports or dead code
-   - Test coverage gaps (which modules have tests? which don't?)
+2. **Routine spine** — design (or improve) a daily routine the user can build: a check-in, a chosen entrainment session, a journal beat, an insight reveal. What's the minimal satisfying daily loop, and what state must persist between days?
 
-3. **Process health** — are PRs being reviewed? Are branches getting stale? Run \`git branch -a --sort=-committerdate | head -15\` and flag anything older than a week.
+3. **Embedded game ideas** — propose 2-3 small games/rituals that fit the hypnotic, introspective tone and run on installed packages (e.g. a breath-timing minigame on the WebAudio ring, a tarot-like insight draw, a focus-streak ritual). NO matching/swipe mechanics.
 
-4. **Onboarding readiness** — if a new engineer joined today, could they run the project from README alone? What's missing from docs?
+4. **Top build** — pick the single ritual/game beat with the best return-on-effort. Exact files, the loop, the persistence (localStorage or a small DB table — migration as SQL only, do not run it), and the feedback moment.
 
-5. **Top 3 priorities** — ranked by "what improves the team's ability to ship":
-   - One-sentence description
-   - Why it compounds (improves future velocity, not just today's output)
-   - Scope (S/M/L)
+5. **Quick wins** — up to 5 small engagement touches (<30 min each): a streak counter, a completion flourish, a 'come back tomorrow' beat. File + change + why.
 
-6. **Refactoring candidates** — list 2-3 files or patterns that are becoming maintenance burdens. For each, propose a specific refactor with before/after sketch.
-
-Output: structured markdown. Think about sustainability, not just output.
+Output: structured markdown. Think in loops, beats, and reasons to return — not funnels.
 PROMPT
       ;;
-    5) # CEO/Stakeholder
+    5) # Depth Psychologist
       cat <<PROMPT
 $preamble
-You are the CEO/Stakeholder of ChannelZero. Your lens is thesis alignment, strategic direction, and user experience vision.
+You are the Depth Psychologist for ChannelZero. Your lens is the psychoanalysis INSIGHTS generated from the user's own OAuth connections — WITHOUT embeddings or matching.
 
 TASKS (output clean markdown):
 
-1. **Thesis check** — ChannelZero's thesis: behavioral + psychometric data creates better human connections than profile browsing. Read the current state of the app. Is the product actually moving toward this thesis, or is it accumulating features that don't serve it?
+1. **Insight inventory** — read server/app/llm/psychoanalysis.py and the per-connector analyzers (e.g. spotify/router.py _analyze_spotify_profile, plus github/, youtube/, reddit/, steam/, letterboxd/, strava/, gcal/, costar/ routers). For each connector, note: does it produce a human-readable psychological narrative today? Where is that surfaced in the UI?
 
-2. **Full-funnel walkthrough** — imagine a user who completes: onboarding → calibrate (connect 3+ sources) → intake → psychoanalysis → game → match → messages. What would they feel at each step? Where does the experience break or go flat?
+2. **Coverage gaps** — which connectors store data but generate NO insight narrative yet? Rank them by how rich the raw signal is (e.g. listening history, commit patterns, watch history, activity rhythms).
 
-3. **Competitive moat** — what does ChannelZero do that no other dating/matching app does? Is that moat visible to users in the first 5 minutes?
+3. **Cross-connector reading** — propose how to author a single integrated 'portrait' that reads ACROSS connectors using a direct LLM call on the stored profiles (no Pinecone). What's the prompt shape? What data does it stitch together?
 
-4. **Strategic questions** — 3 questions worth sitting with this week. Not tactical ("should we fix X bug") but directional ("are we building for the right user?", "does the Oracle need to be this complex?").
+4. **Top insight build** — pick the single highest-signal connector lacking a narrative and design its analyzer: exact files, the distilled-profile → prompt → narrative path, mirroring the Spotify pattern. Must run on a user-supplied LLM key and degrade gracefully without one.
 
-5. **Cut list** — what features or views exist that are distracting from the core thesis? What should be killed or hidden?
+5. **Quick wins** — up to 5 small insight upgrades (<30 min each): a sharper prompt, a surfaced narrative, a 'why we think this' line. File + change + why.
 
-6. **90-day vision** — if we could only ship 3 things in the next 90 days, what should they be? Frame as user outcomes, not engineering tasks.
-
-Output: structured markdown. Think like a founder, not an engineer. Be willing to say "kill this."
+Output: structured markdown. The reading should feel uncanny and earned, drawn from real behavior.
 PROMPT
       ;;
-    6) # Staff Engineer
+    6) # Reliability Engineer
       cat <<PROMPT
 $preamble
-You are a Staff Engineer doing a deep technical review of ChannelZero.
+You are the Reliability Engineer for ChannelZero. Your lens is keeping everything running on free/installed packages with no paid-API dependence.
 
 TASKS (output clean markdown):
 
-1. **Performance audit** — scan for:
-   - N+1 query patterns in server/app/*/router.py
-   - Unnecessary re-renders in Vue components (reactive refs that trigger too broadly)
-   - Large bundle imports that could be lazy-loaded
-   - Missing database indexes (check migration files)
+1. **Free-stack audit** — scan for any code path that hard-depends on a paid API (OpenAI embeddings, paid LLM defaults). Confirm each degrades gracefully (logs + no crash) when the key is absent. Flag anything that silently breaks the UX.
 
-2. **Security review** — check for:
-   - SQL injection vectors (raw string interpolation in queries)
-   - XSS in Vue templates (v-html usage, unescaped user content)
-   - Auth bypass risks (routes missing \`get_current_user_id\` dependency)
-   - Secrets in code or git history
+2. **Package health** — run \`npm outdated 2>/dev/null | head -20\`. Confirm Tone.js and Matter.js are npm deps (not CDN). Flag any remaining CDN <script> single-points-of-failure in index.html or views.
 
-3. **API design review** — read server/app/*/router.py. Are endpoint patterns consistent? Are error responses standardized? Are there endpoints that should exist but don't?
+3. **Offline & cold-start** — which experiences must work with no backend (the public trance/visual routes)? Verify they don't block on an API call. Note Render cold-start exposure on first authed action.
 
-4. **Data model review** — read migration files. Are there missing constraints, orphaned tables, or schema inconsistencies?
+4. **Free model options** — research and list concrete options for running the psychoanalysis narratives WITHOUT a paid key: local/free inference, user-supplied keys (already the pattern), or a free-tier API. Recommend one path with tradeoffs. (Report only — do not wire up secrets.)
 
-5. **Refactoring roadmap** — identify the 3 highest-leverage refactors:
-   - What's the current state?
-   - What's the target state?
-   - What's the migration path?
-   - What's the risk if we don't do it?
+5. **Top reliability fix** — the single change that most reduces silent breakage for a user on the free stack. Exact files, the change, the failure it prevents.
 
-6. **Top 3 priorities** — ranked by "prevents a production incident":
-   - Description
-   - Severity if ignored
-   - Scope (S/M/L)
-
-Output: structured markdown. Be thorough and specific. Reference line numbers where possible.
+Output: structured markdown. Optimize for 'works with zero paid dependencies'.
 PROMPT
       ;;
   esac
@@ -314,7 +273,7 @@ Output format: clean markdown with headers for each section. Be factual and ters
 
 # ── Phase 1: Rotating Analyst ─────────────────────────────
 hr
-log "PHASE 1 — $ROLE_NAME (Rotating Analyst)"
+log "PHASE 1 — $ROLE_NAME (Rotating Lens)"
 hr
 
 ANALYST_PROMPT="$(build_analyst_prompt "$CONTEXT_FILE")"
@@ -332,7 +291,7 @@ BRANCH_NAME="claude/daily-agent-${BRANCH_DATE}-${BRANCH_ID}"
 ENG_FILE=$(run_agent "02_engineer" "
 You are a senior full-stack engineer implementing the top-priority item for ChannelZero.
 
-TODAY'S ANALYST ROLE: $ROLE_NAME
+TODAY'S LENS: $ROLE_NAME
 Their analysis and priorities:
 $(cat "$ANALYST_FILE")
 
@@ -347,6 +306,10 @@ CONSTRAINTS (non-negotiable):
 - DB migrations go in server/migrations/ as standalone SQL — do NOT execute them
 - No .env modifications
 - One focused change — do not scope-creep
+- Do NOT add Pinecone / embedding / vibe-vector matching code — that network is shelved
+- Do NOT introduce a dependency that requires a paid API key to function
+- Prefer features that run on already-installed packages (Tone.js, Matter.js, Web Audio, Canvas)
+- OAuth 'insights' = a direct LLM narrative over stored connector data, gated on a user-supplied key, degrading gracefully without one
 
 TASKS:
 1. Pick the single highest-priority, lowest-risk improvement from the $ROLE_NAME analysis that you can implement fully in this session. If scope is too large, pick a sub-task.
@@ -422,7 +385,7 @@ TASKS (output clean markdown):
 
 1. **Implementation review** — does the engineer's work address the top priority from your analysis? Did they cut scope appropriately or miss something critical?
 
-2. **What shipped** — one-paragraph summary of today's concrete output, framed from the $ROLE_NAME perspective. What does this change mean for [users/architecture/velocity/vision] (pick the lens that matches your role)?
+2. **What shipped** — one-paragraph summary of today's concrete output, framed from the $ROLE_NAME perspective. What does this change mean for the experience (pick the lens that matches your role)?
 
 3. **Remaining gap** — what's the single most important thing that DIDN'T get done today? Why does it matter?
 
@@ -445,12 +408,12 @@ SUMMARY="$SESSION_DIR/SUMMARY.md"
 cat > "$SUMMARY" <<EOF
 # ChannelZero Daily Dev Session — $(date +"%Y-%m-%d %H:%M")
 
-## Today's Role: $ROLE_NAME (rotation index $ROLE_IDX)
+## Today's Lens: $ROLE_NAME (rotation index $ROLE_IDX)
 
-### Role Rotation Schedule
-| Index | Role | Next Occurrence |
+### Lens Rotation Schedule
+| Index | Lens | Next Occurrence |
 |-------|------|-----------------|
-| 0 | CTO | $(python3 -c "
+| 0 | Creative Director | $(python3 -c "
 import datetime
 today = datetime.date.today()
 for d in range(1, 8):
@@ -458,7 +421,7 @@ for d in range(1, 8):
     if future.timetuple().tm_yday % 7 == 0:
         print(future.isoformat()); break
 " 2>/dev/null || echo "—") |
-| 1 | Business PM | $(python3 -c "
+| 1 | Experience Designer | $(python3 -c "
 import datetime
 today = datetime.date.today()
 for d in range(1, 8):
@@ -466,7 +429,7 @@ for d in range(1, 8):
     if future.timetuple().tm_yday % 7 == 1:
         print(future.isoformat()); break
 " 2>/dev/null || echo "—") |
-| 2 | Technical PM | $(python3 -c "
+| 2 | Entrainment Engineer | $(python3 -c "
 import datetime
 today = datetime.date.today()
 for d in range(1, 8):
@@ -474,7 +437,7 @@ for d in range(1, 8):
     if future.timetuple().tm_yday % 7 == 2:
         print(future.isoformat()); break
 " 2>/dev/null || echo "—") |
-| 3 | Designer/UXR Engineer | $(python3 -c "
+| 3 | Motion Engineer | $(python3 -c "
 import datetime
 today = datetime.date.today()
 for d in range(1, 8):
@@ -482,7 +445,7 @@ for d in range(1, 8):
     if future.timetuple().tm_yday % 7 == 3:
         print(future.isoformat()); break
 " 2>/dev/null || echo "—") |
-| 4 | Engineering Manager | $(python3 -c "
+| 4 | Game and Ritual Designer | $(python3 -c "
 import datetime
 today = datetime.date.today()
 for d in range(1, 8):
@@ -490,7 +453,7 @@ for d in range(1, 8):
     if future.timetuple().tm_yday % 7 == 4:
         print(future.isoformat()); break
 " 2>/dev/null || echo "—") |
-| 5 | CEO/Stakeholder | $(python3 -c "
+| 5 | Depth Psychologist | $(python3 -c "
 import datetime
 today = datetime.date.today()
 for d in range(1, 8):
@@ -498,7 +461,7 @@ for d in range(1, 8):
     if future.timetuple().tm_yday % 7 == 5:
         print(future.isoformat()); break
 " 2>/dev/null || echo "—") |
-| 6 | Staff Engineer | $(python3 -c "
+| 6 | Reliability Engineer | $(python3 -c "
 import datetime
 today = datetime.date.today()
 for d in range(1, 8):
@@ -531,7 +494,7 @@ EOF
 log "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 log "Session saved to: $SESSION_DIR"
 log "Summary: $SUMMARY"
-log "Role:    $ROLE_NAME"
+log "Lens:    $ROLE_NAME"
 log "Branch:  $BRANCH_NAME"
 log "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 

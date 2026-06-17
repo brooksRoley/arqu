@@ -23,12 +23,14 @@ import secrets
 
 import httpx
 import jwt
-from fastapi import APIRouter, HTTPException, Query, Request, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from fastapi.responses import JSONResponse, RedirectResponse
 
+from ..auth.deps import get_current_user_id
 from ..auth.service import decode_access_token
 from ..config import get_settings
 from ..db import get_conn
+from ..llm.chat import chat_completion
 from ..oauth_base import store_provider_data
 
 router = APIRouter()
@@ -225,3 +227,60 @@ def _distill_profile(
         "top_games": top_games,
         "heavy_session_hours": round(heavy_solo_hours, 1),
     }
+
+
+# ── Psychoanalysis narrative ─────────────────────────────────────────────────
+
+@router.get("/analyze")
+async def steam_analyze(user_id: UUID = Depends(get_current_user_id)):
+    """Generate an LLM psychoanalysis of the user's Steam gaming profile."""
+    async with get_conn() as conn:
+        row = await conn.fetchrow(
+            "SELECT steam_data FROM vibe_vectors WHERE user_id = $1",
+            user_id,
+        )
+
+    if not row or not row["steam_data"]:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No Steam data found")
+
+    data = row["steam_data"]
+    profile = json.loads(data) if isinstance(data, str) else data
+
+    narrative = await _analyze_steam_profile(profile)
+    return {"narrative": narrative}
+
+
+async def _analyze_steam_profile(profile: dict) -> str:
+    game_count = profile.get("game_count", 0)
+    total_hours = profile.get("total_lifetime_hours", 0)
+    recent_hours = profile.get("recent_2week_hours", 0)
+    recent_titles = ", ".join(profile.get("recent_titles", [])) or "none in the last two weeks"
+    heavy_hours = profile.get("heavy_session_hours", 0)
+    top_games = profile.get("top_games", [])
+    top_list = ", ".join(
+        f"{g.get('name', 'Unknown')} ({g.get('hours', 0)}h)" for g in top_games
+    ) or "no standout titles"
+
+    # Concentration: how much of total lifetime time lives in the top 5 games.
+    concentration = round(heavy_hours / total_hours, 2) if total_hours else 0
+
+    prompt = f"""You are a perceptive behavioral psychologist analyzing a person's Steam gaming data as a window into their inner life.
+Your task: write a sharp, warm, 2-3 paragraph psychoanalysis of the worlds this person chooses to inhabit and what their play reveals about them.
+Do not be clinical. Be insightful, specific, and draw connections between data points.
+
+SIGNAL DATA:
+- Library size: {game_count} owned games
+- Total lifetime playtime: {total_hours} hours
+- Most-played games: {top_list}
+- Concentration (share of lifetime hours in their top 5 games): {concentration:.2f}
+- Recent activity (last 2 weeks): {recent_hours} hours across: {recent_titles}
+- Hours in their five heaviest titles: {heavy_hours}
+
+Write 2-3 paragraphs analyzing:
+1. The worlds they inhabit — what their most-played titles reveal about the realities they choose to step into, and what those worlds offer them (control, mastery, escape, company, story)
+2. Collector vs inhabitant — read the tension between library breadth ({game_count} games) and concentration ({concentration:.2f}): do they amass possibility or sink deep into a few homes? What does that say about how they relate to commitment and novelty?
+3. Rhythm and refuge — what recent activity vs lifetime patterns reveal about how gaming meets their nervous system right now: solitude, ritual, decompression, or hunger
+
+Be direct, specific, a little poetic. Avoid generic statements. Return only the narrative."""
+
+    return await chat_completion(prompt)
