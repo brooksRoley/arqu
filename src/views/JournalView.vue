@@ -1,10 +1,11 @@
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, onMounted } from 'vue'
 const URL = window.URL
 import { useJournalStore } from '@/composables/useJournalStore'
 import { useTTS } from '@/composables/useTTS'
 import { useStoryStore } from '@/composables/useStoryStore'
 import { usePollStore } from '@/composables/usePollStore'
+import { useAnalytics } from '@/composables/useAnalytics'
 import JournalCanvas from '@/components/JournalCanvas.vue'
 import JournalRecorder from '@/components/JournalRecorder.vue'
 
@@ -26,6 +27,11 @@ const {
 const { speak, toggle, isSpeaking, isPaused, stop: stopTTS, progress: ttsProgress, supported: ttsSupported } = useTTS()
 const { setStoryText } = useStoryStore()
 const { token: pollToken } = usePollStore()
+const { logEvent } = useAnalytics()
+
+// ── Funnel instrumentation ─────────────────────────────────────────
+let completedFired = false
+onMounted(() => logEvent('journal_session_started'))
 
 // ── UI State ───────────────────────────────────────────────────────
 
@@ -101,6 +107,10 @@ const latestSynthesis = ref<ReturnType<typeof synthesizeToday> | null>(null)
 
 function runSynthesis() {
   latestSynthesis.value = synthesizeToday()
+  if (!completedFired) {
+    completedFired = true
+    logEvent('journal_session_completed', { keywords: latestSynthesis.value?.keywords?.length ?? 0 })
+  }
 }
 
 // ── New entry ──────────────────────────────────────────────────────

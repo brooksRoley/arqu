@@ -702,6 +702,9 @@ function funnelLabel(step: string) {
     played_game:             'Played Game',
     got_mutual_match:        'Matched',
     sent_message:            'Messaged',
+    opened_self_expression_view: 'Opened Self-Expr',
+    completed_session:           'Completed Session',
+    returned_next_day:           'Returned Next Day',
   }
   return labels[step] ?? step
 }

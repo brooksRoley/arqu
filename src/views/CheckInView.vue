@@ -5,6 +5,7 @@ import { useJournalStore } from '@/composables/useJournalStore'
 import type { JournalSynthesis } from '@/composables/useJournalStore'
 import { usePollStore } from '@/composables/usePollStore'
 import { useTTS } from '@/composables/useTTS'
+import { useAnalytics } from '@/composables/useAnalytics'
 
 const router = useRouter()
 const {
@@ -17,6 +18,15 @@ const {
 
 const { token } = usePollStore()
 const { speak, stop, isSpeaking, toggle, progress: ttsProgress } = useTTS()
+const { logEvent } = useAnalytics()
+
+// ── Funnel instrumentation ─────────────────────────────────────────
+let completedFired = false
+function markCheckinComplete(via: string) {
+  if (completedFired) return
+  completedFired = true
+  logEvent('checkin_completed', { via })
+}
 
 // ── State ──────────────────────────────────────────────────────────
 
@@ -102,6 +112,7 @@ const streakDays = computed(() => {
 
 function runSynthesis() {
   synthesis.value = synthesizeToday()
+  markCheckinComplete('synthesis')
 }
 
 function readSynthesisAloud() {
@@ -119,6 +130,7 @@ function saveIntention() {
     intentionSaved.value = false
   }, 2000)
   intentionText.value = ''
+  markCheckinComplete('intention')
 }
 
 function goToJournal() {
@@ -134,6 +146,7 @@ function openEntry(id: string) {
 
 onMounted(() => {
   greeting.value = buildGreeting()
+  logEvent('checkin_started')
   if (todayEntries.value.length > 0) {
     synthesis.value = synthesizeToday()
   }

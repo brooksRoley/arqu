@@ -3,9 +3,11 @@ import { ref, watch, onMounted, onUnmounted } from 'vue'
 import * as Tone from 'tone'
 import { useStoryStore } from '@/composables/useStoryStore'
 import { useTranceEngine } from '@/composables/useTranceEngine'
+import { useAnalytics } from '@/composables/useAnalytics'
 import PostTranceOverlay from '@/components/PostTranceOverlay.vue'
 
 const { currentWord } = useStoryStore()
+const { logEvent } = useAnalytics()
 const {
   phase,
   sessionActive,
@@ -19,7 +21,14 @@ const {
 const showOverlay = ref(false)
 
 watch(completedSession, (data) => {
-  if (data) showOverlay.value = true
+  if (data) {
+    showOverlay.value = true
+    logEvent('zeromind_session_completed', {
+      coherence: data.coherence,
+      sync_count: data.syncCount,
+      duration_ms: data.sessionDurationMs,
+    })
+  }
 })
 
 function handleOverlayClose() {
@@ -633,6 +642,7 @@ watch([phase, sessionActive], () => {
 })
 
 onMounted(() => {
+  logEvent('zeromind_session_started')
   resize()
   initParticles(MODES[modeIndex.value])
   rafId = requestAnimationFrame(tick)

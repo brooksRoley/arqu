@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+from datetime import datetime, timedelta, timezone
 from typing import Optional
 from uuid import UUID
 
@@ -15,6 +16,20 @@ from ..db import get_conn
 router = APIRouter()
 
 VALID_PROVIDERS = {"spotify", "twitter", "google", "strava", "steam", "letterboxd", "costar"}
+
+# Core self-expression / hypnosis loop events (journal, check-in, zeromind).
+# These drive the streak counter and the new funnel steps.
+SELF_EXPRESSION_STARTED = [
+    "journal_session_started",
+    "checkin_started",
+    "zeromind_session_started",
+]
+SELF_EXPRESSION_COMPLETED = [
+    "journal_session_completed",
+    "checkin_completed",
+    "zeromind_session_completed",
+]
+SELF_EXPRESSION_EVENTS = SELF_EXPRESSION_STARTED + SELF_EXPRESSION_COMPLETED
 
 
 # ── Feedback models ──────────────────────────────────────────────────────────
@@ -46,6 +61,56 @@ async def log_event(
             """,
             user_id, body.event, json.dumps(body.metadata),
         )
+
+
+# ── User-facing: self-expression streak ──────────────────────────────────────
+
+@router.get("/streak")
+async def my_streak(user_id: UUID = Depends(get_current_user_id)):
+    """Return the current user's consecutive-day self-expression streak.
+
+    A day counts as active if it has any journal / check-in / zeromind event.
+    Streak is the run of consecutive calendar days (UTC) ending today, or
+    yesterday if today has no activity yet (so the streak isn't shown as broken
+    until a full day is missed).
+    """
+    async with get_conn() as conn:
+        rows = await conn.fetch(
+            """
+            SELECT DISTINCT (created_at AT TIME ZONE 'UTC')::date AS day
+            FROM session_events
+            WHERE user_id = $1
+              AND event = ANY($2::text[])
+              AND created_at >= now() - interval '60 days'
+            ORDER BY day DESC
+            """,
+            user_id, SELF_EXPRESSION_EVENTS,
+        )
+
+    active_days = {r["day"] for r in rows}
+    today = datetime.now(timezone.utc).date()
+
+    # Start counting from today, or yesterday if nothing logged yet today.
+    cursor = today
+    if today not in active_days and (today - timedelta(days=1)) in active_days:
+        cursor = today - timedelta(days=1)
+
+    streak = 0
+    while cursor in active_days:
+        streak += 1
+        cursor -= timedelta(days=1)
+
+    last_7_days = [
+        {"date": (today - timedelta(days=d)).isoformat(),
+         "active": (today - timedelta(days=d)) in active_days}
+        for d in range(6, -1, -1)
+    ]
+
+    return {
+        "streak": streak,
+        "today_active": today in active_days,
+        "last_7_days": last_7_days,
+    }
 
 
 # ── User-facing: submit connector satisfaction ───────────────────────────────
@@ -188,7 +253,10 @@ async def admin_funnel(_: UUID = Depends(require_admin)):
                 COUNT(*) FILTER (WHERE pm.user_id IS NOT NULL)            AS completed_psychometrics,
                 COUNT(*) FILTER (WHERE mi.actor_id IS NOT NULL)           AS played_game,
                 COUNT(*) FILTER (WHERE mm.user_id IS NOT NULL)            AS got_mutual_match,
-                COUNT(*) FILTER (WHERE msg.sender_id IS NOT NULL)         AS sent_message
+                COUNT(*) FILTER (WHERE msg.sender_id IS NOT NULL)         AS sent_message,
+                COUNT(*) FILTER (WHERE se_open.user_id IS NOT NULL)       AS opened_self_expression_view,
+                COUNT(*) FILTER (WHERE se_done.user_id IS NOT NULL)       AS completed_session,
+                COUNT(*) FILTER (WHERE se_return.user_id IS NOT NULL)     AS returned_next_day
             FROM users u
             LEFT JOIN poll_tokens pt ON pt.user_id = u.id
             LEFT JOIN vibe_vectors vv ON vv.user_id = u.id
@@ -211,7 +279,25 @@ async def admin_funnel(_: UUID = Depends(require_admin)):
             LEFT JOIN (
                 SELECT DISTINCT sender_id FROM messages
             ) msg ON msg.sender_id = u.id
-            """
+            -- Self-expression / hypnosis core loop (journal, check-in, zeromind)
+            LEFT JOIN (
+                SELECT DISTINCT user_id FROM session_events
+                WHERE event = ANY($1::text[]) AND user_id IS NOT NULL
+            ) se_open ON se_open.user_id = u.id
+            LEFT JOIN (
+                SELECT DISTINCT user_id FROM session_events
+                WHERE event = ANY($2::text[]) AND user_id IS NOT NULL
+            ) se_done ON se_done.user_id = u.id
+            LEFT JOIN (
+                SELECT user_id FROM session_events
+                WHERE event = ANY($3::text[]) AND user_id IS NOT NULL
+                GROUP BY user_id
+                HAVING COUNT(DISTINCT (created_at AT TIME ZONE 'UTC')::date) >= 2
+            ) se_return ON se_return.user_id = u.id
+            """,
+            SELF_EXPRESSION_STARTED,
+            SELF_EXPRESSION_COMPLETED,
+            SELF_EXPRESSION_EVENTS,
         )
 
     data = dict(row)
@@ -227,6 +313,10 @@ async def admin_funnel(_: UUID = Depends(require_admin)):
         ("played_game",           data["played_game"]),
         ("got_mutual_match",      data["got_mutual_match"]),
         ("sent_message",          data["sent_message"]),
+        # New core-loop steps (sourced from session_events)
+        ("opened_self_expression_view", data["opened_self_expression_view"]),
+        ("completed_session",           data["completed_session"]),
+        ("returned_next_day",           data["returned_next_day"]),
     ]
 
     return [

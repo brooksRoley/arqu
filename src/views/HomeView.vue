@@ -2,6 +2,7 @@
 import { ref, reactive, computed, nextTick, watch, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { usePollStore } from '@/composables/usePollStore'
+import { useAnalytics, type StreakData } from '@/composables/useAnalytics'
 import { useCosmicPhysics } from '@/composables/useCosmicPhysics'
 import { useBinauralEngine } from '@/composables/useBinauralEngine'
 import { useZenMode } from '@/composables/useZenMode'
@@ -101,6 +102,10 @@ const sessions = computed(() => {
 
 const recommendedSession = computed(() => sessions.value.find((s) => s.recommended) || sessions.value[0])
 const otherSessions = computed(() => sessions.value.filter((s) => !s.recommended))
+
+// ── Self-expression streak (routine / ritual loop) ───────────────
+const { fetchStreak } = useAnalytics()
+const streak = ref<StreakData | null>(null)
 
 // Featured card adapts based on state
 const featuredTitle = computed(() =>
@@ -411,6 +416,7 @@ onMounted(async () => {
   await initCosmic()
   await nextTick()
   updateCardAttractors()
+  fetchStreak().then((s) => { streak.value = s })
 })
 
 onUnmounted(() => {
@@ -471,6 +477,21 @@ onUnmounted(() => {
 
           <!-- Quest Log — "you are here" with next action -->
           <QuestLog @start-poll="stage = 'poll'" />
+
+          <!-- Self-expression streak — daily ritual counter -->
+          <div v-if="streak && streak.streak > 0" class="streak-chip">
+            <span class="streak-flame">🔥</span>
+            <span class="streak-count">{{ streak.streak }}</span>
+            <span class="streak-label">day{{ streak.streak === 1 ? '' : 's' }} in a row</span>
+            <div class="streak-dots" aria-hidden="true">
+              <span
+                v-for="(d, i) in streak.last_7_days"
+                :key="i"
+                class="streak-dot"
+                :class="{ 'streak-dot--active': d.active }"
+              ></span>
+            </div>
+          </div>
 
           <!-- Featured card -->
           <div
@@ -779,6 +800,52 @@ onUnmounted(() => {
 /* ── Featured card glare ── */
 .featured-card:hover .card-glare {
   opacity: 1;
+}
+
+/* ── Self-expression streak chip ── */
+.streak-chip {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: fit-content;
+  margin: 0 auto 1rem;
+  padding: 0.4rem 0.85rem;
+  background: rgba(249, 115, 22, 0.08);
+  border: 1px solid rgba(249, 115, 22, 0.25);
+  border-radius: 2rem;
+}
+
+.streak-flame {
+  font-size: 0.95rem;
+  line-height: 1;
+}
+
+.streak-count {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #fb923c;
+}
+
+.streak-label {
+  font-size: 0.72rem;
+  color: #94a3b8;
+}
+
+.streak-dots {
+  display: flex;
+  gap: 0.2rem;
+  margin-left: 0.35rem;
+}
+
+.streak-dot {
+  width: 0.4rem;
+  height: 0.4rem;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.streak-dot--active {
+  background: #fb923c;
 }
 
 </style>
