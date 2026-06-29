@@ -1,24 +1,33 @@
 # ChannelZero — Project Memory
 
 ## Product Thesis
-ChannelZero matches people through behavioral signals, not profile browsing. Users connect data providers (Spotify, X, Strava, etc.) and complete psychometric intake. The Oracle synthesizes 12 provider streams into a psychological coordinate vector. Pinecone ANN finds the nearest neighbors in that space — your matches are the people whose behavioral fingerprints are closest to yours.
+**Source of truth for product direction: CLAUDE.md's Creative Direction section.**
 
-## Active Connectors
+ChannelZero is a suite of immersive self-expression and hypnosis experiences with an embedded psychoanalysis layer. Priority order:
+1. **Self-expression** — journal (text/draw/audio), glass video studio, speed reader, check-in.
+2. **Hypnosis / entrainment** — binaural & trance audio, spiral, star-tunnel breath journey, generative visuals (Tone.js + Web Audio + Canvas).
+3. **Routine / ritual building** — daily loops the user returns to.
+4. **Embedded gaming** — small introspective games/rituals.
+5. **Psychoanalysis insights from OAuth connections** — per-connector LLM narratives over the user's OWN data (Spotify→sonic psyche, GitHub→maker's mind, etc.). Runs on user-supplied LLM keys, needs no embeddings and no Pinecone.
 
-| Provider | Status | Data Used |
-|----------|--------|-----------|
-| Spotify | Live | Top artists, genres, audio features (with genre-based fallback for deprecation) |
-| X (Twitter) | Live | OAuth 2.0 PKCE, tweet analysis for "neurotic output" signal |
-| Strava | Live | Activity data as "somatic ledger" signal |
-| Google Calendar | Live (OAuth) | Temporal patterns as "temporal anxiety" signal |
-| GitHub | Live (OAuth) | Developer profile + repos as "builder intensity" signal |
-| YouTube | Live (OAuth) | Subscriptions, channel stats as "parasocial field" signal |
-| Reddit | Live (OAuth) | Subreddit + behavioral profile as "tribal signal" |
-| Steam | Backend built, frontend card exists | Game library as "isolation metric" |
-| Letterboxd | Backend built, frontend card exists | Film taste as "empathy simulator" |
-| Co-Star | Backend built, frontend card exists | Astrology data as "fatalism mirror" |
-| Instagram | Backend built | "Aesthetic mirror" signal |
-| TikTok | Backend built | "Cultural velocity" signal |
+**SHELVED (do not build on without explicit ask):** The Pinecone vibe-vector matching network (ANN "three shadows", mutual-match swiping, karma ledger). The OpenAI embed key is intentionally unfunded — `/api/health/embeddings` returns 429 and Pinecone is empty. Matching code degrades gracefully and stays dormant. Grow OAuth insights instead.
+
+## OAuth Connectors (sources of psychoanalysis narrative, not matching signals)
+
+| Provider | Status | Narrative Frame |
+|----------|--------|-----------------|
+| Spotify | Live | Sonic psyche — genre, mood, listening patterns |
+| X (Twitter) | Live | Neurotic output — public signal analysis |
+| Strava | Live | Somatic ledger — body as behavior |
+| Google Calendar | Live | Temporal anxiety — time as identity |
+| GitHub | Live | Maker's mind — builder intensity + repo audit |
+| YouTube | Live | Parasocial field — attention + parasocial investment |
+| Reddit | Live | Tribal signal — community + behavioral profile |
+| Steam | Backend built, frontend card exists | Isolation metric — game library |
+| Letterboxd | Backend built, frontend card exists | Empathy simulator — film taste |
+| Co-Star | Backend built, frontend card exists | Fatalism mirror — astrology |
+| Instagram | Backend built | Aesthetic mirror |
+| TikTok | Backend built | Cultural velocity |
 
 ## Key Architectural Decisions
 
@@ -29,8 +38,7 @@ ChannelZero matches people through behavioral signals, not profile browsing. Use
 - **Namespaces**: `users` (psychological coordinates), `journal` (RAG entries), `images` (brain image library)
 - **Frontend deploy**: Vercel auto-deploy from main, TypeScript CI gate (vue-tsc --noEmit)
 - **Backend deploy**: Render, uvicorn, auto-deploy from main, migrations auto-run at start
-- **Match delivery**: Toast notification component polls `/api/match/new` every 30s, marks seen via `/api/match/seen`
-- **Oracle auto-trigger**: Fires when user connects 2nd+ provider, uses real JSONB from vibe_vectors
+- **Analytics**: Session events, funnel steps, home streak instrumented in `useAnalytics.ts` (shipped 2026-06-21)
 
 ## Tried and Abandoned
 
@@ -43,6 +51,13 @@ ChannelZero matches people through behavioral signals, not profile browsing. Use
 - **OpenAI API key**: Project `proj_8pERhmljbOUkRzurStcMGtZ5` was returning 403 as of 2026-04-20. Needs manual check in OpenAI dashboard. Health endpoint: `/api/health/embeddings`.
 
 ## Changelog
+
+### 2026-06-29
+- Rewrote memory files to match CLAUDE.md Creative Direction pivot (self-expression first, matching shelved)
+- Re-routed post-onboarding destination from `/game` to `/journal` in DiscoveryView.vue, OnboardingView.vue, SideBar.vue
+
+### 2026-06-21
+- Instrumented self-expression core loop: session events, funnel steps, home streak in `useAnalytics.ts`, `HomeView.vue`, `JournalView.vue`, `CheckInView.vue`, `ZeromindView.vue`
 
 ### 2026-05-26
 - Fixed Oracle synthesis: frontend now sends all 12 providers (was only 7, missing github/youtube/reddit/instagram/tiktok)

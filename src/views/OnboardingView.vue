@@ -107,7 +107,7 @@ function skipStep(step: Step) {
 function finishOnboarding() {
   state.value.completed = true
   saveState(state.value)
-  router.push('/game')
+  router.push('/journal')
 }
 
 function skipAll() {

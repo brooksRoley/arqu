@@ -509,7 +509,7 @@ function advanceFromIngestion() {
 }
 
 function enterGame() {
-  router.push('/game')
+  router.push('/journal')
 }
 
 function delay(ms: number) {
