@@ -509,7 +509,7 @@ function advanceFromIngestion() {
 }
 
 function enterGame() {
-  router.push('/game')
+  router.push('/journal')
 }
 
 function delay(ms: number) {
@@ -651,7 +651,7 @@ onUnmounted(() => {
           :style="{ background: accent }"
           @click="enterGame"
         >
-          Your frequencies overlap. Initiate contact?
+          Your frequencies overlap. Begin your practice.
         </button>
       </div>
     </div>
