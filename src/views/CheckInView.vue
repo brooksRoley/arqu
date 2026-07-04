@@ -40,7 +40,7 @@ const intentionSaved = ref(false)
 function buildGreeting(): string {
   const hour = new Date().getHours()
   if (hour < 5) return 'Late night, huh?'
-  if (hour < 12) return 'Good morning, Brooks.'
+  if (hour < 12) return 'Good morning.'
   if (hour < 17) return 'Good afternoon.'
   if (hour < 21) return 'Good evening.'
   return 'Winding down?'

@@ -427,6 +427,7 @@ onUnmounted(() => {
         :class="['menu-btn', { 'menu-btn--floating': isFullBleed && !menuOpen }]"
         @click="menuOpen = !menuOpen"
         aria-label="Toggle controls"
+        :aria-expanded="menuOpen ? 'true' : 'false'"
       >
         <span class="hamburger-lines" :class="{ 'hamburger-lines--open': menuOpen }">
           <span class="hamburger-line"></span>

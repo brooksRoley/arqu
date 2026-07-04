@@ -43,7 +43,7 @@
 
       <!-- Next locked step (fog of war) -->
       <div v-if="nextStep" class="ql-next">
-        <span class="ql-lock">░</span>
+        <span class="ql-lock" aria-hidden="true">░</span>
         <span class="ql-next-label">{{ nextStep.label }}</span>
       </div>
     </div>

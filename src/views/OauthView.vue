@@ -1,10 +1,10 @@
 <template>
-  <div class="min-h-screen bg-gray-900 text-gray-100 p-8 flex flex-col items-center relative">
+  <div class="min-h-screen calibrate-bg text-gray-100 p-8 flex flex-col items-center relative">
 
     <!-- Oracle synthesis overlay -->
     <div
       v-if="oracleSynthesizing"
-      class="fixed inset-0 z-50 bg-gray-950/95 backdrop-blur-sm flex flex-col items-center justify-center px-6"
+      class="fixed inset-0 z-50 oracle-overlay backdrop-blur-sm flex flex-col items-center justify-center px-6"
       role="dialog"
       aria-live="polite"
       aria-label="Oracle synthesis in progress"
@@ -14,7 +14,7 @@
         <div
           v-for="i in 3"
           :key="i"
-          class="absolute inset-0 rounded-full border border-purple-400/40 animate-ping"
+          class="absolute inset-0 rounded-full border border-purple-400/40 animate-ping oracle-ping"
           :style="{ animationDuration: '2s', animationDelay: `${(i - 1) * 0.5}s` }"
         ></div>
         <div class="relative w-24 h-24 rounded-full bg-purple-500/20 border border-purple-400/60 backdrop-blur-md flex items-center justify-center text-purple-200 font-mono uppercase">
@@ -101,7 +101,7 @@
 
         <!-- Spotify -->
         <div v-if="oauthState.spotify.connected"
-             class="bg-gray-800 border border-green-500/50 rounded-2xl p-6 shadow-xl">
+             class="ccard-active border border-green-500/50 rounded-2xl p-6 shadow-xl">
           <div class="flex justify-between items-start mb-4">
             <div>
               <h2 class="text-2xl font-bold text-green-400">Spotify</h2>
@@ -111,9 +111,9 @@
           </div>
           <!-- Loading skeleton -->
           <div v-if="spotifyLoading || !spotifyProfile" class="space-y-3 animate-pulse">
-            <div class="h-4 bg-gray-700 rounded w-3/4"></div>
-            <div class="h-4 bg-gray-700 rounded w-1/2"></div>
-            <div class="h-4 bg-gray-700 rounded w-2/3"></div>
+            <div class="h-4 skel-line rounded w-3/4"></div>
+            <div class="h-4 skel-line rounded w-1/2"></div>
+            <div class="h-4 skel-line rounded w-2/3"></div>
           </div>
           <!-- Data mirror -->
           <div v-else class="space-y-4">
@@ -143,14 +143,14 @@
             <div class="grid grid-cols-2 gap-4">
               <div>
                 <p class="text-xs text-gray-500 uppercase tracking-wider mb-1">Energy</p>
-                <div class="w-full bg-gray-700 rounded-full h-2">
+                <div class="w-full bar-track rounded-full h-2">
                   <div class="bg-green-400 h-2 rounded-full transition-all" :style="{ width: (spotifyProfile.audio_avg.energy * 100) + '%' }"></div>
                 </div>
                 <p class="text-xs text-gray-500 mt-1">{{ (spotifyProfile.audio_avg.energy * 100).toFixed(0) }}%</p>
               </div>
               <div>
                 <p class="text-xs text-gray-500 uppercase tracking-wider mb-1">Danceability</p>
-                <div class="w-full bg-gray-700 rounded-full h-2">
+                <div class="w-full bar-track rounded-full h-2">
                   <div class="bg-green-400 h-2 rounded-full transition-all" :style="{ width: (spotifyProfile.audio_avg.danceability * 100) + '%' }"></div>
                 </div>
                 <p class="text-xs text-gray-500 mt-1">{{ (spotifyProfile.audio_avg.danceability * 100).toFixed(0) }}%</p>
@@ -159,7 +159,7 @@
           </div>
         </div>
         <div v-else
-             class="bg-gray-800 border border-gray-700 rounded-2xl p-6 shadow-xl transition-transform hover:-translate-y-1">
+             class="ccard-idle border rounded-2xl p-6 shadow-xl transition-transform hover:-translate-y-1">
           <div class="flex justify-between items-start mb-4">
             <div>
               <h2 class="text-2xl font-bold text-green-400">Spotify</h2>
@@ -175,7 +175,7 @@
 
         <!-- Twitter / X -->
         <div v-if="oauthState.twitter.connected"
-             class="bg-gray-800 border border-blue-500/50 rounded-2xl p-6 shadow-xl">
+             class="ccard-active border border-blue-500/50 rounded-2xl p-6 shadow-xl">
           <div class="flex justify-between items-start mb-4">
             <div>
               <h2 class="text-2xl font-bold text-blue-400">X / Twitter</h2>
@@ -184,9 +184,9 @@
             <router-link to="/calibrate/twitter" class="text-xs font-medium text-blue-400 bg-blue-400/10 border border-blue-500/30 rounded-full px-3 py-1 hover:bg-blue-400/20 transition-colors">View Signal &rarr;</router-link>
           </div>
           <div v-if="twitterLoading || !twitterProfile" class="space-y-3 animate-pulse">
-            <div class="h-4 bg-gray-700 rounded w-3/4"></div>
-            <div class="h-4 bg-gray-700 rounded w-1/2"></div>
-            <div class="h-4 bg-gray-700 rounded w-2/3"></div>
+            <div class="h-4 skel-line rounded w-3/4"></div>
+            <div class="h-4 skel-line rounded w-1/2"></div>
+            <div class="h-4 skel-line rounded w-2/3"></div>
           </div>
           <div v-else class="space-y-4">
             <div>
@@ -210,7 +210,7 @@
           </div>
         </div>
         <div v-else
-             class="bg-gray-800 border border-gray-700 rounded-2xl p-6 shadow-xl transition-transform hover:-translate-y-1">
+             class="ccard-idle border rounded-2xl p-6 shadow-xl transition-transform hover:-translate-y-1">
           <div class="flex justify-between items-start mb-4">
             <div>
               <h2 class="text-2xl font-bold text-blue-400">X / Twitter</h2>
@@ -226,7 +226,7 @@
 
         <!-- Strava -->
         <div v-if="oauthState.strava.connected"
-             class="bg-gray-800 border border-orange-500/50 rounded-2xl p-6 shadow-xl">
+             class="ccard-active border border-orange-500/50 rounded-2xl p-6 shadow-xl">
           <div class="flex justify-between items-start mb-4">
             <div>
               <h2 class="text-2xl font-bold text-orange-400">Strava</h2>
@@ -236,9 +236,9 @@
           </div>
           <!-- Loading skeleton -->
           <div v-if="stravaLoading || !stravaProfile" class="space-y-3 animate-pulse">
-            <div class="h-4 bg-gray-700 rounded w-3/4"></div>
-            <div class="h-4 bg-gray-700 rounded w-1/2"></div>
-            <div class="h-4 bg-gray-700 rounded w-2/3"></div>
+            <div class="h-4 skel-line rounded w-3/4"></div>
+            <div class="h-4 skel-line rounded w-1/2"></div>
+            <div class="h-4 skel-line rounded w-2/3"></div>
           </div>
           <!-- Data mirror -->
           <div v-else class="space-y-4">
@@ -272,7 +272,7 @@
           <p class="mt-4 text-xs text-gray-600 font-mono italic">Since your body holds the tension your mind ignores.</p>
         </div>
         <div v-else
-             class="bg-gray-800 border border-gray-700 rounded-2xl p-6 shadow-xl transition-transform hover:-translate-y-1">
+             class="ccard-idle border rounded-2xl p-6 shadow-xl transition-transform hover:-translate-y-1">
           <div class="flex justify-between items-start mb-4">
             <div>
               <h2 class="text-2xl font-bold text-orange-400">Strava</h2>
@@ -289,7 +289,7 @@
 
         <!-- Google Calendar -->
         <div v-if="oauthState.google.connected"
-             class="bg-gray-800 border border-red-500/50 rounded-2xl p-6 shadow-xl">
+             class="ccard-active border border-red-500/50 rounded-2xl p-6 shadow-xl">
           <div class="flex justify-between items-start mb-4">
             <div>
               <h2 class="text-2xl font-bold text-red-400">Google Calendar</h2>
@@ -299,9 +299,9 @@
           </div>
           <!-- Loading skeleton -->
           <div v-if="gcalLoading || !gcalProfile" class="space-y-3 animate-pulse">
-            <div class="h-4 bg-gray-700 rounded w-3/4"></div>
-            <div class="h-4 bg-gray-700 rounded w-1/2"></div>
-            <div class="h-4 bg-gray-700 rounded w-2/3"></div>
+            <div class="h-4 skel-line rounded w-3/4"></div>
+            <div class="h-4 skel-line rounded w-1/2"></div>
+            <div class="h-4 skel-line rounded w-2/3"></div>
           </div>
           <!-- Data mirror -->
           <div v-else class="space-y-4">
@@ -312,7 +312,7 @@
             <div class="grid grid-cols-2 gap-4">
               <div>
                 <p class="text-xs text-gray-500 uppercase tracking-wider mb-1">Overcommitment Ratio</p>
-                <div class="w-full bg-gray-700 rounded-full h-2">
+                <div class="w-full bar-track rounded-full h-2">
                   <div class="bg-red-400 h-2 rounded-full transition-all" :style="{ width: (gcalProfile.overcommitment_ratio * 100) + '%' }"></div>
                 </div>
                 <p class="text-xs text-gray-500 mt-1">{{ (gcalProfile.overcommitment_ratio * 100).toFixed(0) }}%</p>
@@ -335,7 +335,7 @@
           <p class="mt-4 text-xs text-gray-600 font-mono italic">Your schedule is a confession you write every morning.</p>
         </div>
         <div v-else
-             class="bg-gray-800 border border-gray-700 rounded-2xl p-6 shadow-xl transition-transform hover:-translate-y-1">
+             class="ccard-idle border rounded-2xl p-6 shadow-xl transition-transform hover:-translate-y-1">
           <div class="flex justify-between items-start mb-4">
             <div>
               <h2 class="text-2xl font-bold text-red-400">Google Calendar</h2>
@@ -352,7 +352,7 @@
 
         <!-- Co-Star -->
         <div v-if="oauthState.costar.connected"
-             class="bg-gray-800 border border-indigo-500/50 rounded-2xl p-6 shadow-xl">
+             class="ccard-active border border-indigo-500/50 rounded-2xl p-6 shadow-xl">
           <div class="flex justify-between items-start mb-4">
             <div>
               <h2 class="text-2xl font-bold text-indigo-400">Co&#8239;&#8212;&#8239;Star</h2>
@@ -366,7 +366,7 @@
           <p class="mt-4 text-xs text-gray-600 font-mono italic">Since you already look to the void for answers.</p>
         </div>
         <div v-else
-             class="bg-gray-800 border border-gray-700 rounded-2xl p-6 shadow-xl transition-transform hover:-translate-y-1">
+             class="ccard-idle border rounded-2xl p-6 shadow-xl transition-transform hover:-translate-y-1">
           <div class="flex justify-between items-start mb-4">
             <div>
               <h2 class="text-2xl font-bold text-indigo-400">Co&#8239;&#8212;&#8239;Star</h2>
@@ -383,7 +383,7 @@
 
         <!-- Letterboxd -->
         <div v-if="oauthState.letterboxd.connected"
-             class="bg-gray-800 border border-emerald-500/50 rounded-2xl p-6 shadow-xl">
+             class="ccard-active border border-emerald-500/50 rounded-2xl p-6 shadow-xl">
           <div class="flex justify-between items-start mb-4">
             <div>
               <h2 class="text-2xl font-bold text-emerald-400">Letterboxd</h2>
@@ -397,7 +397,7 @@
           <p class="mt-4 text-xs text-gray-600 font-mono italic">We already know you cried during that one.</p>
         </div>
         <div v-else
-             class="bg-gray-800 border border-gray-700 rounded-2xl p-6 shadow-xl transition-transform hover:-translate-y-1">
+             class="ccard-idle border rounded-2xl p-6 shadow-xl transition-transform hover:-translate-y-1">
           <div class="flex justify-between items-start mb-4">
             <div>
               <h2 class="text-2xl font-bold text-emerald-400">Letterboxd</h2>
@@ -414,7 +414,7 @@
 
         <!-- Steam -->
         <div v-if="oauthState.steam.connected"
-             class="bg-gray-800 border border-slate-500/50 rounded-2xl p-6 shadow-xl">
+             class="ccard-active border border-slate-500/50 rounded-2xl p-6 shadow-xl">
           <div class="flex justify-between items-start mb-4">
             <div>
               <h2 class="text-2xl font-bold text-slate-400">Steam</h2>
@@ -428,7 +428,7 @@
           <p class="mt-4 text-xs text-gray-600 font-mono italic">Your Steam library is a map of every world you chose over this one.</p>
         </div>
         <div v-else
-             class="bg-gray-800 border border-gray-700 rounded-2xl p-6 shadow-xl transition-transform hover:-translate-y-1">
+             class="ccard-idle border rounded-2xl p-6 shadow-xl transition-transform hover:-translate-y-1">
           <div class="flex justify-between items-start mb-4">
             <div>
               <h2 class="text-2xl font-bold text-slate-400">Steam</h2>
@@ -445,7 +445,7 @@
 
         <!-- GitHub -->
         <div v-if="oauthState.github.connected"
-             class="bg-gray-800 border border-purple-500/50 rounded-2xl p-6 shadow-xl">
+             class="ccard-active border border-purple-500/50 rounded-2xl p-6 shadow-xl">
           <div class="flex justify-between items-start mb-4">
             <div>
               <h2 class="text-2xl font-bold text-purple-400">GitHub</h2>
@@ -454,9 +454,9 @@
             <router-link to="/calibrate/github" class="text-xs font-medium text-purple-400 bg-purple-400/10 border border-purple-500/30 rounded-full px-3 py-1 hover:bg-purple-400/20 transition-colors">View Signal &rarr;</router-link>
           </div>
           <div v-if="githubLoading || !githubProfile" class="space-y-3 animate-pulse">
-            <div class="h-4 bg-gray-700 rounded w-3/4"></div>
-            <div class="h-4 bg-gray-700 rounded w-1/2"></div>
-            <div class="h-4 bg-gray-700 rounded w-2/3"></div>
+            <div class="h-4 skel-line rounded w-3/4"></div>
+            <div class="h-4 skel-line rounded w-1/2"></div>
+            <div class="h-4 skel-line rounded w-2/3"></div>
           </div>
           <div v-else class="space-y-4">
             <div>
@@ -486,7 +486,7 @@
           <p class="mt-4 text-xs text-gray-600 font-mono italic">Your commit history is a diary you forgot you were writing.</p>
         </div>
         <div v-else
-             class="bg-gray-800 border border-gray-700 rounded-2xl p-6 shadow-xl transition-transform hover:-translate-y-1">
+             class="ccard-idle border rounded-2xl p-6 shadow-xl transition-transform hover:-translate-y-1">
           <div class="flex justify-between items-start mb-4">
             <div>
               <h2 class="text-2xl font-bold text-purple-400">GitHub</h2>
@@ -503,7 +503,7 @@
 
         <!-- YouTube -->
         <div v-if="oauthState.youtube.connected"
-             class="bg-gray-800 border border-red-500/50 rounded-2xl p-6 shadow-xl">
+             class="ccard-active border border-red-500/50 rounded-2xl p-6 shadow-xl">
           <div class="flex justify-between items-start mb-4">
             <div>
               <h2 class="text-2xl font-bold text-red-400">YouTube</h2>
@@ -512,9 +512,9 @@
             <router-link to="/calibrate/youtube" class="text-xs font-medium text-red-400 bg-red-400/10 border border-red-500/30 rounded-full px-3 py-1 hover:bg-red-400/20 transition-colors">View Signal &rarr;</router-link>
           </div>
           <div v-if="youtubeLoading || !youtubeProfile" class="space-y-3 animate-pulse">
-            <div class="h-4 bg-gray-700 rounded w-3/4"></div>
-            <div class="h-4 bg-gray-700 rounded w-1/2"></div>
-            <div class="h-4 bg-gray-700 rounded w-2/3"></div>
+            <div class="h-4 skel-line rounded w-3/4"></div>
+            <div class="h-4 skel-line rounded w-1/2"></div>
+            <div class="h-4 skel-line rounded w-2/3"></div>
           </div>
           <div v-else class="space-y-4">
             <div>
@@ -548,7 +548,7 @@
           <p class="mt-4 text-xs text-gray-600 font-mono italic">Your algorithm knows you better than your friends do.</p>
         </div>
         <div v-else
-             class="bg-gray-800 border border-gray-700 rounded-2xl p-6 shadow-xl transition-transform hover:-translate-y-1">
+             class="ccard-idle border rounded-2xl p-6 shadow-xl transition-transform hover:-translate-y-1">
           <div class="flex justify-between items-start mb-4">
             <div>
               <h2 class="text-2xl font-bold text-red-400">YouTube</h2>
@@ -565,7 +565,7 @@
 
         <!-- Reddit -->
         <div v-if="oauthState.reddit.connected"
-             class="bg-gray-800 border border-orange-600/50 rounded-2xl p-6 shadow-xl">
+             class="ccard-active border border-orange-600/50 rounded-2xl p-6 shadow-xl">
           <div class="flex justify-between items-start mb-4">
             <div>
               <h2 class="text-2xl font-bold text-orange-600">Reddit</h2>
@@ -574,9 +574,9 @@
             <router-link to="/calibrate/reddit" class="text-xs font-medium text-orange-600 bg-orange-600/10 border border-orange-600/30 rounded-full px-3 py-1 hover:bg-orange-600/20 transition-colors">View Signal &rarr;</router-link>
           </div>
           <div v-if="redditLoading || !redditProfile" class="space-y-3 animate-pulse">
-            <div class="h-4 bg-gray-700 rounded w-3/4"></div>
-            <div class="h-4 bg-gray-700 rounded w-1/2"></div>
-            <div class="h-4 bg-gray-700 rounded w-2/3"></div>
+            <div class="h-4 skel-line rounded w-3/4"></div>
+            <div class="h-4 skel-line rounded w-1/2"></div>
+            <div class="h-4 skel-line rounded w-2/3"></div>
           </div>
           <div v-else class="space-y-4">
             <div>
@@ -606,7 +606,7 @@
           <p class="mt-4 text-xs text-gray-600 font-mono italic">The things you upvote when no one's watching say everything.</p>
         </div>
         <div v-else
-             class="bg-gray-800 border border-gray-700 rounded-2xl p-6 shadow-xl transition-transform hover:-translate-y-1">
+             class="ccard-idle border rounded-2xl p-6 shadow-xl transition-transform hover:-translate-y-1">
           <div class="flex justify-between items-start mb-4">
             <div>
               <h2 class="text-2xl font-bold text-orange-600">Reddit</h2>
@@ -623,7 +623,7 @@
 
         <!-- Instagram -->
         <div v-if="oauthState.instagram.connected"
-             class="bg-gray-800 border border-pink-500/50 rounded-2xl p-6 shadow-xl">
+             class="ccard-active border border-pink-500/50 rounded-2xl p-6 shadow-xl">
           <div class="flex justify-between items-start mb-4">
             <div>
               <h2 class="text-2xl font-bold text-pink-400">Instagram</h2>
@@ -637,7 +637,7 @@
           <p class="mt-4 text-xs text-gray-600 font-mono italic">The grid is a mirror, not a window.</p>
         </div>
         <div v-else
-             class="bg-gray-800/60 border border-gray-700/60 rounded-2xl p-6 shadow-xl opacity-60 cursor-not-allowed select-none"
+             class="ccard-coming border rounded-2xl p-6 shadow-xl opacity-60 cursor-not-allowed select-none"
              aria-disabled="true">
           <div class="flex justify-between items-start mb-4">
             <div>
@@ -654,7 +654,7 @@
 
         <!-- TikTok -->
         <div v-if="oauthState.tiktok.connected"
-             class="bg-gray-800 border border-cyan-500/50 rounded-2xl p-6 shadow-xl">
+             class="ccard-active border border-cyan-500/50 rounded-2xl p-6 shadow-xl">
           <div class="flex justify-between items-start mb-4">
             <div>
               <h2 class="text-2xl font-bold text-cyan-400">TikTok</h2>
@@ -668,7 +668,7 @@
           <p class="mt-4 text-xs text-gray-600 font-mono italic">Your FYP is a Rorschach test you take every night.</p>
         </div>
         <div v-else
-             class="bg-gray-800/60 border border-gray-700/60 rounded-2xl p-6 shadow-xl opacity-60 cursor-not-allowed select-none"
+             class="ccard-coming border rounded-2xl p-6 shadow-xl opacity-60 cursor-not-allowed select-none"
              aria-disabled="true">
           <div class="flex justify-between items-start mb-4">
             <div>
@@ -686,7 +686,7 @@
       </div>
 
       <!-- Connected sources + feedback -->
-      <div v-if="connectedSources.length > 0" class="mt-8 bg-gray-800/50 border border-green-500/20 rounded-2xl p-5 space-y-4">
+      <div v-if="connectedSources.length > 0" class="mt-8 ccard-sources border border-green-500/20 rounded-2xl p-5 space-y-4">
         <h3 class="text-sm font-medium text-green-400 uppercase tracking-wider">Connected</h3>
         <div class="space-y-4">
           <div v-for="src in connectedSources" :key="src.key">
@@ -1163,6 +1163,26 @@ function proceed() {
 </script>
 
 <style scoped>
+/* Dark-forest palette — matches HomeView #08060e base */
+.calibrate-bg { background: #08060e; }
+.oracle-overlay { background: rgba(2, 1, 6, 0.95); }
+.ccard-active { background: rgba(15, 10, 30, 0.9); }
+.ccard-idle {
+  background: rgba(15, 10, 30, 0.85);
+  border-color: rgba(255, 255, 255, 0.08);
+}
+.ccard-coming {
+  background: rgba(15, 10, 30, 0.5);
+  border-color: rgba(255, 255, 255, 0.05);
+}
+.ccard-sources { background: rgba(15, 10, 30, 0.5); }
+.skel-line { background: rgba(30, 20, 55, 0.8); }
+.bar-track { background: rgba(30, 20, 55, 0.8); }
+
+@media (prefers-reduced-motion: reduce) {
+  .oracle-ping { animation: none !important; opacity: 0.4; }
+}
+
 @keyframes synth-card-pulse {
   0%   { box-shadow: 0 0 0 0 rgba(168, 85, 247, 0.6); transform: scale(1); }
   50%  { box-shadow: 0 0 18px 4px rgba(168, 85, 247, 0.45); transform: scale(1.06); }
