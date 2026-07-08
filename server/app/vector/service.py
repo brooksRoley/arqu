@@ -37,6 +37,19 @@ NAMESPACE_JOURNAL = "journal"
 _index_cache: dict = {}
 
 
+def _embeddings_disabled(caller: str) -> bool:
+    """
+    Feature flag guard for the shelved embedding pipeline (ENABLE_EMBEDDINGS,
+    default false — see CLAUDE.md Creative Direction). When disabled, every
+    public entry point returns early and cleanly instead of burning a request
+    against a dead embed key and silently failing.
+    """
+    if get_settings().enable_embeddings:
+        return False
+    logger.info("%s skipped: embedding pipeline disabled (ENABLE_EMBEDDINGS=false)", caller)
+    return True
+
+
 def _get_client() -> Pinecone | None:
     key = get_settings().pinecone_api_key
     if not key:
@@ -138,6 +151,8 @@ async def upsert_user_vector(
     store it as their psychological coordinate in Pinecone.
     Returns True on success.
     """
+    if _embeddings_disabled("upsert_user_vector"):
+        return False
     try:
         vector = await _embed(confession_text, user_id=user_id, caller="upsert_user_vector")
         if not vector:
@@ -172,6 +187,8 @@ async def find_nearest_users(user_id: str, top_k: int = 3) -> list[dict]:
     ANN lookup: return the top_k users psychologically closest to user_id.
     Excludes the querying user. Returns [] if user has no vector yet.
     """
+    if _embeddings_disabled("find_nearest_users"):
+        return []
     try:
         index = await asyncio.to_thread(_get_index_sync)
         if index is None:
@@ -226,6 +243,8 @@ async def apply_karma_penalty(user_id: str, karma_delta: float) -> None:
 
     Uses a per-user asyncio lock to prevent concurrent read-modify-write races.
     """
+    if _embeddings_disabled("apply_karma_penalty"):
+        return
     if karma_delta >= 0:
         return
 
@@ -276,6 +295,8 @@ async def embed_and_upsert_journal(
     created_at: str,
 ) -> None:
     """Fire-and-forget: embed a journal entry and store in the journal namespace."""
+    if _embeddings_disabled("embed_and_upsert_journal"):
+        return
     if not text.strip():
         return
     try:
@@ -303,6 +324,8 @@ async def embed_and_upsert_journal(
 
 async def query_relevant_journal(user_id: str, query_text: str, top_k: int = 5) -> list[dict]:
     """Return metadata of top-K journal entries semantically closest to query_text."""
+    if _embeddings_disabled("query_relevant_journal"):
+        return []
     try:
         vector = await _embed(query_text, user_id=user_id, caller="query_relevant_journal")
         if not vector:

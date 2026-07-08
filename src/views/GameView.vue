@@ -32,6 +32,10 @@ const currentStatus = ref('')
 const currentMatchIdx = ref(0)
 const interactLoading = ref(false)
 const scanError = ref<string | null>(null)
+// True when the scan succeeded but returned no matches — the matching
+// pipeline is shelved (embeddings disabled server-side), so this is the
+// expected state and gets a "coming soon" placeholder, not an error.
+const matchingComingSoon = ref(false)
 
 const currentMatch = computed<VibeMatch | null>(() =>
   matches.value[currentMatchIdx.value] ?? null,
@@ -130,6 +134,7 @@ async function startScan() {
   phase.value = 'scanning'
   scanProgress.value = 0
   scanError.value = null
+  matchingComingSoon.value = false
 
   // Animate status messages while fetching real matches
   const fetchPromise = fetchMatches()
@@ -143,8 +148,16 @@ async function startScan() {
   // Wait for fetch to complete (may already be done)
   await fetchPromise
 
-  if (matchesError.value || matches.value.length === 0) {
-    scanError.value = matchesError.value || 'No matches yet — connect more sources or deepen your profile to strengthen your signal.'
+  if (matchesError.value) {
+    scanError.value = matchesError.value
+    phase.value = 'lobby'
+    return
+  }
+
+  if (matches.value.length === 0) {
+    // Matching pipeline is shelved server-side — show an honest placeholder
+    // instead of implying a scan failure.
+    matchingComingSoon.value = true
     phase.value = 'lobby'
     return
   }
@@ -316,8 +329,13 @@ onMounted(() => {
         </p>
         <p v-if="scanError" class="scan-error">{{ scanError }}</p>
 
+        <!-- Matching shelved: honest placeholder instead of a fake failure -->
+        <p v-if="matchingComingSoon" class="coming-soon" role="status">
+          Matching is coming soon — connect more data to unlock
+        </p>
+
         <!-- No-match fallback: offer self-analysis paths -->
-        <div v-if="scanError" class="fallback-actions">
+        <div v-if="scanError || matchingComingSoon" class="fallback-actions">
           <p class="fallback-hint">Build a stronger signal to unlock matches.</p>
           <button class="action-btn action-btn--outline" @click="router.push('/psychoanalysis')">
             Explore Your Profile
@@ -330,7 +348,7 @@ onMounted(() => {
           </button>
         </div>
 
-        <button v-if="!scanError" class="action-btn" :style="{ background: accent }" @click="startScan">
+        <button v-if="!scanError && !matchingComingSoon" class="action-btn" :style="{ background: accent }" @click="startScan">
           Analyze Signal
         </button>
       </div>
@@ -857,6 +875,18 @@ onMounted(() => {
 .accept-btn:disabled, .pass-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
 /* ── Scan error ── */
+.coming-soon {
+  font-size: 0.78rem;
+  color: #a78bfa;
+  margin: 0;
+  padding: 0.5rem 0.75rem;
+  background: rgba(167, 139, 250, 0.08);
+  border: 1px solid rgba(167, 139, 250, 0.2);
+  border-radius: 0.35rem;
+  width: 100%;
+  text-align: center;
+}
+
 .scan-error {
   font-size: 0.78rem;
   color: #f87171;

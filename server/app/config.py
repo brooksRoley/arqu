@@ -99,6 +99,14 @@ class Settings(BaseSettings):
     # outage cannot also take down Oracle synthesis.
     openai_embed_key: str = ""
 
+    # ── Embedding pipeline feature flag (shelved 2026-07) ─────────────
+    # The vibe-vector matching network is intentionally dormant: the embed key
+    # has returned 403/429 (insufficient_quota) since 2026-04 and Pinecone is
+    # empty. With ENABLE_EMBEDDINGS unset/false, the boot embed probe is
+    # skipped and all embed/upsert paths return early instead of silently
+    # failing. Set ENABLE_EMBEDDINGS=true only if the key is re-funded.
+    enable_embeddings: bool = False
+
     # ── Server-level OpenAI completion key (independent of embed key) ──
     # Used for Oracle GPT-4o synthesis fallback when a user has no BYOK key.
     # Kept separate so rotation/revocation of one key does not break the other.

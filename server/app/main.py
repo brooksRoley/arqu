@@ -53,8 +53,18 @@ async def _probe_embed_key_on_boot() -> None:
     every deploy instead of failing silently inside background synthesis tasks.
 
     Never blocks or crashes boot — any failure is logged, not raised.
+
+    Only runs when ENABLE_EMBEDDINGS=true — the pipeline is formally shelved
+    (see Creative Direction in CLAUDE.md), so by default there is nothing to
+    probe and no point burning a request against a known-dead key.
     """
     settings = get_settings()
+    if not settings.enable_embeddings:
+        logger.info(
+            "BOOT embed check: skipped — embedding pipeline disabled "
+            "(ENABLE_EMBEDDINGS=false; matching/vibe-vector network is shelved)"
+        )
+        return
     if not settings.openai_embed_key:
         logger.error("BOOT embed check: OPENAI_EMBED_KEY not configured — matching pipeline is dead")
         return
@@ -95,7 +105,8 @@ async def lifespan(app: FastAPI):
         if not exists and settings.debug:
             print("⚠  Tables not found. Run: python -m server.migrate")
 
-    # Non-blocking embed-key probe — surfaces a dead matching pipeline on deploy.
+    # Non-blocking embed-key probe — surfaces a dead matching pipeline on
+    # deploy. No-ops unless ENABLE_EMBEDDINGS=true (pipeline shelved).
     asyncio.create_task(_probe_embed_key_on_boot())
 
     yield

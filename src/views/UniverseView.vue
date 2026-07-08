@@ -8,7 +8,7 @@ import { useVibeStore } from '@/composables/useVibeStore'
 const router = useRouter()
 const { user, isAuthenticated, apiFetch } = useAuthStore()
 const { token: pollToken } = usePollStore()
-const { oauthState, oracleCoordinate, fetchOracleCoordinate } = useVibeStore()
+const { oauthState, oracleCoordinate, fetchOracleCoordinate, matches } = useVibeStore()
 
 // ── X/Twitter analysis data ──────────────────────────────────────
 interface TwitterProfile {
@@ -488,6 +488,11 @@ function startJourney() {
         </div>
       </div>
 
+      <!-- Matching pipeline shelved: honest placeholder while no matches exist -->
+      <p v-if="matches.length === 0" class="matching-soon" role="status">
+        Matching is coming soon — connect more data to unlock
+      </p>
+
       <button class="universe-cta" :style="{ background: accent }" @click="startJourney">
         Begin Calibration
       </button>
@@ -545,6 +550,17 @@ function startJourney() {
   text-align: center;
   max-width: 400px;
   line-height: 1.6;
+}
+
+.matching-soon {
+  font-size: 0.78rem;
+  color: #a78bfa;
+  margin: 0;
+  padding: 0.4rem 0.9rem;
+  background: rgba(167, 139, 250, 0.08);
+  border: 1px solid rgba(167, 139, 250, 0.2);
+  border-radius: 0.35rem;
+  text-align: center;
 }
 
 /* ── Planet legend ── */

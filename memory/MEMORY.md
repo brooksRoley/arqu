@@ -40,9 +40,16 @@ ChannelZero matches people through behavioral signals, not profile browsing. Use
 ## Open Decisions
 
 - **Spotify audio features deprecation**: Fallback added 2026-04-20 (genre-to-valence mapping + track popularity as energy proxy). Needs monitoring.
-- **OpenAI API key**: Project `proj_8pERhmljbOUkRzurStcMGtZ5` was returning 403 as of 2026-04-20. Needs manual check in OpenAI dashboard. Health endpoint: `/api/health/embeddings`.
+- **OpenAI embed key**: Still broken as of 2026-07-08 — `/api/health/embeddings` returns 429 `insufficient_quota` (was 403 as of 2026-04-20, project `proj_8pERhmljbOUkRzurStcMGtZ5`). Pinecone reachable but empty (0 vectors). Pipeline now formally shelved behind `ENABLE_EMBEDDINGS` flag (default false) per CLAUDE.md Creative Direction — key is intentionally unfunded; re-fund only if matching is ever revived.
 
 ## Changelog
+
+### 2026-07-08
+- Keep-warm GitHub Actions cron added (`.github/workflows/keep-warm.yml`, GET /health every 10 min) — Render free-plan cold starts were breaking OAuth callbacks
+- Embedding pipeline formally shelved: `ENABLE_EMBEDDINGS` flag (default false) gates boot probe (`main.py`) and all vector service entry points (`vector/service.py`)
+- GameView + UniverseView: "Matching is coming soon — connect more data to unlock" placeholder when no match results (replaces silent no-op / fake failure)
+- Star.vue rewritten as valid SFC with npm `import * as Tone from 'tone'` (was an inert snippet assuming a never-loaded CDN global; no CDN tag existed in index.html)
+- Embed key audit: 429 insufficient_quota confirmed, Pinecone empty
 
 ### 2026-05-26
 - Fixed Oracle synthesis: frontend now sends all 12 providers (was only 7, missing github/youtube/reddit/instagram/tiktok)

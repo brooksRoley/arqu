@@ -1,6 +1,6 @@
 ---
 name: ChannelZero project state
-description: Current connector status, infrastructure state, known issues, and recent changes as of 2026-05-26
+description: Current connector status, infrastructure state, known issues, and recent changes as of 2026-07-08
 type: project
 ---
 
@@ -51,8 +51,8 @@ type: project
 ## Known Issues
 
 - **Spotify audio features deprecated**: Fallback active (genre→valence mapping + track popularity as energy proxy)
-- **Tone.js + Matter.js**: Matter.js on npm (migrated from CDN 2026-04-20), Tone.js still CDN — no version lock
-- **OpenAI API key**: Was returning 403 as of 2026-04-20 (`proj_8pERhmljbOUkRzurStcMGtZ5`) — needs manual verification in OpenAI dashboard. Health endpoint at `/api/health/embeddings` exists for checking.
+- **OpenAI embed key**: Still broken as of 2026-07-08 — `/api/health/embeddings` returns 429 `insufficient_quota` (OpenAI), Pinecone ok but empty (0 vectors). Key is intentionally unfunded; embedding pipeline is formally shelved behind `ENABLE_EMBEDDINGS` env flag (default false) as of 2026-07-08. Was 403 as of 2026-04-20 (`proj_8pERhmljbOUkRzurStcMGtZ5`).
+- **Render free-plan cold starts**: 30-60s spin-up killed OAuth callback flows — mitigated 2026-07-08 by keep-warm GitHub Actions cron pinging /health every 10 min (needs push to take effect).
 
 ## Resolved Issues (since last update)
 
@@ -66,6 +66,18 @@ type: project
 - **GameView keyboard**: Fixed inverted ArrowLeft/ArrowRight convention (right=accept, left=pass)
 - **GameView mutual phase**: Now reachable — acceptMatch() sets phase='mutual' before routing to /fitting
 - **Oracle chat loop**: Added 5th terminal response + typing indicator
+
+## Recent Changes (2026-07-08 session)
+
+- `.github/workflows/keep-warm.yml`: cron `*/10 * * * *` GET https://channelzero.onrender.com/health (Render cold-start mitigation)
+- `server/app/config.py`: `enable_embeddings: bool = False` (ENABLE_EMBEDDINGS env var)
+- `server/app/main.py`: boot embed probe skipped unless ENABLE_EMBEDDINGS=true
+- `server/app/vector/service.py`: all public entry points (upsert_user_vector, find_nearest_users, apply_karma_penalty, embed_and_upsert_journal, query_relevant_journal) return early with a log line when flag is off
+- `src/views/GameView.vue`: empty match result now shows "Matching is coming soon — connect more data to unlock" (distinct from fetch errors)
+- `src/views/UniverseView.vue`: same placeholder in welcome overlay when store has no matches
+- `src/components/Star.vue`: rewritten from inert snippet to valid SFC; Tone via npm import (tone ^15.1.22 already in package.json); no CDN tag existed in index.html to remove
+- Embed key audit (2026-07-08): 429 insufficient_quota verbatim recorded; Pinecone total_vectors=0
+- Note: "Tone.js still CDN" claim in previous Known Issues was stale — tone is bundled via npm
 
 ## Recent Changes (2026-05-26 session)
 
