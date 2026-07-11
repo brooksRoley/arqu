@@ -1117,43 +1117,43 @@ watch(() => oauthState.value.reddit.connected, (connected) => {
 onMounted(() => {
   if (route.query.spotify === 'connected') {
     markConnected('spotify')
-    router.replace({ path: '/calibrate' })
+    router.replace({ path: '/calibrate/spotify' })
   }
   if (route.query.gcal === 'connected') {
     markConnected('google')
-    router.replace({ path: '/calibrate' })
+    router.replace({ path: '/calibrate/google' })
   }
   if (route.query.twitter === 'connected') {
     markConnected('twitter')
-    router.replace({ path: '/calibrate' })
+    router.replace({ path: '/calibrate/twitter' })
   }
   if (route.query.steam === 'connected') {
     markConnected('steam')
-    router.replace({ path: '/calibrate' })
+    router.replace({ path: '/calibrate/steam' })
   }
   if (route.query.strava === 'connected') {
     markConnected('strava')
-    router.replace({ path: '/calibrate' })
+    router.replace({ path: '/calibrate/strava' })
   }
   if (route.query.github === 'connected') {
     markConnected('github')
-    router.replace({ path: '/calibrate' })
+    router.replace({ path: '/calibrate/github' })
   }
   if (route.query.youtube === 'connected') {
     markConnected('youtube')
-    router.replace({ path: '/calibrate' })
+    router.replace({ path: '/calibrate/youtube' })
   }
   if (route.query.reddit === 'connected') {
     markConnected('reddit')
-    router.replace({ path: '/calibrate' })
+    router.replace({ path: '/calibrate/reddit' })
   }
   if (route.query.instagram === 'connected') {
     markConnected('instagram')
-    router.replace({ path: '/calibrate' })
+    router.replace({ path: '/calibrate/instagram' })
   }
   if (route.query.tiktok === 'connected') {
     markConnected('tiktok')
-    router.replace({ path: '/calibrate' })
+    router.replace({ path: '/calibrate/tiktok' })
   }
 })
 

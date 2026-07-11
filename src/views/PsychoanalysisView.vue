@@ -362,29 +362,25 @@
           </div>
         </section>
 
-        <!-- Matching Ontology -->
+        <!-- What Your Profile Reveals -->
         <section class="border border-lime-800 p-6 bg-black/30">
-          <h2 class="text-lg mb-3 text-white uppercase tracking-widest">Matching Weights</h2>
-          <div class="space-y-2 text-xs text-lime-600">
-            <div class="flex justify-between">
-              <span>Attachment compatibility</span>
-              <span class="text-lime-400">40%</span>
+          <h2 class="text-lg mb-3 text-white uppercase tracking-widest">What This Reveals</h2>
+          <div class="space-y-4 text-xs text-lime-600 leading-relaxed">
+            <div v-if="profile?.ocean_scores">
+              <span class="text-lime-500 uppercase tracking-wider block mb-1">Your drive pattern</span>
+              <p>{{ drivePatternSummary }}</p>
             </div>
-            <div class="flex justify-between">
-              <span>Values congruence</span>
-              <span class="text-lime-400">25%</span>
+            <div v-if="profile?.ecr_r_scores">
+              <span class="text-lime-500 uppercase tracking-wider block mb-1">How you attach</span>
+              <p>{{ attachmentSummary }}</p>
             </div>
-            <div class="flex justify-between">
-              <span>Big Five similarity</span>
-              <span class="text-lime-400">20%</span>
-            </div>
-            <div class="flex justify-between">
-              <span>Behavioral signals (Spotify/Strava/X)</span>
-              <span class="text-lime-400">15%</span>
+            <div v-if="profile?.love_language">
+              <span class="text-lime-500 uppercase tracking-wider block mb-1">How you receive care</span>
+              <p>{{ profile.love_language }} — this shapes what feels like love to you, and what goes unnoticed.</p>
             </div>
           </div>
           <p class="mt-4 text-[10px] text-lime-800 italic leading-relaxed">
-            Extraversion complementarity adds constructive friction. Neuroticism similarity stabilizes long-term satisfaction. Behavioral data fine-tunes raw psychological scores.
+            Connect more data sources in Calibrate to deepen this read.
           </p>
         </section>
       </div>
@@ -480,6 +476,37 @@
           </p>
           <p v-if="narrativeError" class="text-red-500 text-xs mt-2 font-mono italic">{{ narrativeError }}</p>
         </section>
+      </div>
+    </div>
+
+    <!-- ── Continue your practice CTA ──────────────────────── -->
+    <div class="mt-16 border-t border-lime-900/40 pt-12 max-w-2xl mx-auto">
+      <p class="text-[10px] text-lime-800 uppercase tracking-widest text-center mb-8">Continue your practice</p>
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <router-link
+          to="/journal"
+          class="block border border-lime-800/60 p-5 hover:border-lime-600 hover:bg-lime-900/20 transition-all group focus-visible:ring-2 focus-visible:ring-lime-500 focus-visible:outline-none"
+        >
+          <span class="text-xl mb-2 block">✍</span>
+          <span class="text-xs uppercase tracking-widest text-lime-500 block group-hover:text-lime-300 transition-colors">Journal</span>
+          <span class="text-[10px] text-lime-800 mt-1 block">Capture what's surfacing</span>
+        </router-link>
+        <router-link
+          to="/zeromind"
+          class="block border border-lime-800/60 p-5 hover:border-lime-600 hover:bg-lime-900/20 transition-all group focus-visible:ring-2 focus-visible:ring-lime-500 focus-visible:outline-none"
+        >
+          <span class="text-xl mb-2 block">◎</span>
+          <span class="text-xs uppercase tracking-widest text-lime-500 block group-hover:text-lime-300 transition-colors">Zeromind</span>
+          <span class="text-[10px] text-lime-800 mt-1 block">Enter trance — let this settle</span>
+        </router-link>
+        <router-link
+          to="/calibrate"
+          class="block border border-lime-800/60 p-5 hover:border-lime-600 hover:bg-lime-900/20 transition-all group focus-visible:ring-2 focus-visible:ring-lime-500 focus-visible:outline-none"
+        >
+          <span class="text-xl mb-2 block">◈</span>
+          <span class="text-xs uppercase tracking-widest text-lime-500 block group-hover:text-lime-300 transition-colors">Calibrate</span>
+          <span class="text-[10px] text-lime-800 mt-1 block">Connect more signal sources</span>
+        </router-link>
       </div>
     </div>
   </div>
@@ -742,6 +769,33 @@ const attachmentStyleLabel = computed(() => {
   if (anxiety >= 0.5 && avoidance < 0.5) return 'Anxious-Preoccupied — craves closeness, fears abandonment'
   if (anxiety < 0.5 && avoidance >= 0.5) return 'Dismissive-Avoidant — values independence, suppresses need'
   return 'Fearful-Avoidant — desires closeness but fears vulnerability'
+})
+
+const drivePatternSummary = computed(() => {
+  const s = profile.value?.ocean_scores
+  if (!s) return ''
+  const high = (v: number) => v > 0.6
+  const parts: string[] = []
+  if (high(s.O)) parts.push('curious and drawn to novelty')
+  else parts.push('grounded in the concrete and familiar')
+  if (high(s.C)) parts.push('structured and self-directed')
+  else parts.push('flexible and adaptive')
+  if (high(s.E)) parts.push('energized by people and activity')
+  else parts.push('recharged by solitude and reflection')
+  return parts.join(', ') + '.'
+})
+
+const attachmentSummary = computed(() => {
+  const ecr = profile.value?.ecr_r_scores
+  if (!ecr) return ''
+  const { anxiety, avoidance } = ecr
+  if (anxiety < 0.5 && avoidance < 0.5)
+    return 'You tend to feel safe in close relationships and are comfortable depending on others.'
+  if (anxiety >= 0.5 && avoidance < 0.5)
+    return 'You crave closeness and are sensitive to signs of distance — connection is high-stakes for you.'
+  if (anxiety < 0.5 && avoidance >= 0.5)
+    return 'You value independence and may pull away when others press for closeness.'
+  return 'You want deep connection but closeness also triggers fear — the push-pull is the signal.'
 })
 
 // ── Helpers ────────────────────────────────────────────────────────
