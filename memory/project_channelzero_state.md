@@ -4,37 +4,41 @@ description: Current connector status, infrastructure state, known issues, and r
 type: project
 ---
 
+**Source of truth for product direction: CLAUDE.md's Creative Direction section.**
+ChannelZero is a self-expression + hypnosis + psychoanalysis platform. Matching/Pinecone is shelved.
+
 # ChannelZero — Project State
 
-## Funnel Steps
+## Self-Expression Core Loop (instrumented 2026-06-21)
 | Step | Meaning |
 |------|---------|
 | registered | User created account |
 | completed_poll | Took the archetype poll |
 | connected_any | Connected 1+ OAuth provider |
-| connected_2plus | Connected 2+ providers (triggers Oracle synthesis) |
-| has_vibe_vector | Intake confession → Pinecone vector exists |
+| connected_2plus | Connected 2+ providers (unlocks per-connector psychoanalysis narratives) |
 | completed_psychometrics | IPIP-NEO + ECR-R + love language assessed |
-| played_game | Made at least one match interaction |
-| got_mutual_match | Both sides accepted |
-| sent_message | Sent a message to a mutual match |
+| had_first_session | Completed first journal / zeromind / check-in session |
+| streak_active | Returned on consecutive days (home streak) |
 
-## Connector Status (as of 2026-05-26)
+**Shelved funnel steps (matching era — do not build on):** `played_game`, `got_mutual_match`, `sent_message`
 
-| Connector | OAuth | Data Fetch | Oracle Feed | Frontend Card |
-|-----------|-------|------------|-------------|---------------|
-| Spotify | Live | Live (genre fallback for deprecated audio-features) | All 12 providers sent to synthesis | OauthView card + SpotifyPhysics |
-| X/Twitter | Live | Live (PKCE) + LLM psychoanalysis | All 12 providers sent to synthesis | OauthView card + UniverseView |
-| Strava | Live | Live (activities + stats) | All 12 providers sent to synthesis | OauthView card |
-| Google Calendar | Live (OAuth) | Live (temporal patterns) | All 12 providers sent to synthesis | OauthView card (callback-based) |
-| Co-Star | Backend built | Credential proxy (no OAuth) | Included if present | OauthView card (CoStarConnect) |
-| Letterboxd | Backend built | API key auth + username ingest | Included if present | OauthView card (LetterboxdConnect) |
-| Steam | Backend built | OpenID 2.0 + game library | Included if present | OauthView card (SteamConnect) |
-| GitHub | Live (OAuth) | Developer profile + repos | Included if present | OauthView card |
-| YouTube | Live (OAuth) | Subscriptions, channel stats, attention profile | Included if present | OauthView card + YouTubeCallback |
-| Reddit | Live (OAuth) | Subreddit + behavioral profile | Included if present | OauthView card |
-| Instagram | Backend built | Router exists | Included if present | OauthView card |
-| TikTok | Backend built | Router exists | Included if present | OauthView card |
+## Connector Status (as of 2026-06-29)
+Connectors are sources of **personal psychoanalysis narrative**, not matching signals.
+
+| Connector | OAuth | Data Fetch | Narrative Frame | Frontend Card |
+|-----------|-------|------------|-----------------|---------------|
+| Spotify | Live | Live (genre fallback for deprecated audio-features) | Sonic psyche | OauthView card + SpotifyPhysics |
+| X/Twitter | Live | Live (PKCE) + LLM psychoanalysis | Neurotic output | OauthView card + UniverseView |
+| Strava | Live | Live (activities + stats) | Somatic ledger | OauthView card |
+| Google Calendar | Live (OAuth) | Live (temporal patterns) | Temporal anxiety | OauthView card (callback-based) |
+| Co-Star | Backend built | Credential proxy (no OAuth) | Fatalism mirror | OauthView card (CoStarConnect) |
+| Letterboxd | Backend built | API key auth + username ingest | Empathy simulator | OauthView card (LetterboxdConnect) |
+| Steam | Backend built | OpenID 2.0 + game library | Isolation metric | OauthView card (SteamConnect) |
+| GitHub | Live (OAuth) | Developer profile + repos | Maker's mind | OauthView card |
+| YouTube | Live (OAuth) | Subscriptions, channel stats, attention profile | Parasocial field | OauthView card + YouTubeCallback |
+| Reddit | Live (OAuth) | Subreddit + behavioral profile | Tribal signal | OauthView card |
+| Instagram | Backend built | Router exists | Aesthetic mirror | OauthView card |
+| TikTok | Backend built | Router exists | Cultural velocity | OauthView card |
 
 ## Infrastructure
 
@@ -78,6 +82,12 @@ type: project
 - `src/components/Star.vue`: rewritten from inert snippet to valid SFC; Tone via npm import (tone ^15.1.22 already in package.json); no CDN tag existed in index.html to remove
 - Embed key audit (2026-07-08): 429 insufficient_quota verbatim recorded; Pinecone total_vectors=0
 - Note: "Tone.js still CDN" claim in previous Known Issues was stale — tone is bundled via npm
+
+## Recent Changes (2026-06-29 session)
+
+- Rewrote memory files to match CLAUDE.md Creative Direction pivot
+- Re-routed post-onboarding from `/game` → `/journal` in DiscoveryView.vue (line 512), OnboardingView.vue (line 110), SideBar.vue (line 68)
+- Updated Funnel Steps table to reflect self-expression core loop; shelved matching-era steps
 
 ## Recent Changes (2026-05-26 session)
 
