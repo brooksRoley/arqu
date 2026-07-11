@@ -73,7 +73,7 @@ const steps: Step[] = [
   {
     key: 'intake',
     title: 'Intake',
-    description: 'Final vibe calibration before entering the matching engine',
+    description: 'Complete your psychological intake to deepen your practice',
     route: '/intake',
     icon: '🎯',
   },
@@ -107,7 +107,7 @@ function skipStep(step: Step) {
 function finishOnboarding() {
   state.value.completed = true
   saveState(state.value)
-  router.push('/game')
+  router.push('/journal')
 }
 
 function skipAll() {
@@ -122,7 +122,7 @@ function skipAll() {
     <div class="onboarding-container">
       <h1 class="onboarding-title">Welcome{{ user?.display_name ? `, ${user.display_name}` : '' }}</h1>
       <p class="onboarding-subtitle">
-        Let's get you calibrated. Complete these steps to unlock the matching engine.
+        Let's get you calibrated. Complete these steps to begin your practice.
       </p>
 
       <!-- Progress bar -->
@@ -188,7 +188,7 @@ function skipAll() {
           class="btn-primary btn-lg"
           @click="finishOnboarding"
         >
-          Enter the Game
+          Begin Your Practice
         </button>
         <button class="btn-ghost" @click="skipAll">Skip for now</button>
       </div>

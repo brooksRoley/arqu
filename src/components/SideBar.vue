@@ -65,7 +65,7 @@ const questSteps = computed<QuestStep[]>(() => {
     { key: 'attune',   label: 'Attunement',  icon: '✦', color: '#a78bfa', route: '/',              done: !!pollToken.value },
     { key: 'signal',   label: 'Signal',       icon: '◉', color: '#22c55e', route: '/calibrate',     done: anyConnected },
     { key: 'confess',  label: 'Confession',   icon: '◈', color: '#38bdf8', route: '/intake',        done: onboarding.value.intake },
-    { key: 'resonate', label: 'Resonance',    icon: '⬡', color: '#f59e0b', route: '/game',          done: onboarding.value.completed },
+    { key: 'resonate', label: 'Resonance',    icon: '⬡', color: '#f59e0b', route: '/journal',       done: onboarding.value.completed },
   ]
 })
 
