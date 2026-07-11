@@ -447,6 +447,7 @@ onUnmounted(() => {
       :class="{ 'zen-btn--active': zenMode }"
       @click="zenMode ? exitZen() : enterZen()"
       :title="zenMode ? 'Exit zen mode (Esc)' : 'Enter zen mode'"
+      :aria-label="zenMode ? 'Exit zen mode' : 'Enter zen mode'"
     >{{ zenMode ? '✕' : '◎' }}</button>
 
     <!-- ── Zen exit hint (fades after 3s) ── -->
@@ -705,7 +706,7 @@ onUnmounted(() => {
 .profile-retake {
   background: none;
   border: none;
-  color: #475569;
+  color: #64748b;
   font-size: 0.7rem;
   font-family: inherit;
   cursor: pointer;
