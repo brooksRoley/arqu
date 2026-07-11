@@ -1129,7 +1129,8 @@ onMounted(() => {
   }
   if (route.query.steam === 'connected') {
     markConnected('steam')
-    router.replace({ path: '/calibrate/steam' })
+    // steam has no connectorConfig entry — /calibrate/steam renders empty
+    router.replace({ path: '/calibrate' })
   }
   if (route.query.strava === 'connected') {
     markConnected('strava')
