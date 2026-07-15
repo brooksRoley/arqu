@@ -182,6 +182,14 @@ const router = createRouter({
       meta: { requiresAuth: true }
     },
 
+    // ── Integrated Portrait: cross-connector narrative ───────────
+    {
+      path: '/portrait',
+      name: 'portrait',
+      component: () => import('@/views/PortraitView.vue'),
+      meta: { requiresAuth: true }
+    },
+
     // ── Onboarding (auth required) ───────────────────────────────
     {
       path: '/onboarding',

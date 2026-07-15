@@ -97,6 +97,24 @@
         </p>
       </div>
 
+      <!-- Integrated Portrait invitation — unlocked at 2+ connected streams -->
+      <RouterLink
+        v-if="synthProviderKeys.length >= 2"
+        to="/portrait"
+        class="block rounded-2xl border border-indigo-400/40 bg-indigo-500/5 p-6 hover:bg-indigo-500/10 hover:border-indigo-400/60 transition-colors group"
+      >
+        <div class="flex items-center justify-between gap-4">
+          <div>
+            <h2 class="text-lg font-bold text-indigo-200 mb-1">Your Integrated Portrait</h2>
+            <p class="text-sm text-gray-400">
+              {{ synthProviderKeys.length }} streams connected — enough for one reading across all of them.
+              A mirror earned from your own data.
+            </p>
+          </div>
+          <span class="text-indigo-300 text-2xl group-hover:translate-x-1 transition-transform shrink-0" aria-hidden="true">&rarr;</span>
+        </div>
+      </RouterLink>
+
       <div class="grid grid-cols-1 gap-8">
 
         <!-- Spotify -->

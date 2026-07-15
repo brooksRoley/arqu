@@ -73,6 +73,19 @@ function cardStyle(key: string) {
 <template>
   <div class="nav-grid">
     <router-link
+      to="/portrait"
+      class="nav-card nav-card--portrait"
+      :style="cardStyle('portrait')"
+      @pointermove="onCardMove($event, 'portrait')"
+      @pointerenter="onCardEnter($event, 'portrait')"
+      @pointerleave="onCardLeave('portrait')"
+    >
+      <span class="card-title">Integrated Portrait</span>
+      <span class="card-desc">One reading across everything you've connected — a mirror earned from your own data</span>
+      <div class="card-glare"></div>
+    </router-link>
+
+    <router-link
       to="/checkin"
       class="nav-card nav-card--pipeline"
       :style="cardStyle('checkin')"
@@ -194,6 +207,19 @@ function cardStyle(key: string) {
 
 .nav-card--pipeline:hover {
   border-color: rgba(167, 139, 250, 0.4);
+  box-shadow:
+    0 0 32px rgba(99, 102, 241, 0.12),
+    inset 0 0 32px rgba(99, 102, 241, 0.06);
+}
+
+.nav-card--portrait {
+  grid-column: 1 / -1;
+  min-height: 90px;
+  border-color: rgba(129, 140, 248, 0.2);
+}
+
+.nav-card--portrait:hover {
+  border-color: rgba(129, 140, 248, 0.45);
   box-shadow:
     0 0 32px rgba(99, 102, 241, 0.12),
     inset 0 0 32px rgba(99, 102, 241, 0.06);
