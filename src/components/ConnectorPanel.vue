@@ -23,7 +23,7 @@
           'cp-pill--on': c.connected,
           'cp-pill--loading': c.key === loadingKey,
         }"
-        :title="c.connected ? `${c.label} — connected` : `Connect ${c.label}`"
+        :title="c.connected ? `${c.label} — view your signal` : `Connect ${c.label}`"
         @click="handleConnect(c)"
       >
         <span class="cp-pill-dot" :class="c.connected ? 'dot--on' : 'dot--off'"></span>
@@ -191,8 +191,18 @@ const connectedCount = computed(() => connectors.value.filter((c) => c.connected
 
 // ── Connect handler ──────────────────────────────────────────────
 
+// Steam has no connector config page yet — its connected pill goes to /calibrate
+const inspectablePages = new Set([
+  'spotify', 'twitter', 'strava', 'google', 'github', 'youtube',
+  'reddit', 'letterboxd', 'instagram', 'tiktok', 'costar',
+])
+
 async function handleConnect(c: { connected: boolean; key: string; connect: () => Promise<void> | void }) {
-  if (c.connected || loadingKey.value) return
+  if (c.connected) {
+    router.push(inspectablePages.has(c.key) ? `/calibrate/${c.key}` : '/calibrate')
+    return
+  }
+  if (loadingKey.value) return
   loadingKey.value = c.key as string
   try {
     await c.connect()
@@ -297,7 +307,11 @@ async function handleConnect(c: { connected: boolean; key: string; connect: () =
   border-color: rgba(34, 197, 94, 0.35);
   background: rgba(34, 197, 94, 0.06);
   color: #86efac;
-  cursor: default;
+}
+
+.cp-pill--on:hover {
+  border-color: rgba(34, 197, 94, 0.6);
+  background: rgba(34, 197, 94, 0.12);
 }
 
 .cp-pill--loading {

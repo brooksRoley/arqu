@@ -150,6 +150,10 @@ function formatDate(ts: number): string {
     <!-- History sidebar -->
     <Transition name="slide-in">
       <div v-if="showHistory" class="history-panel">
+        <div v-if="sortedEntries.length === 0" class="history-empty">
+          <span class="history-empty-icon">✦</span>
+          <p>Your entries will appear here.<br />Start writing, drawing, or recording — this space keeps what you make.</p>
+        </div>
         <div
           v-for="entry in sortedEntries"
           :key="entry.id"
@@ -585,6 +589,25 @@ function formatDate(ts: number): string {
   gap: 0.35rem;
   max-height: 300px;
   overflow-y: auto;
+}
+
+.history-empty {
+  padding: 1.25rem 0.85rem;
+  text-align: center;
+  color: rgba(226, 232, 240, 0.35);
+  font-size: 0.75rem;
+  line-height: 1.6;
+}
+
+.history-empty-icon {
+  display: block;
+  font-size: 1rem;
+  margin-bottom: 0.4rem;
+  color: rgba(99, 102, 241, 0.5);
+}
+
+.history-empty p {
+  margin: 0;
 }
 
 .history-item {

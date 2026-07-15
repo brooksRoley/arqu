@@ -282,7 +282,7 @@ onUnmounted(() => {
 .ctrl-btn {
   @apply w-9 h-9 rounded-full bg-white/5 hover:bg-white/10
          border border-white/[0.06] text-white/50 hover:text-white/80
-         flex items-center justify-center transition-all shrink-0;
+         flex items-center justify-center transition-all shrink-0 active:scale-95;
 }
 
 .fade-enter-active, .fade-leave-active { transition: opacity 0.3s ease; }

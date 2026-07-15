@@ -474,7 +474,7 @@
           <p v-else class="text-xs text-lime-800 italic relative z-10">
             No synthesis available. Click Initiate to construct a personalized narrative.
           </p>
-          <p v-if="narrativeError" class="text-red-500 text-xs mt-2 font-mono italic">{{ narrativeError }}</p>
+          <p v-if="narrativeError" class="text-red-400 text-xs mt-2 font-mono italic">{{ narrativeError }}</p>
         </section>
       </div>
     </div>

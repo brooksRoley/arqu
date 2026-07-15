@@ -770,6 +770,10 @@ onUnmounted(() => {
   transition: all 0.15s;
 }
 
+.mini-play:active {
+  transform: scale(0.92);
+}
+
 .mini-play.on {
   background: rgba(99, 102, 241, 0.25);
   border-color: rgba(99, 102, 241, 0.5);
@@ -831,6 +835,10 @@ onUnmounted(() => {
 
 .mixer-btn:hover {
   background: rgba(255, 255, 255, 0.07);
+}
+
+.mixer-btn:active {
+  transform: scale(0.97);
 }
 
 .wind-btn { border-color: rgba(224, 144, 64, 0.25); }
