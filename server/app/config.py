@@ -119,6 +119,11 @@ class Settings(BaseSettings):
     llm_model: str = ""
     openrouter_api_key: str = ""
 
+    # ── Integrated Portrait ─────────────────────────────────────
+    # A stored portrait counts as stale after this many days even if the
+    # connected-provider set hasn't changed.
+    portrait_ttl_days: int = 14
+
     # ── CORS ────────────────────────────────────────────────────
     cors_origins: str = "http://localhost:5173"
 
