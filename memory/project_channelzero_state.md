@@ -52,6 +52,18 @@ Connectors are sources of **personal psychoanalysis narrative**, not matching si
 
 - **RadarCanvas** (`src/components/RadarCanvas.vue`): Canvas-based radar chart used in PsychoanalysisView to visualize psychometric scores
 
+## Decisions (routine: honor these — do not re-flag)
+
+- **JWT → HttpOnly cookie migration: CLOSED as NO (Brooks, 2026-07-15).** Rationale: frontend
+  (channelzero.vercel.app) and backend (channelzero.onrender.com) are different registrable
+  domains, so an HttpOnly auth cookie would be a third-party cookie — blocked by Safari and
+  being phased out in Chrome. Migration also requires CSRF defense and OAuth callback rework.
+  Revisit ONLY if ChannelZero moves to a custom domain serving both frontend and API.
+  Replacement security work (open, agent-doable): stop passing the session JWT as a query
+  parameter in connector connect flows (`/api/<provider>/connect?token=...` leaks to server
+  logs, browser history, Referer) — mint a short-lived (~60s) single-purpose connect token
+  instead.
+
 ## Known Issues
 
 - **Spotify audio features deprecated**: Fallback active (genre→valence mapping + track popularity as energy proxy)
