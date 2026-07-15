@@ -1,5 +1,12 @@
 # ChannelZero — Claude Code Guide
 
+## Mission
+**Community rather than convenience.** ChannelZero reimagines popular apps and connection
+capabilities: where mainstream apps optimize for frictionless consumption, ChannelZero turns
+the same connections (Spotify, GitHub, YouTube, calendar…) into mirrors for self-knowledge,
+and treats connection between people as something earned through understanding — not a swipe.
+Product copy, feature framing, and routine-agent proposals should reflect this lens.
+
 ## Creative Direction (read first — overrides older "matching engine" framing)
 ChannelZero is a suite of **immersive self-expression and hypnosis experiences** with an
 embedded psychoanalysis layer. The product is, in priority order:

@@ -92,6 +92,9 @@ build_analyst_prompt() {
 
 Stack: Vue 3 + Vite + TypeScript + Tailwind (frontend); FastAPI + Neon PostgreSQL (backend); Tone.js + Matter.js + Web Audio + Canvas power the experiences.
 
+MISSION — community rather than convenience:
+ChannelZero reimagines popular apps and connection capabilities. Where mainstream apps optimize for convenience (frictionless feeds, engagement loops that leave people alone), ChannelZero turns the same connections into community: OAuth data becomes a mirror for self-knowledge, expression comes before consumption, and connection between people is earned through understanding rather than a swipe. Frame proposals and copy through this lens.
+
 CREATIVE DIRECTION — this overrides any older 'matching engine' framing:
 - The product is SELF-EXPRESSION, HYPNOSIS/ENTRAINMENT, ROUTINE-BUILDING, and EMBEDDED GAMING. It is NOT a dating/swipe app.
 - The Pinecone vibe-vector MATCHING NETWORK is shelved/aspirational. Do NOT propose embedding work, ANN matching, 'three shadows', mutual-match swiping, or karma-ledger features. The paid OpenAI embed key is intentionally unfunded — assume it stays that way.

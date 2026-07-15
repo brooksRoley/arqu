@@ -24,6 +24,28 @@
     </section>
 
     <section class="block">
+      <h2>Why this exists</h2>
+      <p>
+        Most popular apps optimize for convenience — faster feeds, frictionless
+        consumption, engagement that keeps you scrolling but leaves you alone.
+        ChannelZero is built on the opposite bet: that the point of connection
+        is community, not convenience.
+      </p>
+      <p>
+        We reimagine the apps you already live in. When you connect Spotify,
+        GitHub, YouTube, or your calendar, that data stops being a feed engineered
+        to hold your attention and becomes a mirror — material for understanding
+        who you are, what you make, and how you spend your hours. Expression comes
+        before consumption. Ritual comes before scrolling. Knowing yourself comes
+        before being known by an algorithm.
+      </p>
+      <p>
+        Community starts there: people who arrive at each other through
+        self-knowledge rather than a swipe.
+      </p>
+    </section>
+
+    <section class="block">
       <h2>How to use this site</h2>
       <ul>
         <li>Start with <RouterLink to="/learn">Learn</RouterLink> to understand the concepts before opening a session.</li>

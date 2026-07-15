@@ -459,6 +459,7 @@ onUnmounted(() => {
 
     <div class="content-scene" :style="sceneStyle" :class="{ 'content-scene--hidden': zenMode }">
       <h1 class="title" :style="titleStyle">Channel Zero: Dreamer</h1>
+      <p class="tagline" :style="titleStyle">community over convenience — know yourself first</p>
 
       <!-- ── Stage: Home ── -->
       <Transition name="stage" mode="out-in">
@@ -641,9 +642,18 @@ onUnmounted(() => {
 .title {
   font-size: 2rem;
   font-weight: bold;
-  margin-bottom: 0.5rem;
+  margin-bottom: 0.25rem;
   color: #e2e8f0;
   margin-top: 2rem;
+  will-change: transform;
+}
+
+.tagline {
+  font-size: 0.72rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: rgba(148, 163, 184, 0.55);
+  margin: 0 0 0.75rem;
   will-change: transform;
 }
 
