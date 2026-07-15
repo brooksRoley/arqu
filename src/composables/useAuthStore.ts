@@ -55,7 +55,9 @@ async function apiFetch<T>(path: string, opts: RequestInit = {}): Promise<T> {
       ...(opts.headers || {}),
     },
   })
-  if (res.status === 401) {
+  // 401 on auth endpoints means bad credentials, not an expired session —
+  // let it fall through to the normal error path below
+  if (res.status === 401 && !path.startsWith('/api/auth/')) {
     logout()
     window.location.href = '/login'
     throw new Error('Session expired')
