@@ -9,9 +9,9 @@ from pydantic import BaseModel, Field
 
 
 class JournalEntryCreate(BaseModel):
-    text: str = ""
-    drawings: list[dict] = Field(default_factory=list)
-    mood: str | None = None
+    text: str = Field(default="", max_length=50_000)
+    drawings: list[dict] = Field(default_factory=list, max_length=500)
+    mood: str | None = Field(default=None, max_length=100)
     poll_token_id: UUID | None = None
     created_at: datetime | None = None  # allow client to set (for sync)
 
@@ -35,7 +35,7 @@ class JournalEntryResponse(BaseModel):
 
 class JournalSyncRequest(BaseModel):
     """Bulk sync: client sends all local entries with timestamps."""
-    entries: list[JournalEntryCreate]
+    entries: list[JournalEntryCreate] = Field(max_length=200)
     last_sync: datetime | None = None  # entries changed since this time
 
 
