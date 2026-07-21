@@ -173,16 +173,16 @@ async def spotify_sync(user_id: UUID = Depends(get_current_user_id)):
 
 
 @router.get("/connect")
-async def spotify_connect(token: str = Query(..., description="Frontend JWT")):
+async def spotify_connect(ct: str = Query(..., description="Short-lived connect token")):
     """
     Redirect the authenticated user to Spotify's authorization page.
-    Accepts the JWT as a query param because browser redirects can't set headers.
+    Accepts a short-lived connect token (?ct=) minted by POST /api/auth/connect-token.
     """
     settings = get_settings()
     if not settings.spotify_client_id:
         raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="Spotify not configured")
 
-    payload = validate_connect_token(token)
+    payload = await validate_connect_token(ct)
 
     url = build_authorize_url(
         _SPOTIFY_AUTH_URL,

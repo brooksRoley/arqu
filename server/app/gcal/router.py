@@ -25,11 +25,10 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from fastapi.responses import RedirectResponse
 
 from ..auth.deps import get_current_user_id
-from ..auth.service import decode_access_token
 from ..config import get_settings
 from ..db import get_conn
 from ..llm.encryption import encrypt_api_key
-from ..oauth_base import store_provider_data
+from ..oauth_base import store_provider_data, validate_connect_token
 from ..llm.chat import chat_completion
 
 router = APIRouter()
@@ -76,15 +75,13 @@ async def _verify_state(state: str) -> str:
 # ── Routes ───────────────────────────────────────────────────────────────────
 
 @router.get("/connect")
-async def gcal_connect(token: str = Query(..., description="Frontend JWT")):
+async def gcal_connect(ct: str = Query(..., description="Short-lived connect token")):
     """Redirect user to Google OAuth with calendar.readonly scope."""
     settings = get_settings()
     if not settings.google_client_id:
         raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="Google OAuth not configured")
 
-    payload = decode_access_token(token)
-    if not payload:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
+    payload = await validate_connect_token(ct)
 
     params = {
         "client_id": settings.google_client_id,

@@ -24,7 +24,6 @@ import httpx
 import jwt
 from fastapi import HTTPException, status
 
-from .auth.service import decode_access_token
 from .config import get_settings
 from .db import get_conn
 from .llm.encryption import decrypt_api_key, encrypt_api_key
@@ -76,16 +75,28 @@ async def verify_oauth_state(state: str) -> str:
 # ── Token helpers ─────────────────────────────────────────────────────────────
 
 
-def validate_connect_token(token: str) -> dict:
-    """Decode the frontend JWT passed as a query param on /connect.
-    Returns the decoded payload or raises 401."""
-    payload = decode_access_token(token)
-    if not payload:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid token",
+async def validate_connect_token(ct: str) -> dict:
+    """Validate a short-lived single-use connect token from /api/auth/connect-token.
+
+    Returns {"sub": user_id_str} or raises 401/410.
+    The token is consumed on first use so a leaked URL cannot be replayed.
+    """
+    async with get_conn() as conn:
+        row = await conn.fetchrow(
+            "SELECT user_id, expires_at, consumed_at FROM connect_tokens WHERE token = $1",
+            ct,
         )
-    return payload
+    if not row:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid connect token")
+    if row["consumed_at"] is not None:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Connect token already used")
+    if row["expires_at"] < datetime.now(timezone.utc):
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Connect token expired")
+    async with get_conn() as conn:
+        await conn.execute(
+            "UPDATE connect_tokens SET consumed_at = now() WHERE token = $1", ct
+        )
+    return {"sub": str(row["user_id"])}
 
 
 def build_authorize_url(

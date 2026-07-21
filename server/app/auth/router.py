@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import secrets
+from datetime import datetime, timedelta, timezone
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -74,6 +76,25 @@ async def me(user_id: UUID = Depends(get_current_user_id)):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
 
     return UserResponse(**dict(row))
+
+
+@router.post("/connect-token")
+async def issue_connect_token(user_id: UUID = Depends(get_current_user_id)):
+    """Issue a 60-second single-use token for OAuth connect redirects.
+
+    Redirect-based connect flows (Spotify, GCal) pass the full session JWT in
+    the URL because browser navigation can't set headers — that leaks to server
+    logs, browser history, and Referer. This endpoint mints a short-lived token
+    that expires in 60 s and is consumed on first use, so a leak window is tiny.
+    """
+    ct = secrets.token_urlsafe(32)
+    expires_at = datetime.now(timezone.utc) + timedelta(seconds=60)
+    async with get_conn() as conn:
+        await conn.execute(
+            "INSERT INTO connect_tokens (token, user_id, expires_at) VALUES ($1, $2, $3)",
+            ct, user_id, expires_at,
+        )
+    return {"ct": ct}
 
 
 @router.get("/connectors")

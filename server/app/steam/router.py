@@ -23,11 +23,10 @@ import secrets
 
 import httpx
 import jwt
-from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.responses import JSONResponse, RedirectResponse
 
 from ..auth.deps import get_current_user_id
-from ..auth.service import decode_access_token
 from ..config import get_settings
 from ..db import get_conn
 from ..llm.chat import chat_completion
@@ -75,17 +74,14 @@ async def _verify_state(state: str) -> str:
 # ── Routes ───────────────────────────────────────────────────────────────────
 
 @router.get("/connect")
-async def steam_connect(token: str = Query(..., description="Frontend JWT")):
-    """Return the Steam OpenID login URL."""
+async def steam_connect(user_id: UUID = Depends(get_current_user_id)):
+    """Return the Steam OpenID login URL.
+    Frontend fetches with Authorization: Bearer header — no JWT in the URL."""
     settings = get_settings()
     if not settings.steam_api_key:
         raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="Steam not configured")
 
-    payload = decode_access_token(token)
-    if not payload:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
-
-    state = _make_state(payload["sub"])
+    state = _make_state(str(user_id))
     return_to = f"{settings.steam_redirect_uri}?state={state}"
 
     params = {
