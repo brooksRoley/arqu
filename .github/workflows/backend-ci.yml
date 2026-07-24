@@ -1,0 +1,41 @@
+name: Backend CI
+
+# Run the pytest suite whenever server/ code changes or a PR targets main.
+# Tests use FakeConn — no real DB connection is made. Fake env vars satisfy
+# pydantic-settings validation at import time; the actual values are unused.
+on:
+  push:
+    paths:
+      - "server/**"
+      - ".github/workflows/backend-ci.yml"
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "server/**"
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: server
+    env:
+      DATABASE_URL: "postgresql://ci:ci@localhost/ci"
+      DATABASE_URL_UNPOOLED: "postgresql://ci:ci@localhost/ci"
+      JWT_SECRET: "ci-test-secret-not-for-production"
+      SERVER_ENCRYPTION_KEY: "ci-test-key-not-used-in-unit-tests"
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: server/requirements.txt
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run pytest
+        run: python -m pytest tests/ -v --tb=short
