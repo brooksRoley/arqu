@@ -5,7 +5,6 @@ import { useStoryStore } from '@/composables/useStoryStore'
 import { useTranceEngine } from '@/composables/useTranceEngine'
 import { useAuthStore } from '@/composables/useAuthStore'
 import { usePollStore } from '@/composables/usePollStore'
-import { useMessageStore } from '@/composables/useMessageStore'
 
 const router = useRouter()
 const route = useRoute()
@@ -97,7 +96,6 @@ const canWindDown = computed(() =>
 
 const { isAuthenticated, user, logout } = useAuthStore()
 const { token: pollToken } = usePollStore()
-const { unreadCount, fetchUnread } = useMessageStore()
 
 // ── Pipeline progress ─────────────────────────────────────────────
 const ONBOARDING_KEY = 'channelzero-onboarding'
@@ -305,7 +303,6 @@ onMounted(() => {
   window.addEventListener('touchstart', showNav, { passive: true })
   document.addEventListener('fullscreenchange', handleFullscreenChange)
   document.addEventListener('webkitfullscreenchange', handleFullscreenChange)
-  if (isAuthenticated.value) fetchUnread()
 })
 
 onUnmounted(() => {
@@ -384,20 +381,6 @@ onUnmounted(() => {
           <line x1="21" y1="3" x2="14" y2="10"></line>
         </svg>
       </button>
-
-      <!-- Messages button (authenticated) -->
-      <RouterLink
-        v-if="isAuthenticated"
-        to="/messages"
-        class="messages-btn"
-        :class="{ 'messages-btn--unread': unreadCount > 0 }"
-        :aria-label="`Messages${unreadCount > 0 ? ` (${unreadCount} unread)` : ''}`"
-      >
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/>
-        </svg>
-        <span v-if="unreadCount > 0" class="messages-badge">{{ unreadCount > 9 ? '9+' : unreadCount }}</span>
-      </RouterLink>
 
       <!-- Auth button -->
       <RouterLink
@@ -769,48 +752,6 @@ onUnmounted(() => {
   font-size: 0.72rem;
   font-weight: 500;
   letter-spacing: 0.02em;
-}
-
-/* ── Messages button ── */
-.messages-btn {
-  position: relative;
-  flex-shrink: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 2.25rem;
-  height: 2.25rem;
-  border-radius: 0.4rem;
-  color: #64748b;
-  transition: color 0.15s, background 0.15s;
-  text-decoration: none;
-}
-
-.messages-btn svg {
-  width: 18px;
-  height: 18px;
-}
-
-.messages-btn:hover { color: #e2e8f0; background: rgba(255,255,255,0.06); }
-
-.messages-btn--unread { color: #6366f1; }
-
-.messages-badge {
-  position: absolute;
-  top: 2px;
-  right: 2px;
-  background: #6366f1;
-  color: #fff;
-  font-size: 0.55rem;
-  font-weight: 700;
-  border-radius: 100px;
-  min-width: 14px;
-  height: 14px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0 3px;
-  pointer-events: none;
 }
 
 /* ── Hamburger button ── */

@@ -305,10 +305,10 @@ const accent = computed(() => token.value?.palette?.accent || '#a78bfa')
             <span class="pipeline-label">The Intake</span>
             <span class="pipeline-desc">Psychoanalytic confessional</span>
           </button>
-          <button class="pipeline-btn" @click="router.push('/game')">
+          <button class="pipeline-btn" @click="router.push('/portrait')">
             <span class="pipeline-step">2</span>
-            <span class="pipeline-label">The Game</span>
-            <span class="pipeline-desc">Deployment protocol</span>
+            <span class="pipeline-label">The Portrait</span>
+            <span class="pipeline-desc">Your integrated psyche</span>
           </button>
         </div>
       </section>
@@ -585,6 +585,11 @@ const accent = computed(() => token.value?.palette?.accent || '#a78bfa')
   color: #e2e8f0;
 }
 
+.btn-small:focus-visible {
+  outline: 2px solid rgba(167, 139, 250, 0.7);
+  outline-offset: 2px;
+}
+
 .btn-ghost {
   background: none;
   border: none;
@@ -602,6 +607,12 @@ const accent = computed(() => token.value?.palette?.accent || '#a78bfa')
   color: #94a3b8;
 }
 
+.btn-ghost:focus-visible {
+  outline: 2px solid rgba(167, 139, 250, 0.7);
+  outline-offset: 2px;
+  border-radius: 0.2rem;
+}
+
 .btn-accent {
   font-size: 0.8rem;
   padding: 0.5rem 1rem;
@@ -617,6 +628,11 @@ const accent = computed(() => token.value?.palette?.accent || '#a78bfa')
 .btn-accent:disabled {
   opacity: 0.3;
   cursor: default;
+}
+
+.btn-accent:focus-visible {
+  outline: 2px solid rgba(167, 139, 250, 0.7);
+  outline-offset: 2px;
 }
 
 .actions-row {
@@ -640,6 +656,11 @@ const accent = computed(() => token.value?.palette?.accent || '#a78bfa')
 .btn-primary:hover {
   opacity: 0.9;
   transform: translateY(-1px);
+}
+
+.btn-primary:focus-visible {
+  outline: 2px solid rgba(167, 139, 250, 0.7);
+  outline-offset: 2px;
 }
 
 /* ── Pipeline ── */
