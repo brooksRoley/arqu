@@ -1,6 +1,4 @@
-"""
-ChannelZero API — FastAPI application entry point.
-"""
+"""\nChannelZero API — FastAPI application entry point.\n"""
 
 from __future__ import annotations
 
@@ -11,9 +9,12 @@ import logging
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from slowapi import _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
 
 from .config import get_settings
 from .db import init_pool, close_pool
+from .ratelimit import limiter
 from .auth.router import router as auth_router
 from .auth.oauth import router as oauth_router
 from .journal.router import router as journal_router
@@ -126,7 +127,11 @@ def create_app() -> FastAPI:
         lifespan=lifespan,
     )
 
-    # ── CORS ────────────────────────────────────────────────────
+    # ── Rate limiting ───────────────────────────────────────
+    app.state.limiter = limiter
+    app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
+    # ── CORS ────────────────────────────────────────────
     app.add_middleware(
         CORSMiddleware,
         allow_origins=settings.cors_origin_list,
@@ -135,7 +140,7 @@ def create_app() -> FastAPI:
         allow_headers=["*"],
     )
 
-    # ── Routers ─────────────────────────────────────────────────
+    # ── Routers ───────────────────────────────────────────
     prefix = settings.api_prefix
     app.include_router(auth_router, prefix=f"{prefix}/auth", tags=["auth"])
     app.include_router(oauth_router, prefix=f"{prefix}/auth", tags=["oauth"])
@@ -174,7 +179,7 @@ def create_app() -> FastAPI:
             content={"detail": "Internal server error"},
         )
 
-    # ── Health ──────────────────────────────────────────────────
+    # ── Health ──────────────────────────────────────────
     @app.get("/health")
     async def health():
         return {"status": "ok", "service": "channelzero-api"}
