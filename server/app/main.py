@@ -1,6 +1,4 @@
-"""
-ChannelZero API — FastAPI application entry point.
-"""
+"""\nChannelZero API — FastAPI application entry point.\n"""
 
 from __future__ import annotations
 
@@ -36,8 +34,6 @@ from .youtube.router import router as youtube_router
 from .reddit.router import router as reddit_router
 from .instagram.router import router as instagram_router
 from .tiktok.router import router as tiktok_router
-from .match.router import router as match_router
-from .messages.router import router as messages_router
 from .analytics.router import router as analytics_router
 from .brain.router import router as brain_router
 from .vector.router import router as vector_router
@@ -126,7 +122,7 @@ def create_app() -> FastAPI:
         lifespan=lifespan,
     )
 
-    # ── CORS ────────────────────────────────────────────────────
+    # ── CORS ────────────────────────────────────────────
     app.add_middleware(
         CORSMiddleware,
         allow_origins=settings.cors_origin_list,
@@ -135,7 +131,7 @@ def create_app() -> FastAPI:
         allow_headers=["*"],
     )
 
-    # ── Routers ─────────────────────────────────────────────────
+    # ── Routers ───────────────────────────────────────────
     prefix = settings.api_prefix
     app.include_router(auth_router, prefix=f"{prefix}/auth", tags=["auth"])
     app.include_router(oauth_router, prefix=f"{prefix}/auth", tags=["oauth"])
@@ -159,8 +155,6 @@ def create_app() -> FastAPI:
     app.include_router(reddit_router, prefix=f"{prefix}/reddit", tags=["reddit"])
     app.include_router(instagram_router, prefix=f"{prefix}/instagram", tags=["instagram"])
     app.include_router(tiktok_router, prefix=f"{prefix}/tiktok", tags=["tiktok"])
-    app.include_router(match_router, prefix=f"{prefix}/match", tags=["match"])
-    app.include_router(messages_router, prefix=f"{prefix}/messages", tags=["messages"])
     app.include_router(analytics_router, prefix=f"{prefix}/analytics", tags=["analytics"])
     app.include_router(brain_router, prefix=f"{prefix}/brain", tags=["brain"])
     app.include_router(vector_router, prefix=f"{prefix}/vector", tags=["vector"])
@@ -174,7 +168,7 @@ def create_app() -> FastAPI:
             content={"detail": "Internal server error"},
         )
 
-    # ── Health ──────────────────────────────────────────────────
+    # ── Health ──────────────────────────────────────────
     @app.get("/health")
     async def health():
         return {"status": "ok", "service": "channelzero-api"}
