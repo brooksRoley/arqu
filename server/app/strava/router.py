@@ -17,8 +17,6 @@ import json
 import time
 from uuid import UUID
 
-from ..oracle.trigger import maybe_trigger_synthesis
-
 import httpx
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from fastapi.responses import JSONResponse
@@ -144,6 +142,7 @@ async def strava_callback(code: str, state: str):
     await store_provider_data(user_id, "strava_data", strava_profile)
 
     # Auto-trigger Oracle synthesis if enough providers connected
+    from ..oracle.trigger import maybe_trigger_synthesis
     await maybe_trigger_synthesis(UUID(user_id))
 
     # 7. Return success — frontend handles navigation

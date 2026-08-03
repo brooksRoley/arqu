@@ -17,8 +17,6 @@ import json
 from collections import Counter
 from uuid import UUID
 
-from ..oracle.trigger import maybe_trigger_synthesis
-
 import httpx
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from fastapi.responses import JSONResponse
@@ -154,6 +152,7 @@ async def github_callback(code: str, state: str):
     await store_provider_data(user_id, "github_data", github_profile)
 
     # Auto-trigger Oracle synthesis if enough providers connected
+    from ..oracle.trigger import maybe_trigger_synthesis
     await maybe_trigger_synthesis(UUID(user_id))
 
     # 9. Return success — frontend handles navigation

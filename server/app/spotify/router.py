@@ -18,8 +18,6 @@ import json
 import time
 from uuid import UUID
 
-from ..oracle.trigger import maybe_trigger_synthesis
-
 import logging
 
 import httpx
@@ -165,6 +163,7 @@ async def spotify_sync(user_id: UUID = Depends(get_current_user_id)):
 
     # Re-trigger Oracle synthesis (non-blocking)
     try:
+        from ..oracle.trigger import maybe_trigger_synthesis
         await maybe_trigger_synthesis(user_id)
     except Exception:
         logger.exception("Oracle synthesis trigger failed for user %s (non-blocking)", user_id)
@@ -281,6 +280,7 @@ async def spotify_callback(code: str, state: str):
     await store_provider_data(user_id, "spotify_data", spotify_profile)
 
     # 7.5 Auto-trigger Oracle synthesis if enough providers connected
+    from ..oracle.trigger import maybe_trigger_synthesis
     await maybe_trigger_synthesis(UUID(user_id))
 
     # 8. Fetch full vibe vector to re-embed with Spotify context blended in
@@ -309,7 +309,7 @@ async def spotify_callback(code: str, state: str):
 
     # 10. Redirect back to frontend
     frontend = settings.cors_origin_list[0] if settings.cors_origin_list else "http://localhost:5173"
-    return RedirectResponse(f"{frontend}/game?spotify=connected")
+    return RedirectResponse(f"{frontend}/calibrate/spotify")
 
 
 # ── Profile distillation ─────────────────────────────────────────────────────

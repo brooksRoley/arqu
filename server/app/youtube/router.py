@@ -21,8 +21,6 @@ from uuid import UUID
 
 import secrets
 
-from ..oracle.trigger import maybe_trigger_synthesis
-
 import httpx
 import jwt
 from fastapi import APIRouter, Depends, HTTPException, Query, status
@@ -213,6 +211,7 @@ async def youtube_callback(code: str, state: str):
         await store_provider_data(user_id, "youtube_data", youtube_profile)
 
         # 7.5 Auto-trigger Oracle synthesis if enough providers connected
+        from ..oracle.trigger import maybe_trigger_synthesis
         await maybe_trigger_synthesis(UUID(user_id))
 
     except HTTPException:
