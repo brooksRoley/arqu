@@ -283,18 +283,29 @@ async function autoSynthesize() {
 
 /**
  * Redirect the browser to the backend Spotify OAuth flow.
- * The JWT is passed as a query param since browser redirects can't set headers.
+ * Mints a short-lived connect token so the full JWT never appears in the URL.
  */
-function connectSpotify() {
+async function connectSpotify() {
   const { token } = useAuthStore()
   if (!token.value) return
-  window.location.href = `${API}/api/spotify/connect?token=${token.value}`
+  const ctResp = await fetch(`${API}/api/auth/connect-token`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token.value}` },
+  })
+  if (!ctResp.ok) return
+  const { ct } = await ctResp.json()
+  window.location.href = `${API}/api/spotify/connect?ct=${ct}`
 }
 
-function connectYouTube() {
+async function connectYouTube() {
   const { token } = useAuthStore()
   if (!token.value) return
-  window.location.href = `${API}/api/youtube/connect?token=${token.value}`
+  const res = await fetch(`${API}/api/youtube/connect`, {
+    headers: { Authorization: `Bearer ${token.value}` },
+  })
+  if (!res.ok) return
+  const data = await res.json()
+  if (data.auth_url) window.location.href = data.auth_url
 }
 
 /**

@@ -87,10 +87,16 @@ const buttonText = computed(() => {
   return 'CONNECT GOOGLE CALENDAR'
 })
 
-function initiateGoogleAuth() {
+async function initiateGoogleAuth() {
   if (isConnected.value || !token.value) return
   isConnecting.value = true
-  // Server-side redirect builds the URL with calendar.readonly scope
-  window.location.href = `${API}/api/gcal/connect?token=${token.value}`
+  // Mint a short-lived connect token so the full JWT never appears in the URL
+  const ctResp = await fetch(`${API}/api/auth/connect-token`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token.value}` },
+  })
+  if (ctResp.status === 401) { isConnecting.value = false; return }
+  const { ct } = await ctResp.json()
+  window.location.href = `${API}/api/gcal/connect?ct=${ct}`
 }
 </script>

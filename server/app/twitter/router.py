@@ -30,10 +30,9 @@ import secrets
 
 import httpx
 import jwt
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.responses import JSONResponse, RedirectResponse
 
-from ..auth.service import decode_access_token
 from ..oauth_base import store_provider_data
 from ..auth.deps import get_current_user_id
 from ..config import get_settings
@@ -97,22 +96,19 @@ def _pkce_challenge(verifier: str) -> str:
 # ── Routes ───────────────────────────────────────────────────────────────────
 
 @router.get("/connect")
-async def twitter_connect(token: str = Query(..., description="Frontend JWT")):
+async def twitter_connect(user_id: UUID = Depends(get_current_user_id)):
     """
     Return the X OAuth2 authorization URL with data scopes.
+    Frontend fetches with Authorization: Bearer header — no JWT in the URL.
     PKCE verifier is generated server-side and embedded in the state JWT.
     """
     settings = get_settings()
     if not settings.x_client_id:
         raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="X/Twitter not configured")
 
-    payload = decode_access_token(token)
-    if not payload:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
-
     code_verifier = secrets.token_urlsafe(43)
     code_challenge = _pkce_challenge(code_verifier)
-    state = _make_state(payload["sub"], code_verifier)
+    state = _make_state(str(user_id), code_verifier)
 
     params = {
         "response_type": "code",

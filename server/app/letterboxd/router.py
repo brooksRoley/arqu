@@ -34,7 +34,6 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from fastapi.responses import JSONResponse
 
 from ..auth.deps import get_current_user_id
-from ..auth.service import decode_access_token
 from ..oauth_base import store_provider_data
 from ..config import get_settings
 from ..db import get_conn
@@ -103,11 +102,12 @@ def _sign_request(method: str, url: str, body: str = "") -> dict:
 # ── Routes ───────────────────────────────────────────────────────────────────
 
 @router.get("/connect")
-async def letterboxd_connect(token: str = Query(..., description="Frontend JWT")):
+async def letterboxd_connect(user_id: UUID = Depends(get_current_user_id)):
     """
     Initiate Letterboxd auth. Since Letterboxd uses API key auth (not OAuth),
     we ask the user for their Letterboxd username and fetch their public data.
     Returns an auth URL that collects the username on the frontend side.
+    Frontend fetches with Authorization: Bearer header — no JWT in the URL.
     """
     settings = get_settings()
     if not settings.letterboxd_api_key:
@@ -116,11 +116,7 @@ async def letterboxd_connect(token: str = Query(..., description="Frontend JWT")
             detail="Letterboxd API not configured. Requires LETTERBOXD_API_KEY — apply at https://letterboxd.com/api-beta/",
         )
 
-    payload = decode_access_token(token)
-    if not payload:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
-
-    state = _make_state(payload["sub"])
+    state = _make_state(str(user_id))
 
     # For Letterboxd, we direct the user to a frontend form that collects their
     # username and POSTs back to /letterboxd/ingest — no OAuth redirect needed.
