@@ -305,10 +305,10 @@ const accent = computed(() => token.value?.palette?.accent || '#a78bfa')
             <span class="pipeline-label">The Intake</span>
             <span class="pipeline-desc">Psychoanalytic confessional</span>
           </button>
-          <button class="pipeline-btn" @click="router.push('/game')">
+          <button class="pipeline-btn" @click="router.push('/portrait')">
             <span class="pipeline-step">2</span>
-            <span class="pipeline-label">The Game</span>
-            <span class="pipeline-desc">Deployment protocol</span>
+            <span class="pipeline-label">Your Portrait</span>
+            <span class="pipeline-desc">Cross-connector self-reading</span>
           </button>
         </div>
       </section>
