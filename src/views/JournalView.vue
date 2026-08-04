@@ -442,6 +442,11 @@ function formatDate(ts: number): string {
   color: #e2e8f0;
 }
 
+.action-btn:focus-visible {
+  outline: 2px solid rgba(99, 102, 241, 0.7);
+  outline-offset: 2px;
+}
+
 .action-btn--new {
   border-color: rgba(99, 102, 241, 0.3);
   color: #a5b4fc;
