@@ -117,7 +117,7 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div class="min-h-screen bg-gray-950 text-gray-100">
+  <div class="min-h-screen calibrate-bg text-gray-100">
     <div class="max-w-3xl mx-auto px-6 py-20 sm:py-24">
       <header class="mb-14">
         <h1 class="text-4xl sm:text-5xl font-black tracking-tight mb-3">Integrated Portrait</h1>

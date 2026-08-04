@@ -17,3 +17,8 @@ a {
 a:hover {
   text-decoration: underline;
 }
+
+/* Shared background token for the calibrate → portrait flow. */
+.calibrate-bg {
+  background-color: #08060e;
+}
