@@ -58,7 +58,7 @@
               <span class="text-lime-500 text-sm">&#10003;</span>
               <span class="text-xs text-lime-500 uppercase tracking-widest">Personality — Completed</span>
             </div>
-            <button class="text-[10px] text-lime-700 hover:text-lime-500 uppercase tracking-widest" @click="expandOcean = !expandOcean">
+            <button class="text-[10px] text-lime-700 hover:text-lime-500 uppercase tracking-widest focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lime-500" @click="expandOcean = !expandOcean">
               {{ expandOcean ? 'Collapse' : 'Review' }}
             </button>
           </div>
@@ -104,7 +104,7 @@
                   :key="n"
                   :aria-label="`Rate ${n} of 5 — ${item.text}`"
                   :class="[
-                    'w-9 h-9 border text-xs transition-all',
+                    'w-9 h-9 border text-xs transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lime-500',
                     oceanAnswers[i] === n
                       ? 'border-lime-400 bg-lime-900/60 text-lime-200'
                       : 'border-lime-900 text-lime-700 hover:border-lime-600 hover:text-lime-400'
@@ -117,7 +117,7 @@
         </template>
         <button
           :disabled="!oceanComplete"
-          class="w-full border border-lime-600 p-3 text-xs uppercase tracking-widest transition-all disabled:opacity-30 disabled:cursor-not-allowed hover:bg-lime-900/40"
+          class="w-full border border-lime-600 p-3 text-xs uppercase tracking-widest transition-all disabled:opacity-30 disabled:cursor-not-allowed hover:bg-lime-900/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lime-500"
           @click="step++"
         >Continue &#8594;</button>
       </div>
@@ -131,7 +131,7 @@
               <span class="text-lime-500 text-sm">&#10003;</span>
               <span class="text-xs text-lime-500 uppercase tracking-widest">Attachment — Completed</span>
             </div>
-            <button class="text-[10px] text-lime-700 hover:text-lime-500 uppercase tracking-widest" @click="expandAttach = !expandAttach">
+            <button class="text-[10px] text-lime-700 hover:text-lime-500 uppercase tracking-widest focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lime-500" @click="expandAttach = !expandAttach">
               {{ expandAttach ? 'Collapse' : 'Review' }}
             </button>
           </div>
@@ -177,7 +177,7 @@
                   :key="n"
                   :aria-label="`Rate ${n} of 7 — ${item.text}`"
                   :class="[
-                    'w-9 h-9 border text-xs transition-all',
+                    'w-9 h-9 border text-xs transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lime-500',
                     attachAnswers[i] === n
                       ? 'border-lime-400 bg-lime-900/60 text-lime-200'
                       : 'border-lime-900 text-lime-700 hover:border-lime-600 hover:text-lime-400'
@@ -189,10 +189,10 @@
           </div>
         </template>
         <div class="flex gap-3">
-          <button class="flex-1 border border-lime-900 p-3 text-xs uppercase tracking-widest hover:bg-lime-900/20" @click="step--">&#8592; Back</button>
+          <button class="flex-1 border border-lime-900 p-3 text-xs uppercase tracking-widest hover:bg-lime-900/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lime-500" @click="step--">&#8592; Back</button>
           <button
             :disabled="!attachmentComplete"
-            class="flex-1 border border-lime-600 p-3 text-xs uppercase tracking-widest transition-all disabled:opacity-30 disabled:cursor-not-allowed hover:bg-lime-900/40"
+            class="flex-1 border border-lime-600 p-3 text-xs uppercase tracking-widest transition-all disabled:opacity-30 disabled:cursor-not-allowed hover:bg-lime-900/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lime-500"
             @click="step++"
           >Continue &#8594;</button>
         </div>
@@ -207,7 +207,7 @@
               <span class="text-lime-500 text-sm">&#10003;</span>
               <span class="text-xs text-lime-500 uppercase tracking-widest">Identity — Completed</span>
             </div>
-            <button class="text-[10px] text-lime-700 hover:text-lime-500 uppercase tracking-widest" @click="expandIdentity = !expandIdentity">
+            <button class="text-[10px] text-lime-700 hover:text-lime-500 uppercase tracking-widest focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lime-500" @click="expandIdentity = !expandIdentity">
               {{ expandIdentity ? 'Collapse' : 'Review' }}
             </button>
           </div>
@@ -232,7 +232,7 @@
                 v-for="ll in LOVE_LANGUAGES"
                 :key="ll"
                 :class="[
-                  'p-3 border text-left text-xs transition-all',
+                  'p-3 border text-left text-xs transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lime-500',
                   form.love_language === ll
                     ? (microdosedItemIds.has('identity_love_language') ? 'border-purple-500 bg-purple-900/30 text-purple-200' : 'border-lime-400 bg-lime-900/50 text-lime-200')
                     : 'border-lime-900 text-lime-600 hover:border-lime-700 hover:text-lime-400'
@@ -252,7 +252,7 @@
                 v-for="vc in VALUES_CLUSTERS"
                 :key="vc"
                 :class="[
-                  'p-3 border text-left text-xs transition-all',
+                  'p-3 border text-left text-xs transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lime-500',
                   form.values_cluster === vc
                     ? (microdosedItemIds.has('identity_values') ? 'border-purple-500 bg-purple-900/30 text-purple-200' : 'border-lime-400 bg-lime-900/50 text-lime-200')
                     : 'border-lime-900 text-lime-600 hover:border-lime-700 hover:text-lime-400'
@@ -272,7 +272,7 @@
                 v-for="so in SOCIOSEXUAL_OPTIONS"
                 :key="so.value"
                 :class="[
-                  'p-3 border text-xs transition-all',
+                  'p-3 border text-xs transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lime-500',
                   form.sociosexual === so.value
                     ? (microdosedItemIds.has('identity_sociosexual') ? 'border-purple-500 bg-purple-900/30 text-purple-200' : 'border-lime-400 bg-lime-900/50 text-lime-200')
                     : 'border-lime-900 text-lime-600 hover:border-lime-700 hover:text-lime-400'
@@ -287,10 +287,10 @@
         </template>
 
         <div class="flex gap-3 pt-2">
-          <button class="flex-1 border border-lime-900 p-3 text-xs uppercase tracking-widest hover:bg-lime-900/20" @click="step--">&#8592; Back</button>
+          <button class="flex-1 border border-lime-900 p-3 text-xs uppercase tracking-widest hover:bg-lime-900/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lime-500" @click="step--">&#8592; Back</button>
           <button
             :disabled="!identityComplete"
-            class="flex-1 border border-lime-600 p-3 text-xs uppercase tracking-widest transition-all disabled:opacity-30 disabled:cursor-not-allowed hover:bg-lime-900/40"
+            class="flex-1 border border-lime-600 p-3 text-xs uppercase tracking-widest transition-all disabled:opacity-30 disabled:cursor-not-allowed hover:bg-lime-900/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lime-500"
             @click="submitAssessment"
           >{{ submitting ? 'Synchronizing...' : 'Initialize Sync' }}</button>
         </div>
@@ -457,7 +457,7 @@
             <h2 class="text-lg text-white uppercase tracking-widest">Agent Synthesis</h2>
             <button
               v-if="!profile.narrative && !generating"
-              class="text-[10px] border border-lime-600 px-4 py-2 hover:bg-lime-900 text-lime-400 transition-all uppercase tracking-widest"
+              class="text-[10px] border border-lime-600 px-4 py-2 hover:bg-lime-900 text-lime-400 transition-all uppercase tracking-widest focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lime-500"
               @click="generateNarrative"
             >Initiate</button>
             <span v-else-if="generating" class="text-[10px] text-lime-500 animate-pulse uppercase tracking-widest">Synthesizing...</span>
