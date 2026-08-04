@@ -11,6 +11,7 @@ import QuestLog from '@/components/QuestLog.vue'
 import HomePoll from '@/components/home/HomePoll.vue'
 import MeditationOverlay from '@/components/home/MeditationOverlay.vue'
 import NavCardGrid from '@/components/home/NavCardGrid.vue'
+import TodaysPractice from '@/components/home/TodaysPractice.vue'
 
 const router = useRouter()
 const { token, resetPoll } = usePollStore()
@@ -494,6 +495,9 @@ onUnmounted(() => {
               ></span>
             </div>
           </div>
+
+          <!-- Today's Practice — three-step daily ritual sequence -->
+          <TodaysPractice v-if="token" />
 
           <!-- Featured card -->
           <div
