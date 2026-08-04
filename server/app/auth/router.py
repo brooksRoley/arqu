@@ -6,12 +6,13 @@ import secrets
 from datetime import datetime, timedelta, timezone
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 
 from .models import RegisterRequest, LoginRequest, TokenResponse, UserResponse
 from .service import hash_password, verify_password, create_access_token
 from .deps import get_current_user_id
 from ..db import get_conn
+from ..ratelimit import limiter
 
 router = APIRouter()
 
@@ -22,7 +23,8 @@ _DUMMY_HASH = hash_password("__dummy_constant_time_guard__")
 
 
 @router.post("/register", response_model=TokenResponse, status_code=status.HTTP_201_CREATED)
-async def register(body: RegisterRequest):
+@limiter.limit("3/minute")
+async def register(request: Request, body: RegisterRequest):
     pw_hash = hash_password(body.password)
 
     async with get_conn() as conn:
@@ -52,7 +54,8 @@ async def register(body: RegisterRequest):
 
 
 @router.post("/login", response_model=TokenResponse)
-async def login(body: LoginRequest):
+@limiter.limit("5/minute")
+async def login(request: Request, body: LoginRequest):
     async with get_conn() as conn:
         row = await conn.fetchrow(
             "SELECT id, password_hash FROM users WHERE email = $1",
