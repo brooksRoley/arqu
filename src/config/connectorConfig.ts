@@ -274,6 +274,29 @@ export const connectorConfigs: Record<string, ProviderConfig> = {
       pulseRate: 'venus',
     },
   },
+
+  steam: {
+    key: 'steam',
+    label: 'Steam',
+    subtitle: 'The Isolation Metric',
+    color: '#1b2838',
+    heroStats: [
+      { field: 'game_count', label: 'Library Size', format: 'integer' },
+      { field: 'total_lifetime_hours', label: 'Lifetime Hours', format: 'decimal' },
+      { field: 'recent_2week_hours', label: 'Recent Activity (2wk)', format: 'decimal' },
+      { field: 'heavy_session_hours', label: 'Deep Session Hours', format: 'decimal' },
+    ],
+    tagFields: [
+      { field: 'recent_titles', label: 'Recently Played' },
+      { field: 'top_games', label: 'Most Played' },
+    ],
+    physics: {
+      particleSpeed: 'recent_2week_hours',
+      colorTemp: 'heavy_session_hours',
+      particleCount: 'game_count',
+      pulseRate: 'total_lifetime_hours',
+    },
+  },
 }
 
 /** Resolve a dot-path value from an object, e.g. "audio_avg.energy" */
