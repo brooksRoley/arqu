@@ -13,6 +13,11 @@ from ..db import get_conn
 
 router = APIRouter()
 
+# Pre-computed hash used when a login email is not found, so the response time
+# for invalid emails matches the response time for valid-but-wrong-password
+# attempts, preventing email enumeration via timing.
+_DUMMY_HASH = hash_password("__dummy_constant_time_guard__")
+
 
 @router.post("/register", response_model=TokenResponse, status_code=status.HTTP_201_CREATED)
 async def register(body: RegisterRequest):
@@ -52,11 +57,17 @@ async def login(body: LoginRequest):
             body.email,
         )
 
-    if row is None or not verify_password(body.password, row["password_hash"]):
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid email or password",
-        )
+    _invalid = HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Invalid email or password",
+    )
+
+    if row is None:
+        verify_password(body.password, _DUMMY_HASH)  # constant-time guard
+        raise _invalid
+
+    if not verify_password(body.password, row["password_hash"]):
+        raise _invalid
 
     token = create_access_token(row["id"])
     return TokenResponse(access_token=token)
