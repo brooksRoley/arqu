@@ -23,23 +23,19 @@
         class="absolute inset-0 w-full h-full"
       />
 
-      <!-- Text overlay -->
-      <div
-        v-if="overlayText"
-        class="absolute inset-0 flex items-center justify-center p-6 sm:p-12 pointer-events-none mix-blend-exclusion"
-      >
-        <h1 class="text-[6vw] sm:text-[10vw] leading-[0.95] font-black text-white text-center tracking-tighter uppercase break-words">
-          {{ overlayText }}
-        </h1>
-      </div>
+      <!-- Text overlay — SHARED composer canvas (same drawFrame as export) -->
+      <canvas
+        ref="overlayRef"
+        class="absolute inset-0 w-full h-full pointer-events-none"
+      />
 
       <!-- Empty state -->
       <div v-if="!hasMedia" class="absolute inset-0 flex items-center justify-center">
         <div class="text-center space-y-4">
           <p class="text-slate-600 text-sm tracking-[0.2em] uppercase">Glass Studio</p>
           <p class="text-slate-700 text-xs max-w-xs mx-auto leading-relaxed">
-            Upload a video or audio file, overlay text, layer Tone.js synthesis that
-            reacts to the speech, and export the composition.
+            Upload a video or audio file, layer customizable subliminal text, add
+            Tone.js synthesis that reacts to the speech, and export the composition.
           </p>
           <label class="inline-block px-6 py-3 bg-white/5 hover:bg-white/10 border border-white/10 rounded-full text-white/60 hover:text-white/80 text-sm tracking-wider cursor-pointer transition-all">
             Upload Video or Audio
@@ -63,6 +59,16 @@
         </div>
       </Transition>
     </div>
+
+    <!-- ── Text panel (collapsible) ── -->
+    <Transition name="fade">
+      <div
+        v-if="showText"
+        class="relative z-20 bg-black/70 backdrop-blur-xl border-t border-white/[0.04] px-4 py-3 max-h-[45vh] overflow-y-auto"
+      >
+        <TextControls :layers="composition.textLayers" />
+      </div>
+    </Transition>
 
     <!-- ── Bottom controls ── -->
     <div class="relative z-20 bg-black/60 backdrop-blur-xl border-t border-white/[0.04] px-4 py-3 space-y-2.5">
@@ -95,12 +101,23 @@
 
         <div class="w-px h-5 bg-white/[0.06] shrink-0" />
 
-        <!-- Text input -->
+        <!-- Quick text (binds the first / title layer) -->
         <input
-          v-model="overlayText"
+          v-model="quickText"
           placeholder="Overlay text..."
-          class="bg-transparent border-b border-white/10 focus:border-white/30 text-white text-sm px-2 py-1 w-36 sm:w-48 outline-none placeholder-slate-600 transition-colors font-light tracking-wide"
+          class="bg-transparent border-b border-white/10 focus:border-white/30 text-white text-sm px-2 py-1 w-28 sm:w-40 outline-none placeholder-slate-600 transition-colors font-light tracking-wide"
         />
+
+        <!-- Text panel toggle -->
+        <button
+          @click="showText = !showText"
+          class="px-2.5 py-1 rounded-full text-[10px] tracking-wider transition-all border whitespace-nowrap shrink-0"
+          :class="showText
+            ? 'bg-white/10 border-white/20 text-white/90'
+            : 'bg-transparent border-white/[0.06] text-white/40 hover:text-white/60 hover:border-white/10'"
+        >
+          Text ({{ composition.textLayers.length }})
+        </button>
 
         <div class="w-px h-5 bg-white/[0.06] shrink-0" />
 
@@ -135,24 +152,40 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onUnmounted } from 'vue'
+import { ref, reactive, computed, onMounted, onUnmounted } from 'vue'
 import * as Tone from 'tone'
 import { useAudioSync } from '@/composables/useAudioSync'
 import { useGlassTones, PRESET_LABELS, type TonePreset } from '@/composables/useGlassTones'
 import { useGlassExport } from '@/composables/useGlassExport'
+import { drawFrame } from '@/composables/useGlassComposer'
+import { makeDefaultComposition } from '@/composables/studioTypes'
+import TextControls from '@/components/studio/TextControls.vue'
 
 // ── Refs ──
 const mediaRef = ref<HTMLVideoElement | null>(null)
 const vizRef = ref<HTMLCanvasElement | null>(null)
+const overlayRef = ref<HTMLCanvasElement | null>(null)
 
-const overlayText = ref('')
 const isPlaying = ref(false)
 const currentTime = ref(0)
 const duration = ref(0)
 const mediaType = ref<'video' | 'audio' | ''>('')
 const mediaUrl = ref('')
 const fileName = ref('')
+const showText = ref(false)
 const hasMedia = computed(() => !!mediaUrl.value)
+
+// ── Composition (in-memory) ──
+const composition = reactive(makeDefaultComposition())
+
+// Quick text binds the first/title layer's primary line (preserves old behavior).
+const quickText = computed({
+  get: () => composition.textLayers[0]?.content[0] ?? '',
+  set: (v: string) => {
+    const l = composition.textLayers[0]
+    if (l) l.content = [v, ...l.content.slice(1)]
+  },
+})
 
 // ── Composables ──
 const sync = useAudioSync()
@@ -167,6 +200,34 @@ sync.onFrame((env, speaking) => {
   tones.update(env, speaking)
   if (mediaType.value === 'audio' && vizRef.value) drawViz(env)
 })
+
+// ── Shared-composer overlay loop (matches export exactly) ──
+let overlayRaf: number | undefined
+
+function overlayLoop() {
+  overlayRaf = requestAnimationFrame(overlayLoop)
+  const canvas = overlayRef.value
+  if (!canvas) return
+  const ctx = canvas.getContext('2d')
+  if (!ctx) return
+
+  const dpr = window.devicePixelRatio || 1
+  const w = canvas.clientWidth
+  const h = canvas.clientHeight
+  if (w === 0 || h === 0) return
+  if (canvas.width !== Math.round(w * dpr) || canvas.height !== Math.round(h * dpr)) {
+    canvas.width = Math.round(w * dpr)
+    canvas.height = Math.round(h * dpr)
+  }
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
+  ctx.clearRect(0, 0, w, h)
+
+  // Export re-draws text on a canvas frame while recording; skip preview draw
+  // then to avoid double compositing artifacts.
+  if (isExporting.value || !mediaRef.value) return
+  const clockMs = mediaRef.value.currentTime * 1000
+  drawFrame(ctx, clockMs, composition.textLayers, { w, h })
+}
 
 // ── Audio-only waveform ring ──
 function drawViz(env: number) {
@@ -264,14 +325,21 @@ async function doExport() {
   isPlaying.value = true
   await startExport(
     mediaRef.value,
-    overlayText.value,
+    composition.textLayers,
     sync.getAnalyserNode(),
     tones.getMasterNode(),
+    // No extra audio nodes yet — the Binaural step wires its node in here.
+    [],
   )
 }
 
-// ── Cleanup ──
+// ── Lifecycle ──
+onMounted(() => {
+  overlayRaf = requestAnimationFrame(overlayLoop)
+})
+
 onUnmounted(() => {
+  if (overlayRaf) cancelAnimationFrame(overlayRaf)
   sync.disconnect()
   tones.dispose()
   if (mediaUrl.value) URL.revokeObjectURL(mediaUrl.value)
