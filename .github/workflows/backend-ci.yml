@@ -1,0 +1,42 @@
+name: Backend CI
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'server/**'
+      - '.github/workflows/backend-ci.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'server/**'
+      - '.github/workflows/backend-ci.yml'
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    env:
+      DATABASE_URL: postgresql://ci:ci@localhost/ci
+      DATABASE_URL_UNPOOLED: postgresql://ci:ci@localhost/ci
+      JWT_SECRET: ci-jwt-secret-placeholder
+      SERVER_ENCRYPTION_KEY: ci-encryption-key-placeholder-32ch
+      OPENAI_API_KEY: sk-placeholder
+      OPENAI_EMBED_KEY: sk-placeholder
+      PINECONE_API_KEY: placeholder
+      CORS_ORIGINS: http://localhost:5173
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: server/requirements.txt
+
+      - name: Install dependencies
+        run: pip install -r server/requirements.txt
+
+      - name: Run tests
+        run: python -m pytest server/tests/ -v --tb=short
