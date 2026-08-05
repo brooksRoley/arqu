@@ -15,7 +15,35 @@ from ..db import get_conn
 
 router = APIRouter()
 
-VALID_PROVIDERS = {"spotify", "twitter", "google", "strava", "steam", "letterboxd", "costar"}
+VALID_PROVIDERS = {
+    "spotify", "twitter", "google", "strava",
+    "steam", "letterboxd", "costar",
+    "github", "reddit", "youtube",
+}
+
+# All valid client-side analytics events. Allowlist prevents authenticated
+# users from injecting noise into the session_events table.
+VALID_EVENTS = {
+    # self-expression loop
+    "journal_session_started",
+    "journal_session_completed",
+    "checkin_started",
+    "checkin_completed",
+    "zeromind_session_started",
+    "zeromind_session_completed",
+    # funnel steps
+    "registered",
+    "completed_poll",
+    "connected_any",
+    "connected_2plus",
+    "completed_psychometrics",
+    "had_first_session",
+    "streak_active",
+    # oracle / portrait
+    "has_vibe_vector",
+    "portrait_generated",
+    "portrait_viewed",
+}
 
 # Core self-expression / hypnosis loop events (journal, check-in, zeromind).
 # These drive the streak counter and the new funnel steps.
@@ -53,6 +81,11 @@ async def log_event(
     user_id: UUID = Depends(get_current_user_id),
 ):
     """Log a funnel event for the current user."""
+    if body.event not in VALID_EVENTS:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Unknown event: {body.event}",
+        )
     async with get_conn() as conn:
         await conn.execute(
             """
