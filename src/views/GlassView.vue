@@ -77,6 +77,11 @@
           @volume="onBinauralVolume"
           @tone="(k: string) => selectPreset(k as TonePreset)"
         />
+        <RecipeControls
+          v-else-if="activePanel === 'recipes'"
+          :active-recipe-id="composition.recipeId"
+          @apply="applyRecipe"
+        />
       </div>
     </Transition>
 
@@ -137,6 +142,15 @@
         >
           Sound<span v-if="composition.binaural.enabled" class="text-emerald-400/80"> ♪</span>
         </button>
+        <button
+          @click="togglePanel('recipes')"
+          class="px-2.5 py-1 rounded-full text-[10px] tracking-wider transition-all border whitespace-nowrap shrink-0"
+          :class="activePanel === 'recipes'
+            ? 'bg-white/10 border-white/20 text-white/90'
+            : 'bg-transparent border-white/[0.06] text-white/40 hover:text-white/60 hover:border-white/10'"
+        >
+          Recipes
+        </button>
 
         <div class="flex-1 min-w-0" />
 
@@ -162,8 +176,10 @@ import { useGlassExport } from '@/composables/useGlassExport'
 import { useStudioBinaural } from '@/composables/useStudioBinaural'
 import { drawFrame } from '@/composables/useGlassComposer'
 import { makeDefaultComposition } from '@/composables/studioTypes'
+import { type GlassRecipe } from '@/data/glassRecipes'
 import TextControls from '@/components/studio/TextControls.vue'
 import SoundControls from '@/components/studio/SoundControls.vue'
+import RecipeControls from '@/components/studio/RecipeControls.vue'
 
 // ── Refs ──
 const mediaRef = ref<HTMLVideoElement | null>(null)
@@ -176,10 +192,10 @@ const duration = ref(0)
 const mediaType = ref<'video' | 'audio' | ''>('')
 const mediaUrl = ref('')
 const fileName = ref('')
-const activePanel = ref<'text' | 'sound' | null>(null)
+const activePanel = ref<'text' | 'sound' | 'recipes' | null>(null)
 const hasMedia = computed(() => !!mediaUrl.value)
 
-function togglePanel(p: 'text' | 'sound') {
+function togglePanel(p: 'text' | 'sound' | 'recipes') {
   activePanel.value = activePanel.value === p ? null : p
 }
 
@@ -355,6 +371,18 @@ async function onBinauralApply() {
 
 function onBinauralVolume(v: number) {
   studioBinaural.setVolume(v)
+}
+
+// ── Recipes (Recipes panel) ──
+// Applying a recipe replaces the live composition's contents in place so the
+// reactive Text and Sound bindings update, then re-syncs the binaural engine.
+async function applyRecipe(recipe: GlassRecipe) {
+  const built = recipe.build()
+  composition.textLayers.splice(0, composition.textLayers.length, ...built.textLayers)
+  Object.assign(composition.binaural, built.binaural)
+  composition.recipeId = recipe.id
+  // Re-seat the engine on the new binaural config (same path as a Sound-panel edit).
+  await onBinauralApply()
 }
 
 // ── Export ──
