@@ -1,14 +1,19 @@
 import { ref, readonly } from 'vue'
 import * as Tone from 'tone'
+import { drawFrame } from './useGlassComposer'
+import type { TextLayer } from './studioTypes'
 
 /**
  * Records the Glass Studio composition to a downloadable video file.
  *
  * Pipeline:
- *   1. Composites each video frame + text overlay onto a hidden canvas.
+ *   1. Composites each video frame + text overlay onto a hidden canvas. The
+ *      text is drawn by the SHARED `drawFrame` composer so the export is
+ *      byte-for-byte identical to the live preview.
  *   2. canvas.captureStream(30) → video track.
- *   3. MediaStreamAudioDestinationNode captures both the original media
- *      audio and the Tone.js synthesis master into one audio track.
+ *   3. MediaStreamAudioDestinationNode captures the original media audio, the
+ *      Tone.js synthesis master, and any extra audio nodes (e.g. a binaural
+ *      engine — the Sound layer wires this in) into one audio track.
  *   4. MediaRecorder merges the two tracks and writes chunks.
  *   5. On media end → stop → Blob → download link.
  *
@@ -41,9 +46,11 @@ function pickMime(): string {
 export function useGlassExport() {
   async function startExport(
     mediaEl: HTMLVideoElement,
-    text: string,
+    textLayers: TextLayer[],
     analyserNode: AnalyserNode | null,
     toneMasterNode: GainNode,
+    extraAudioNodes: AudioNode[] = [],
+    beatHz?: number,
   ) {
     if (isRecording.value) return
     await Tone.start()
@@ -62,9 +69,13 @@ export function useGlassExport() {
     const canvasStream = exportCanvas.captureStream(30)
     const audioDest = ctx.createMediaStreamDestination()
 
-    // Route original audio + tone synthesis into the export bus
+    // Route original audio + tone synthesis (+ any extra nodes, e.g. binaural)
+    // into the export bus.
     if (analyserNode) analyserNode.connect(audioDest)
     toneMasterNode.connect(audioDest)
+    for (const node of extraAudioNodes) {
+      try { node.connect(audioDest) } catch { /* already connected */ }
+    }
 
     const combined = new MediaStream([
       ...canvasStream.getVideoTracks(),
@@ -94,6 +105,9 @@ export function useGlassExport() {
       // Tear down export-only connections
       if (analyserNode) try { analyserNode.disconnect(audioDest) } catch { /* ok */ }
       try { toneMasterNode.disconnect(audioDest) } catch { /* ok */ }
+      for (const node of extraAudioNodes) {
+        try { node.disconnect(audioDest) } catch { /* ok */ }
+      }
 
       isRecording.value = false
       progress.value = 0
@@ -113,39 +127,10 @@ export function useGlassExport() {
         exportCtx.fillRect(0, 0, cw, ch)
       }
 
-      // Text overlay (difference composite ≈ mix-blend-exclusion)
-      if (text) {
-        exportCtx.save()
-        exportCtx.globalCompositeOperation = 'difference'
-        const fontSize = Math.min(cw * 0.1, 140)
-        exportCtx.font = `900 ${fontSize}px system-ui, -apple-system, sans-serif`
-        exportCtx.fillStyle = 'white'
-        exportCtx.textAlign = 'center'
-        exportCtx.textBaseline = 'middle'
-
-        // Simple word-wrap
-        const words = text.split(/\s+/)
-        const maxW = cw * 0.85
-        const lines: string[] = []
-        let cur = ''
-        for (const w of words) {
-          const test = cur ? `${cur} ${w}` : w
-          if (exportCtx.measureText(test).width > maxW && cur) {
-            lines.push(cur)
-            cur = w
-          } else {
-            cur = test
-          }
-        }
-        if (cur) lines.push(cur)
-
-        const lh = fontSize * 1.1
-        const startY = ch / 2 - ((lines.length - 1) * lh) / 2
-        lines.forEach((line, i) => {
-          exportCtx!.fillText(line, cw / 2, startY + i * lh)
-        })
-        exportCtx.restore()
-      }
+      // Text overlays — SAME renderer as the live preview, driven by the
+      // media clock so subliminal flashes / motion are frame-accurate.
+      const clockMs = mediaEl.currentTime * 1000
+      drawFrame(exportCtx, clockMs, textLayers, { w: cw, h: ch }, beatHz)
 
       // Progress
       if (mediaEl.duration && isFinite(mediaEl.duration)) {

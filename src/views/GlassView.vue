@@ -23,23 +23,19 @@
         class="absolute inset-0 w-full h-full"
       />
 
-      <!-- Text overlay -->
-      <div
-        v-if="overlayText"
-        class="absolute inset-0 flex items-center justify-center p-6 sm:p-12 pointer-events-none mix-blend-exclusion"
-      >
-        <h1 class="text-[6vw] sm:text-[10vw] leading-[0.95] font-black text-white text-center tracking-tighter uppercase break-words">
-          {{ overlayText }}
-        </h1>
-      </div>
+      <!-- Text overlay — SHARED composer canvas (same drawFrame as export) -->
+      <canvas
+        ref="overlayRef"
+        class="absolute inset-0 w-full h-full pointer-events-none"
+      />
 
       <!-- Empty state -->
       <div v-if="!hasMedia" class="absolute inset-0 flex items-center justify-center">
         <div class="text-center space-y-4">
           <p class="text-slate-600 text-sm tracking-[0.2em] uppercase">Glass Studio</p>
           <p class="text-slate-700 text-xs max-w-xs mx-auto leading-relaxed">
-            Upload a video or audio file, overlay text, layer Tone.js synthesis that
-            reacts to the speech, and export the composition.
+            Upload a video or audio file, layer customizable subliminal text, add
+            Tone.js synthesis that reacts to the speech, and export the composition.
           </p>
           <label class="inline-block px-6 py-3 bg-white/5 hover:bg-white/10 border border-white/10 rounded-full text-white/60 hover:text-white/80 text-sm tracking-wider cursor-pointer transition-all">
             Upload Video or Audio
@@ -63,6 +59,31 @@
         </div>
       </Transition>
     </div>
+
+    <!-- ── Editor panel (Text / Sound tabs) ── -->
+    <Transition name="fade">
+      <div
+        v-if="activePanel"
+        class="relative z-20 bg-black/70 backdrop-blur-xl border-t border-white/[0.04] px-4 py-3 max-h-[45vh] overflow-y-auto"
+      >
+        <TextControls v-if="activePanel === 'text'" :layers="composition.textLayers" />
+        <SoundControls
+          v-else-if="activePanel === 'sound'"
+          :binaural="composition.binaural"
+          :active-beat-hz="studioBinaural.activeBeatHz.value"
+          :tone-presets="presetLabels"
+          :active-tone-preset="activePreset"
+          @apply="onBinauralApply"
+          @volume="onBinauralVolume"
+          @tone="(k: string) => selectPreset(k as TonePreset)"
+        />
+        <RecipeControls
+          v-else-if="activePanel === 'recipes'"
+          :active-recipe-id="composition.recipeId"
+          @apply="applyRecipe"
+        />
+      </div>
+    </Transition>
 
     <!-- ── Bottom controls ── -->
     <div class="relative z-20 bg-black/60 backdrop-blur-xl border-t border-white/[0.04] px-4 py-3 space-y-2.5">
@@ -95,29 +116,41 @@
 
         <div class="w-px h-5 bg-white/[0.06] shrink-0" />
 
-        <!-- Text input -->
+        <!-- Quick text (binds the first / title layer) -->
         <input
-          v-model="overlayText"
+          v-model="quickText"
           placeholder="Overlay text..."
-          class="bg-transparent border-b border-white/10 focus:border-white/30 text-white text-sm px-2 py-1 w-36 sm:w-48 outline-none placeholder-slate-600 transition-colors font-light tracking-wide"
+          class="bg-transparent border-b border-white/10 focus:border-white/30 text-white text-sm px-2 py-1 w-28 sm:w-40 outline-none placeholder-slate-600 transition-colors font-light tracking-wide"
         />
 
-        <div class="w-px h-5 bg-white/[0.06] shrink-0" />
-
-        <!-- Tone presets -->
-        <div class="flex gap-1.5 flex-wrap">
-          <button
-            v-for="(label, key) in presetLabels"
-            :key="key"
-            @click="selectPreset(key as TonePreset)"
-            class="px-2.5 py-1 rounded-full text-[10px] tracking-wider transition-all border whitespace-nowrap"
-            :class="activePreset === key
-              ? 'bg-white/10 border-white/20 text-white/90'
-              : 'bg-transparent border-white/[0.06] text-white/30 hover:text-white/50 hover:border-white/10'"
-          >
-            {{ label }}
-          </button>
-        </div>
+        <!-- Panel toggles -->
+        <button
+          @click="togglePanel('text')"
+          class="px-2.5 py-1 rounded-full text-[10px] tracking-wider transition-all border whitespace-nowrap shrink-0"
+          :class="activePanel === 'text'
+            ? 'bg-white/10 border-white/20 text-white/90'
+            : 'bg-transparent border-white/[0.06] text-white/40 hover:text-white/60 hover:border-white/10'"
+        >
+          Text ({{ composition.textLayers.length }})
+        </button>
+        <button
+          @click="togglePanel('sound')"
+          class="px-2.5 py-1 rounded-full text-[10px] tracking-wider transition-all border whitespace-nowrap shrink-0"
+          :class="activePanel === 'sound'
+            ? 'bg-white/10 border-white/20 text-white/90'
+            : 'bg-transparent border-white/[0.06] text-white/40 hover:text-white/60 hover:border-white/10'"
+        >
+          Sound<span v-if="composition.binaural.enabled" class="text-emerald-400/80"> ♪</span>
+        </button>
+        <button
+          @click="togglePanel('recipes')"
+          class="px-2.5 py-1 rounded-full text-[10px] tracking-wider transition-all border whitespace-nowrap shrink-0"
+          :class="activePanel === 'recipes'
+            ? 'bg-white/10 border-white/20 text-white/90'
+            : 'bg-transparent border-white/[0.06] text-white/40 hover:text-white/60 hover:border-white/10'"
+        >
+          Recipes
+        </button>
 
         <div class="flex-1 min-w-0" />
 
@@ -135,28 +168,53 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onUnmounted } from 'vue'
+import { ref, reactive, computed, onMounted, onUnmounted } from 'vue'
 import * as Tone from 'tone'
 import { useAudioSync } from '@/composables/useAudioSync'
 import { useGlassTones, PRESET_LABELS, type TonePreset } from '@/composables/useGlassTones'
 import { useGlassExport } from '@/composables/useGlassExport'
+import { useStudioBinaural } from '@/composables/useStudioBinaural'
+import { drawFrame } from '@/composables/useGlassComposer'
+import { makeDefaultComposition } from '@/composables/studioTypes'
+import { type GlassRecipe } from '@/data/glassRecipes'
+import TextControls from '@/components/studio/TextControls.vue'
+import SoundControls from '@/components/studio/SoundControls.vue'
+import RecipeControls from '@/components/studio/RecipeControls.vue'
 
 // ── Refs ──
 const mediaRef = ref<HTMLVideoElement | null>(null)
 const vizRef = ref<HTMLCanvasElement | null>(null)
+const overlayRef = ref<HTMLCanvasElement | null>(null)
 
-const overlayText = ref('')
 const isPlaying = ref(false)
 const currentTime = ref(0)
 const duration = ref(0)
 const mediaType = ref<'video' | 'audio' | ''>('')
 const mediaUrl = ref('')
 const fileName = ref('')
+const activePanel = ref<'text' | 'sound' | 'recipes' | null>(null)
 const hasMedia = computed(() => !!mediaUrl.value)
+
+function togglePanel(p: 'text' | 'sound' | 'recipes') {
+  activePanel.value = activePanel.value === p ? null : p
+}
+
+// ── Composition (in-memory) ──
+const composition = reactive(makeDefaultComposition())
+
+// Quick text binds the first/title layer's primary line (preserves old behavior).
+const quickText = computed({
+  get: () => composition.textLayers[0]?.content[0] ?? '',
+  set: (v: string) => {
+    const l = composition.textLayers[0]
+    if (l) l.content = [v, ...l.content.slice(1)]
+  },
+})
 
 // ── Composables ──
 const sync = useAudioSync()
 const tones = useGlassTones()
+const studioBinaural = useStudioBinaural(composition.binaural)
 const { isRecording: isExporting, progress: exportProgress, startExport, stopExport: cancelExport } = useGlassExport()
 
 const presetLabels = PRESET_LABELS
@@ -167,6 +225,36 @@ sync.onFrame((env, speaking) => {
   tones.update(env, speaking)
   if (mediaType.value === 'audio' && vizRef.value) drawViz(env)
 })
+
+// ── Shared-composer overlay loop (matches export exactly) ──
+let overlayRaf: number | undefined
+
+function overlayLoop() {
+  overlayRaf = requestAnimationFrame(overlayLoop)
+  const canvas = overlayRef.value
+  if (!canvas) return
+  const ctx = canvas.getContext('2d')
+  if (!ctx) return
+
+  const dpr = window.devicePixelRatio || 1
+  const w = canvas.clientWidth
+  const h = canvas.clientHeight
+  if (w === 0 || h === 0) return
+  if (canvas.width !== Math.round(w * dpr) || canvas.height !== Math.round(h * dpr)) {
+    canvas.width = Math.round(w * dpr)
+    canvas.height = Math.round(h * dpr)
+  }
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
+  ctx.clearRect(0, 0, w, h)
+
+  // Export re-draws text on a canvas frame while recording; skip preview draw
+  // then to avoid double compositing artifacts.
+  if (isExporting.value || !mediaRef.value) return
+  const clockMs = mediaRef.value.currentTime * 1000
+  // Pass the live binaural beat so `syncToBeat` motion pulses in the preview.
+  const beatHz = composition.binaural.enabled ? studioBinaural.activeBeatHz.value : undefined
+  drawFrame(ctx, clockMs, composition.textLayers, { w, h }, beatHz)
+}
 
 // ── Audio-only waveform ring ──
 function drawViz(env: number) {
@@ -217,16 +305,24 @@ async function handleUpload(e: Event) {
 async function onMediaLoaded() {
   if (!mediaRef.value) return
   duration.value = mediaRef.value.duration
+  // Journey phases auto-fit to the media length.
+  studioBinaural.setMediaDuration(mediaRef.value.duration)
   await Tone.start()
   await sync.connect(mediaRef.value)
 }
 
 function onTimeUpdate() {
-  if (mediaRef.value) currentTime.value = mediaRef.value.currentTime
+  if (!mediaRef.value) return
+  currentTime.value = mediaRef.value.currentTime
+  // Advance the binaural journey off the media clock (no-op in preset mode).
+  studioBinaural.tickJourney(mediaRef.value.currentTime)
 }
 
 function onEnded() {
-  if (!isExporting.value) isPlaying.value = false
+  if (!isExporting.value) {
+    isPlaying.value = false
+    studioBinaural.stop()
+  }
 }
 
 async function togglePlay() {
@@ -234,8 +330,10 @@ async function togglePlay() {
   await Tone.start()
   if (isPlaying.value) {
     mediaRef.value.pause()
+    studioBinaural.stop()
   } else {
     await mediaRef.value.play()
+    if (composition.binaural.enabled) await studioBinaural.start()
   }
   isPlaying.value = !isPlaying.value
 }
@@ -258,22 +356,72 @@ async function selectPreset(preset: TonePreset) {
   tones.setPreset(preset)
 }
 
+// ── Binaural (Sound panel) ──
+// `apply` fires after a band/mode/journey/enable change → re-sync the engine.
+async function onBinauralApply() {
+  if (composition.binaural.enabled && isPlaying.value) {
+    await studioBinaural.start() // idempotent init + applies current config
+  } else if (!composition.binaural.enabled) {
+    studioBinaural.stop()
+  } else {
+    // Enabled but paused — just keep config in sync for the next play.
+    studioBinaural.refresh()
+  }
+}
+
+function onBinauralVolume(v: number) {
+  studioBinaural.setVolume(v)
+}
+
+// ── Recipes (Recipes panel) ──
+// Applying a recipe replaces the live composition's contents in place so the
+// reactive Text and Sound bindings update, then re-syncs the binaural engine.
+async function applyRecipe(recipe: GlassRecipe) {
+  const built = recipe.build()
+  composition.textLayers.splice(0, composition.textLayers.length, ...built.textLayers)
+  Object.assign(composition.binaural, built.binaural)
+  composition.recipeId = recipe.id
+  // Re-seat the engine on the new binaural config (same path as a Sound-panel edit).
+  await onBinauralApply()
+}
+
 // ── Export ──
 async function doExport() {
   if (!mediaRef.value) return
   isPlaying.value = true
+
+  // Start the beat first so its graph lives in Tone's shared context and its
+  // output node can be routed into the export's MediaStreamAudioDestination
+  // (same context = the beat actually lands in the file).
+  const extraNodes: AudioNode[] = []
+  let beatHz: number | undefined
+  if (composition.binaural.enabled) {
+    await studioBinaural.start()
+    const node = studioBinaural.getOutputNode()
+    if (node) extraNodes.push(node)
+    beatHz = studioBinaural.activeBeatHz.value
+  }
+
   await startExport(
     mediaRef.value,
-    overlayText.value,
+    composition.textLayers,
     sync.getAnalyserNode(),
     tones.getMasterNode(),
+    extraNodes,
+    beatHz,
   )
 }
 
-// ── Cleanup ──
+// ── Lifecycle ──
+onMounted(() => {
+  overlayRaf = requestAnimationFrame(overlayLoop)
+})
+
 onUnmounted(() => {
+  if (overlayRaf) cancelAnimationFrame(overlayRaf)
   sync.disconnect()
   tones.dispose()
+  studioBinaural.destroy()
   if (mediaUrl.value) URL.revokeObjectURL(mediaUrl.value)
 })
 </script>
