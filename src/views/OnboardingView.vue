@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, watch, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/composables/useAuthStore'
 import { usePollStore } from '@/composables/usePollStore'
+import { useVibeStore } from '@/composables/useVibeStore'
 
 const router = useRouter()
 const { user } = useAuthStore()
@@ -32,6 +33,8 @@ function saveState(s: OnboardingState) {
 
 const state = ref<OnboardingState>(loadState())
 
+const { oauthState } = useVibeStore()
+
 // Auto-detect poll completion from pollStore
 onMounted(() => {
   if (pollToken.value && !state.value.poll) {
@@ -39,6 +42,17 @@ onMounted(() => {
     saveState(state.value)
   }
 })
+
+// Auto-detect calibrate completion: any connected provider counts
+const hasAnyConnected = computed(() =>
+  Object.values(oauthState.value).some((s) => s.connected)
+)
+
+watch(hasAnyConnected, (v) => {
+  if (v && !state.value.calibrate) {
+    markComplete('calibrate')
+  }
+}, { immediate: true })
 
 interface Step {
   key: keyof Omit<OnboardingState, 'completed'>
@@ -361,6 +375,11 @@ function skipAll() {
   box-shadow: 0 0 16px rgba(167, 139, 250, 0.3);
 }
 
+.btn-primary:focus-visible {
+  outline: 2px solid #a78bfa;
+  outline-offset: 2px;
+}
+
 .btn-primary.btn-lg {
   padding: 0.75rem 2rem;
   font-size: 1rem;
@@ -380,6 +399,11 @@ function skipAll() {
 .btn-ghost:hover {
   border-color: rgba(255, 255, 255, 0.2);
   color: rgba(232, 228, 240, 0.8);
+}
+
+.btn-ghost:focus-visible {
+  outline: 2px solid rgba(167, 139, 250, 0.6);
+  outline-offset: 2px;
 }
 
 .btn-ghost.btn-sm {

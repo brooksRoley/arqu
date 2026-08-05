@@ -86,7 +86,9 @@ async function initiateRedditAuth() {
   isConnecting.value = true
 
   try {
-    const response = await fetch(`${API}/api/reddit/connect?token=${token.value}`)
+    const response = await fetch(`${API}/api/reddit/connect`, {
+      headers: { Authorization: `Bearer ${token.value}` },
+    })
     if (response.status === 401) {
       logout()
       window.location.href = '/login'

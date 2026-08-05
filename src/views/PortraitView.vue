@@ -117,7 +117,7 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div class="min-h-screen bg-gray-950 text-gray-100">
+  <div class="min-h-screen calibrate-bg text-gray-100">
     <div class="max-w-3xl mx-auto px-6 py-20 sm:py-24">
       <header class="mb-14">
         <h1 class="text-4xl sm:text-5xl font-black tracking-tight mb-3">Integrated Portrait</h1>
@@ -214,6 +214,25 @@ onUnmounted(() => {
               class="text-xs font-mono text-gray-600 hover:text-gray-400 underline underline-offset-4 transition-colors"
             >re-sit for a new portrait</button>
           </footer>
+
+          <!-- What's next — return hook at peak engagement; shown only when portrait is fresh -->
+          <div v-if="state === 'ready'" class="pt-8 border-t border-gray-800 space-y-4">
+            <p class="text-xs uppercase tracking-[0.3em] text-gray-600 font-mono">What's next</p>
+            <div class="flex flex-wrap gap-3">
+              <RouterLink
+                to="/checkin"
+                class="text-xs font-mono px-5 py-2.5 rounded-full border border-gray-700/60 text-gray-400 hover:border-indigo-400/50 hover:text-indigo-300 transition-colors"
+              >Daily check-in</RouterLink>
+              <RouterLink
+                to="/journal"
+                class="text-xs font-mono px-5 py-2.5 rounded-full border border-gray-700/60 text-gray-400 hover:border-indigo-400/50 hover:text-indigo-300 transition-colors"
+              >Open journal</RouterLink>
+              <RouterLink
+                to="/"
+                class="text-xs font-mono px-5 py-2.5 rounded-full border border-gray-700/60 text-gray-400 hover:border-gray-500/60 hover:text-gray-300 transition-colors"
+              >Return home</RouterLink>
+            </div>
+          </div>
         </div>
       </template>
 

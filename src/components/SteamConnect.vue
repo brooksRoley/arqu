@@ -81,7 +81,9 @@ async function initiateSteamAuth() {
   isConnecting.value = true
 
   try {
-    const response = await fetch(`${API}/api/steam/connect?token=${token.value}`)
+    const response = await fetch(`${API}/api/steam/connect`, {
+      headers: { Authorization: `Bearer ${token.value}` },
+    })
     if (response.status === 401) {
       logout()
       window.location.href = '/login'

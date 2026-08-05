@@ -2,20 +2,29 @@
 
 from __future__ import annotations
 
+import secrets
+from datetime import datetime, timedelta, timezone
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 
 from .models import RegisterRequest, LoginRequest, TokenResponse, UserResponse
 from .service import hash_password, verify_password, create_access_token
 from .deps import get_current_user_id
 from ..db import get_conn
+from ..ratelimit import limiter
 
 router = APIRouter()
 
+# Pre-computed hash used when a login email is not found, so the response time
+# for invalid emails matches the response time for valid-but-wrong-password
+# attempts, preventing email enumeration via timing.
+_DUMMY_HASH = hash_password("__dummy_constant_time_guard__")
+
 
 @router.post("/register", response_model=TokenResponse, status_code=status.HTTP_201_CREATED)
-async def register(body: RegisterRequest):
+@limiter.limit("3/minute")
+async def register(request: Request, body: RegisterRequest):
     pw_hash = hash_password(body.password)
 
     async with get_conn() as conn:
@@ -45,18 +54,25 @@ async def register(body: RegisterRequest):
 
 
 @router.post("/login", response_model=TokenResponse)
-async def login(body: LoginRequest):
+@limiter.limit("5/minute")
+async def login(request: Request, body: LoginRequest):
     async with get_conn() as conn:
         row = await conn.fetchrow(
             "SELECT id, password_hash FROM users WHERE email = $1",
             body.email,
         )
 
-    if row is None or not verify_password(body.password, row["password_hash"]):
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid email or password",
-        )
+    _invalid = HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Invalid email or password",
+    )
+
+    if row is None:
+        verify_password(body.password, _DUMMY_HASH)  # constant-time guard
+        raise _invalid
+
+    if not verify_password(body.password, row["password_hash"]):
+        raise _invalid
 
     token = create_access_token(row["id"])
     return TokenResponse(access_token=token)
@@ -74,6 +90,25 @@ async def me(user_id: UUID = Depends(get_current_user_id)):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
 
     return UserResponse(**dict(row))
+
+
+@router.post("/connect-token")
+async def issue_connect_token(user_id: UUID = Depends(get_current_user_id)):
+    """Issue a 60-second single-use token for OAuth connect redirects.
+
+    Redirect-based connect flows (Spotify, GCal) pass the full session JWT in
+    the URL because browser navigation can't set headers — that leaks to server
+    logs, browser history, and Referer. This endpoint mints a short-lived token
+    that expires in 60 s and is consumed on first use, so a leak window is tiny.
+    """
+    ct = secrets.token_urlsafe(32)
+    expires_at = datetime.now(timezone.utc) + timedelta(seconds=60)
+    async with get_conn() as conn:
+        await conn.execute(
+            "INSERT INTO connect_tokens (token, user_id, expires_at) VALUES ($1, $2, $3)",
+            ct, user_id, expires_at,
+        )
+    return {"ct": ct}
 
 
 @router.get("/connectors")

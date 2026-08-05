@@ -39,7 +39,7 @@ async function goToMessages() {
   } catch { /* silent */ }
   visible.value = false
   matches.value = []
-  router.push('/messages')
+  router.push('/portrait')
 }
 
 function dismiss() {

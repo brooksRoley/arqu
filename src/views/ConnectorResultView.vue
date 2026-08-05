@@ -1,5 +1,5 @@
 <template>
-  <div class="min-h-screen bg-gray-950 text-gray-100 relative">
+  <div class="min-h-screen result-bg text-gray-100 relative">
 
     <!-- Section 1: Hero — full-viewport physics canvas + title -->
     <section
@@ -645,3 +645,7 @@ onUnmounted(() => {
   statObserver?.disconnect()
 })
 </script>
+
+<style scoped>
+.result-bg { background: #08060e; }
+</style>

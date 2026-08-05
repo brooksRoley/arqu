@@ -69,13 +69,11 @@ import { useRouter } from 'vue-router'
 import { usePollStore } from '@/composables/usePollStore'
 import { useVibeStore } from '@/composables/useVibeStore'
 import { useAuthStore } from '@/composables/useAuthStore'
-import { useMessageStore } from '@/composables/useMessageStore'
 
 const router = useRouter()
 const { token: pollToken } = usePollStore()
 const { oauthState } = useVibeStore()
 const { isAuthenticated } = useAuthStore()
-const { threads } = useMessageStore()
 
 // ── Onboarding state (mirrors NavBar / OnboardingView) ───────────────────────
 
@@ -120,10 +118,9 @@ interface Step {
   done:   boolean
 }
 
-const hasSentMessage = computed(() => threads.value.length > 0)
-
 const steps = computed<Step[]>(() => {
   const oauth = oauthState.value
+  const connectedCount = Object.values(oauth).filter((p) => p.connected).length
   return [
     {
       key:    'attune',
@@ -173,7 +170,7 @@ const steps = computed<Step[]>(() => {
       key:    'confess',
       phase:  'Phase 3 — Confession',
       label:  'Confession',
-      desc:   'Speak to the Oracle. Your unfiltered text is encrypted, analyzed, and embedded into psychological space.',
+      desc:   'Speak to the Oracle. Your unfiltered thoughts are encrypted and analyzed — the rawest signal in your profile.',
       action: 'Open intake',
       icon:   '◈',
       color:  '#38bdf8',
@@ -181,26 +178,28 @@ const steps = computed<Step[]>(() => {
       done:   onboarding.value.intake,
     },
     {
-      key:    'resonate',
-      phase:  'Phase 4 — Resonance',
-      label:  'Resonance',
-      desc:   'Three shadows surface from the nearest coordinates in 1,536-dimensional space. Accept or pass.',
-      action: 'Enter the game',
-      icon:   '⬡',
-      color:  '#f59e0b',
-      route:  '/game',
-      done:   onboarding.value.completed,
+      key:    'portrait',
+      phase:  'Phase 4 — Integration',
+      label:  'Integrated Portrait',
+      desc:   connectedCount >= 2
+        ? 'Your streams are ready to be woven into a single portrait — one reading across everything you shared.'
+        : 'Connect at least two sources and the portrait becomes possible.',
+      action: 'Sit for your portrait',
+      icon:   '◉',
+      color:  '#818cf8',
+      route:  '/portrait',
+      done:   false,
     },
     {
-      key:    'message',
-      phase:  'Phase 5 — Contact',
-      label:  'First Message',
-      desc:   'Reach out to your match. The algorithm found them — now the human part begins.',
-      action: 'Open messages',
-      icon:   '✉',
-      color:  '#c084fc',
-      route:  '/messages',
-      done:   hasSentMessage.value,
+      key:    'checkin',
+      phase:  'Phase 5 — Daily Practice',
+      label:  'Daily Check-In',
+      desc:   'Return daily. A mood read and arc — your inner weather tracked over time.',
+      action: 'Check in',
+      icon:   '◐',
+      color:  '#34d399',
+      route:  '/checkin',
+      done:   false,
     },
   ]
 })

@@ -94,11 +94,11 @@ const navItems = computed<NavItem[]>(() => {
     // The Archive — connectors & data
     { label: 'Calibrate',    icon: 'M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4', route: '/calibrate', zone: 'archive' },
     { label: 'Analysis',     icon: 'M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z', route: '/psychoanalysis', zone: 'archive' },
-    { label: 'Messages',     icon: 'M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z', route: '/messages', zone: 'archive' },
+    { label: 'Portrait',     icon: 'M5.121 17.804A13.937 13.937 0 0112 16c2.5 0 4.847.655 6.879 1.804M15 10a3 3 0 11-6 0 3 3 0 016 0zm6 2a9 9 0 11-18 0 9 9 0 0118 0z', route: '/portrait', zone: 'archive' },
   ]
   return items.filter(i => {
     if (i.route === '/universe' && !isAuthenticated.value) return false
-    if (['/checkin', '/journal', '/calibrate', '/psychoanalysis', '/messages'].includes(i.route) && !isAuthenticated.value) return false
+    if (['/checkin', '/journal', '/calibrate', '/psychoanalysis', '/portrait'].includes(i.route) && !isAuthenticated.value) return false
     return true
   })
 })

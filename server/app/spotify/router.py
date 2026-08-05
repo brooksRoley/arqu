@@ -18,8 +18,6 @@ import json
 import time
 from uuid import UUID
 
-from ..oracle.trigger import maybe_trigger_synthesis
-
 import logging
 
 import httpx
@@ -165,6 +163,7 @@ async def spotify_sync(user_id: UUID = Depends(get_current_user_id)):
 
     # Re-trigger Oracle synthesis (non-blocking)
     try:
+        from ..oracle.trigger import maybe_trigger_synthesis
         await maybe_trigger_synthesis(user_id)
     except Exception:
         logger.exception("Oracle synthesis trigger failed for user %s (non-blocking)", user_id)
@@ -173,16 +172,16 @@ async def spotify_sync(user_id: UUID = Depends(get_current_user_id)):
 
 
 @router.get("/connect")
-async def spotify_connect(token: str = Query(..., description="Frontend JWT")):
+async def spotify_connect(ct: str = Query(..., description="Short-lived connect token")):
     """
     Redirect the authenticated user to Spotify's authorization page.
-    Accepts the JWT as a query param because browser redirects can't set headers.
+    Accepts a short-lived connect token (?ct=) minted by POST /api/auth/connect-token.
     """
     settings = get_settings()
     if not settings.spotify_client_id:
         raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="Spotify not configured")
 
-    payload = validate_connect_token(token)
+    payload = await validate_connect_token(ct)
 
     url = build_authorize_url(
         _SPOTIFY_AUTH_URL,
@@ -281,6 +280,7 @@ async def spotify_callback(code: str, state: str):
     await store_provider_data(user_id, "spotify_data", spotify_profile)
 
     # 7.5 Auto-trigger Oracle synthesis if enough providers connected
+    from ..oracle.trigger import maybe_trigger_synthesis
     await maybe_trigger_synthesis(UUID(user_id))
 
     # 8. Fetch full vibe vector to re-embed with Spotify context blended in
@@ -309,7 +309,7 @@ async def spotify_callback(code: str, state: str):
 
     # 10. Redirect back to frontend
     frontend = settings.cors_origin_list[0] if settings.cors_origin_list else "http://localhost:5173"
-    return RedirectResponse(f"{frontend}/game?spotify=connected")
+    return RedirectResponse(f"{frontend}/calibrate/spotify")
 
 
 # ── Profile distillation ─────────────────────────────────────────────────────

@@ -21,15 +21,12 @@ from uuid import UUID
 
 import secrets
 
-from ..oracle.trigger import maybe_trigger_synthesis
-
 import httpx
 import jwt
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.responses import JSONResponse
 
 from ..auth.deps import get_current_user_id
-from ..auth.service import decode_access_token
 from ..config import get_settings
 from ..oauth_base import store_provider_data
 from ..db import get_conn
@@ -86,25 +83,21 @@ async def _verify_state(state: str) -> str:
 # ── Routes ───────────────────────────────────────────────────────────────────
 
 @router.get("/connect")
-async def reddit_connect(token: str = Query(..., description="Frontend JWT")):
+async def reddit_connect(user_id: UUID = Depends(get_current_user_id)):
     """
     Return the Reddit authorization URL for the authenticated user.
-    Accepts the JWT as a query param because browser redirects can't set headers.
+    Frontend fetches with Authorization: Bearer header — no JWT in the URL.
     """
     settings = get_settings()
     if not settings.reddit_client_id:
         raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="Reddit not configured")
-
-    payload = decode_access_token(token)
-    if not payload:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
 
     params = {
         "client_id": settings.reddit_client_id,
         "response_type": "code",
         "redirect_uri": settings.reddit_redirect_uri,
         "scope": _SCOPES,
-        "state": _make_state(payload["sub"]),
+        "state": _make_state(str(user_id)),
         "duration": "permanent",
     }
     return {"auth_url": f"{_REDDIT_AUTH_URL}?{urlencode(params)}"}
@@ -241,6 +234,7 @@ async def reddit_callback(code: str, state: str):
     await store_provider_data(user_id, "reddit_data", reddit_profile)
 
     # Auto-trigger Oracle synthesis if enough providers connected
+    from ..oracle.trigger import maybe_trigger_synthesis
     await maybe_trigger_synthesis(UUID(user_id))
 
     # 10. Return success — frontend handles navigation

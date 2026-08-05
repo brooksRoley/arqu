@@ -80,7 +80,7 @@ const bigFiveLabels: Record<string, string> = {
     <!-- Error -->
     <div v-else-if="revealError" class="flex flex-col items-center justify-center h-screen gap-4">
       <div class="text-red-400">{{ revealError }}</div>
-      <button @click="router.push('/game')" class="text-sm text-gray-500 hover:text-white">Back to matches</button>
+      <button @click="router.push('/portrait')" class="text-sm text-gray-500 hover:text-white">Back to matches</button>
     </div>
 
     <!-- Reveal scroll -->
@@ -347,10 +347,10 @@ const bigFiveLabels: Record<string, string> = {
         </div>
         <p class="text-sm text-gray-400 max-w-md text-center mb-8">{{ revealData.match_reason }}</p>
         <button
-          @click="router.push(`/messages/${matchId}`)"
+          @click="router.push('/portrait')"
           class="px-8 py-3 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-medium transition-colors"
         >Send a message</button>
-        <router-link to="/game" class="text-xs text-gray-500 hover:text-gray-400 mt-4">Back to matches</router-link>
+        <router-link to="/portrait" class="text-xs text-gray-500 hover:text-gray-400 mt-4">Back to matches</router-link>
       </section>
     </div>
   </div>

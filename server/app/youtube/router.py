@@ -21,15 +21,12 @@ from uuid import UUID
 
 import secrets
 
-from ..oracle.trigger import maybe_trigger_synthesis
-
 import httpx
 import jwt
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.responses import RedirectResponse
 
 from ..auth.deps import get_current_user_id
-from ..auth.service import decode_access_token
 from ..config import get_settings
 from ..db import get_conn
 from ..oauth_base import store_provider_data
@@ -87,29 +84,26 @@ async def _verify_state(state: str) -> str:
 # ── Routes ───────────────────────────────────────────────────────────────────
 
 @router.get("/connect")
-async def youtube_connect(token: str = Query(..., description="Frontend JWT")):
+async def youtube_connect(user_id: UUID = Depends(get_current_user_id)):
     """
-    Redirect the authenticated user to Google's YouTube authorization page.
-    Accepts the JWT as a query param because browser redirects can't set headers.
+    Return the YouTube authorization URL for the authenticated user.
+    Frontend fetches this endpoint with Authorization: Bearer header and then
+    redirects to the returned auth_url — no JWT in the URL.
     """
     settings = get_settings()
     if not settings.google_client_id:
         raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="Google OAuth not configured")
-
-    payload = decode_access_token(token)
-    if not payload:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
 
     params = {
         "client_id": settings.google_client_id,
         "redirect_uri": settings.youtube_redirect_uri,
         "response_type": "code",
         "scope": _SCOPES,
-        "state": _make_state(payload["sub"]),
+        "state": _make_state(str(user_id)),
         "access_type": "offline",
         "prompt": "consent",
     }
-    return RedirectResponse(f"{_GOOGLE_AUTH_URL}?{urlencode(params)}")
+    return {"auth_url": f"{_GOOGLE_AUTH_URL}?{urlencode(params)}"}
 
 
 @router.get("/callback")
@@ -213,6 +207,7 @@ async def youtube_callback(code: str, state: str):
         await store_provider_data(user_id, "youtube_data", youtube_profile)
 
         # 7.5 Auto-trigger Oracle synthesis if enough providers connected
+        from ..oracle.trigger import maybe_trigger_synthesis
         await maybe_trigger_synthesis(UUID(user_id))
 
     except HTTPException:

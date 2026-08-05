@@ -221,27 +221,6 @@ const router = createRouter({
       component: () => import('@/views/IntakeView.vue'),
       meta: { requiresAuth: true }
     },
-    {
-      path: '/game',
-      name: 'game',
-      component: () => import('@/views/GameView.vue'),
-      meta: { requiresAuth: true }
-    },
-
-    // ── Messaging (mutual matches only) ─────────────────────────────
-    {
-      path: '/messages',
-      name: 'messages',
-      component: () => import('@/views/MessagesView.vue'),
-      meta: { requiresAuth: true }
-    },
-    {
-      path: '/messages/:userId',
-      name: 'thread',
-      component: () => import('@/views/ThreadView.vue'),
-      meta: { requiresAuth: true }
-    },
-
     // ── Spotify field visualization ──────────────────────────────────────
     {
       path: '/spotify',

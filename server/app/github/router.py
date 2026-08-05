@@ -17,10 +17,8 @@ import json
 from collections import Counter
 from uuid import UUID
 
-from ..oracle.trigger import maybe_trigger_synthesis
-
 import httpx
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.responses import JSONResponse
 
 from ..auth.deps import get_current_user_id
@@ -32,7 +30,6 @@ from ..oauth_base import (
     make_oauth_state,
     store_oauth_tokens,
     store_provider_data,
-    validate_connect_token,
     verify_oauth_state,
 )
 
@@ -47,23 +44,21 @@ _SCOPES = "read:user repo"
 # -- Routes --------------------------------------------------------------------
 
 @router.get("/connect")
-async def github_connect(token: str = Query(..., description="Frontend JWT")):
+async def github_connect(user_id: UUID = Depends(get_current_user_id)):
     """
     Return the GitHub authorization URL for the authenticated user.
-    Accepts the JWT as a query param because browser redirects can't set headers.
+    Frontend fetches with Authorization: Bearer header — no JWT in the URL.
     """
     settings = get_settings()
     if not settings.github_client_id:
         raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="GitHub not configured")
-
-    payload = validate_connect_token(token)
 
     url = build_authorize_url(
         _GITHUB_AUTH_URL,
         client_id=settings.github_client_id,
         redirect_uri=settings.github_redirect_uri,
         scope=_SCOPES,
-        state=make_oauth_state(payload["sub"]),
+        state=make_oauth_state(str(user_id)),
     )
     return {"auth_url": url}
 
@@ -154,6 +149,7 @@ async def github_callback(code: str, state: str):
     await store_provider_data(user_id, "github_data", github_profile)
 
     # Auto-trigger Oracle synthesis if enough providers connected
+    from ..oracle.trigger import maybe_trigger_synthesis
     await maybe_trigger_synthesis(UUID(user_id))
 
     # 9. Return success — frontend handles navigation

@@ -231,7 +231,7 @@ function triggerCalendarSync() {
 }
 
 function enterTheGame() {
-  router.push('/game')
+  router.push('/portrait')
 }
 
 function goBack() {
