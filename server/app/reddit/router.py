@@ -21,8 +21,6 @@ from uuid import UUID
 
 import secrets
 
-from ..oracle.trigger import maybe_trigger_synthesis
-
 import httpx
 import jwt
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -236,6 +234,7 @@ async def reddit_callback(code: str, state: str):
     await store_provider_data(user_id, "reddit_data", reddit_profile)
 
     # Auto-trigger Oracle synthesis if enough providers connected
+    from ..oracle.trigger import maybe_trigger_synthesis
     await maybe_trigger_synthesis(UUID(user_id))
 
     # 10. Return success — frontend handles navigation
