@@ -9,7 +9,6 @@ import logging
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 
 from .config import get_settings
@@ -112,6 +111,25 @@ async def lifespan(app: FastAPI):
     yield
 
     await close_pool()
+
+
+def _rate_limit_exceeded_handler(request: Request, exc: RateLimitExceeded) -> JSONResponse:
+    """429 with a Retry-After header so blocked clients know when to back off.
+
+    We avoid slowapi's global ``headers_enabled`` mode because it tries to inject
+    headers into every (success) response and errors on endpoints that return a
+    Pydantic ``response_model`` rather than a raw Response. Adding Retry-After
+    only on the 429 path sidesteps that entirely.
+    """
+    try:
+        retry_after = int(exc.limit.limit.get_expiry())
+    except Exception:
+        retry_after = 60
+    return JSONResponse(
+        status_code=429,
+        content={"detail": "Rate limit exceeded. Please slow down and try again."},
+        headers={"Retry-After": str(retry_after)},
+    )
 
 
 def create_app() -> FastAPI:

@@ -122,7 +122,7 @@
         <router-link to="/intake" class="px-5 py-2 border border-gray-600/30 text-gray-400 text-xs tracking-widest uppercase hover:bg-gray-700/30 transition-colors rounded-full">
           intake
         </router-link>
-        <router-link to="/game" class="px-5 py-2 border border-gray-600/30 text-gray-400 text-xs tracking-widest uppercase hover:bg-gray-700/30 transition-colors rounded-full">
+        <router-link to="/portrait" class="px-5 py-2 border border-gray-600/30 text-gray-400 text-xs tracking-widest uppercase hover:bg-gray-700/30 transition-colors rounded-full">
           oracle
         </router-link>
       </nav>

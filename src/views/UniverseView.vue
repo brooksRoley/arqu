@@ -400,7 +400,7 @@ function onClick(e: MouseEvent) {
     social: '/calibrate',
     psyche: '/psychoanalysis',
     shadow: '/intake',
-    connections: '/game',
+    connections: '/portrait',
   }
   if (routes[p.key]) router.push(routes[p.key])
 }

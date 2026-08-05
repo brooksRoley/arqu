@@ -141,7 +141,7 @@
         <span class="nav-sep">·</span>
         <router-link to="/intake" class="nav-link">intake</router-link>
         <span class="nav-sep">·</span>
-        <router-link to="/game" class="nav-link">oracle</router-link>
+        <router-link to="/portrait" class="nav-link">oracle</router-link>
       </div>
 
     </div>
@@ -181,7 +181,7 @@
         <span class="nav-sep">·</span>
         <router-link to="/intake" class="nav-link">intake</router-link>
         <span class="nav-sep">·</span>
-        <router-link to="/game" class="nav-link">oracle</router-link>
+        <router-link to="/portrait" class="nav-link">oracle</router-link>
       </div>
 
     </div>
