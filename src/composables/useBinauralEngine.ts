@@ -20,9 +20,23 @@ class BinauralEngine {
   carrier = 220
   beatFreq = 40
   started = false
+  /** True when we created our own AudioContext (so destroy() may close it). */
+  ownsContext = true
 
-  init() {
-    this.ctx = new (window.AudioContext || (window as any).webkitAudioContext)()
+  /**
+   * @param externalCtx  When provided (e.g. Tone.js' shared rawContext), the
+   *   oscillator graph is built inside that context so its output can be routed
+   *   into other nodes in the same context — required for export capture. When
+   *   omitted, the engine owns a fresh AudioContext (legacy behavior).
+   */
+  init(externalCtx?: AudioContext) {
+    if (externalCtx) {
+      this.ctx = externalCtx
+      this.ownsContext = false
+    } else {
+      this.ctx = new (window.AudioContext || (window as any).webkitAudioContext)()
+      this.ownsContext = true
+    }
 
     this.masterGain = this.ctx.createGain()
     this.masterGain.gain.value = 0.12
@@ -91,7 +105,13 @@ class BinauralEngine {
   destroy() {
     try { this.oscLeft?.stop() } catch { /* already stopped */ }
     try { this.oscRight?.stop() } catch { /* already stopped */ }
-    try { this.ctx?.close() } catch { /* already closed */ }
+    // Detach from the graph. Only close the context if we own it — a shared
+    // (Tone.js) context must outlive this engine.
+    try { this.masterGain?.disconnect() } catch { /* ok */ }
+    try { this.analyser?.disconnect() } catch { /* ok */ }
+    if (this.ownsContext) {
+      try { this.ctx?.close() } catch { /* already closed */ }
+    }
     this.started = false
     this.ctx = null
     this.oscLeft = null
@@ -108,10 +128,10 @@ const initialized = ref(false)
 const volume = ref(12)
 
 export function useBinauralEngine() {
-  function init() {
+  function init(externalCtx?: AudioContext) {
     if (engine?.started) return
     engine = new BinauralEngine()
-    engine.init()
+    engine.init(externalCtx)
     initialized.value = true
   }
 
@@ -128,6 +148,19 @@ export function useBinauralEngine() {
     return engine?.getWaveformData() ?? null
   }
 
+  /** The AudioContext the oscillator graph lives in (own or shared). */
+  function getContext(): AudioContext | null {
+    return engine?.ctx ?? null
+  }
+
+  /**
+   * The engine's post-volume output node. Route this into an export
+   * MediaStreamAudioDestinationNode (same context) to bake the beat into a file.
+   */
+  function getOutputNode(): AudioNode | null {
+    return engine?.masterGain ?? null
+  }
+
   function destroy() {
     engine?.destroy()
     engine = null
@@ -141,6 +174,8 @@ export function useBinauralEngine() {
     setBeat,
     setVolume,
     getWaveformData,
+    getContext,
+    getOutputNode,
     destroy,
   }
 }
