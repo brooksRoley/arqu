@@ -26,6 +26,20 @@ def _mime_from_ext(filename: str | None) -> str:
     return mapping.get(ext, "image/png")
 
 
+def _is_valid_image_magic(data: bytes) -> bool:
+    """Check file magic bytes to confirm the data is actually an image."""
+    if len(data) < 4:
+        return False
+    head = data[:12]
+    return (
+        head[:4] == b"\x89PNG"                              # PNG
+        or head[:3] == b"\xff\xd8\xff"                      # JPEG
+        or head[:4] in (b"GIF8", b"GIF9")                   # GIF87a / GIF89a
+        or (head[:4] == b"RIFF" and head[8:12] == b"WEBP")  # WebP
+        or head[:2] == b"BM"                                 # BMP
+    )
+
+
 @router.post("/upload", response_model=UploadResponse)
 async def upload_image(
     file: UploadFile = File(...),
@@ -37,6 +51,12 @@ async def upload_image(
     if len(image_bytes) > _MAX_FILE_SIZE:
         raise HTTPException(status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
                             detail="Image exceeds 10 MB limit")
+
+    if not _is_valid_image_magic(image_bytes):
+        raise HTTPException(
+            status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
+            detail="File does not appear to be a valid image",
+        )
 
     mime_type = _mime_from_ext(file.filename)
     pinecone_id = str(uuid4())
