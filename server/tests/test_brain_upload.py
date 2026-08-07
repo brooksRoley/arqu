@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from server.app.brain.router import _is_valid_image_magic
+from app.brain.router import _is_valid_image_magic
 
 
 # Minimal valid headers for each supported format
