@@ -228,6 +228,10 @@ onUnmounted(() => {
                 class="text-xs font-mono px-5 py-2.5 rounded-full border border-gray-700/60 text-gray-400 hover:border-indigo-400/50 hover:text-indigo-300 transition-colors"
               >Open journal</RouterLink>
               <RouterLink
+                to="/studio"
+                class="text-xs font-mono px-5 py-2.5 rounded-full border border-gray-700/60 text-gray-400 hover:border-emerald-400/50 hover:text-emerald-300 transition-colors"
+              >Glass Studio</RouterLink>
+              <RouterLink
                 to="/"
                 class="text-xs font-mono px-5 py-2.5 rounded-full border border-gray-700/60 text-gray-400 hover:border-gray-500/60 hover:text-gray-300 transition-colors"
               >Return home</RouterLink>
