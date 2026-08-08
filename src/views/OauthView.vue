@@ -97,6 +97,26 @@
         </p>
       </div>
 
+      <!-- One-stream progress nudge — visible when exactly 1 stream is connected -->
+      <div
+        v-if="synthProviderKeys.length === 1 && showProgressNudge"
+        class="flex items-start justify-between gap-4 rounded-2xl border border-indigo-400/30 bg-indigo-500/5 px-5 py-4"
+        role="status"
+      >
+        <p class="text-sm text-indigo-300/80 font-mono leading-relaxed">
+          One stream connected — connect one more to unlock your Integrated Portrait.
+        </p>
+        <button
+          @click="showProgressNudge = false"
+          class="shrink-0 text-gray-600 hover:text-gray-400 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400/60 rounded"
+          aria-label="Dismiss"
+        >
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+      </div>
+
       <!-- Integrated Portrait invitation — unlocked at 2+ connected streams -->
       <RouterLink
         v-if="synthProviderKeys.length >= 2"
@@ -238,7 +258,7 @@
           </div>
           <div class="space-y-3 text-gray-300">
             <p><strong>Data Collected:</strong> Followed accounts, liked tweets, linguistic patterns, chronological posting habits.</p>
-            <p><strong>Correlation Engine:</strong> Humor compatibility and ideological alignment. The LLM extracts dominance, neuroticism, and dark humor scores from your social graph to deepen the match signal.</p>
+            <p><strong>Correlation Engine:</strong> Humor register and ideological signature. The LLM extracts dominance, neuroticism, and dark humor scores from your public graph to build a neurotic-output narrative.</p>
           </div>
         </div>
 
@@ -300,7 +320,7 @@
           </div>
           <div class="space-y-3 text-gray-300">
             <p><strong>Data Collected:</strong> Heart-rate exertion curves, elevation masochism, routing patterns, recovery windows.</p>
-            <p><strong>Correlation Engine:</strong> High-karma users matching on somatic data are routed into <span class="text-orange-400 font-semibold">Shared Suffering</span> co-op events — blind 5K runs ending at a partnered local brewery.</p>
+            <p><strong>Correlation Engine:</strong> Maps your body's behavioral signature — exertion cadence, elevation obsessions, recovery windows — into a somatic narrative the Oracle reads as psychological data.</p>
           </div>
           <p class="mt-4 text-xs text-gray-600 font-mono italic">Since your body holds the tension your mind ignores.</p>
         </div>
@@ -410,7 +430,7 @@
             <router-link to="/calibrate/letterboxd" class="text-xs font-medium text-emerald-400 bg-emerald-400/10 border border-emerald-500/30 rounded-full px-3 py-1 hover:bg-emerald-400/20 transition-colors">View Signal &rarr;</router-link>
           </div>
           <div class="space-y-3 text-gray-300">
-            <p>Your watchlist and diary entries are being analyzed. Aesthetic pretension markers and star-rating patterns feed the Cinema Co-Op matching engine.</p>
+            <p>Your watchlist and diary entries are being analyzed. Aesthetic pretension markers and star-rating patterns feed the empathy-simulator narrative.</p>
           </div>
           <p class="mt-4 text-xs text-gray-600 font-mono italic">We already know you cried during that one.</p>
         </div>
@@ -425,7 +445,7 @@
           </div>
           <div class="space-y-3 text-gray-300">
             <p><strong>Data Collected:</strong> Watchlist, diary entries, star ratings, aesthetic pretension markers.</p>
-            <p><strong>Correlation Engine:</strong> Unlocks the <span class="text-emerald-400 font-semibold">Cinema Co-Op</span>. Matches are routed to partnered indie theaters — ticket discounts scale with the obscurity of your shared watchlist.</p>
+            <p><strong>Correlation Engine:</strong> Decodes your empathy architecture — which narratives you choose, how harshly you judge them, and what your genre obsessions reveal about your interior life.</p>
           </div>
           <p class="mt-4 text-xs text-gray-600 font-mono italic">We already know you cried during that one.</p>
         </div>
@@ -797,6 +817,7 @@ const { oauthState, markConnected, oracleSynthesizing, dismissOracleSynthesis } 
 const synthStage = ref(0) // 0 hidden, 1 ring, 2 cards pulsing, 3 dims revealed, 4 cta
 const synthCount = ref(0) // center-orb counter, animates 0 -> connected provider count
 const coordinatesLocked = ref(false) // green "Coordinates locked" flash before dismiss
+const showProgressNudge = ref(true)
 let synthTimers: number[] = []
 let synthCountRaf = 0
 
