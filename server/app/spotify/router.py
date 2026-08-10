@@ -112,43 +112,7 @@ async def spotify_sync(user_id: UUID = Depends(get_current_user_id)):
 
             headers = {"Authorization": f"Bearer {access_token}"}
 
-            # Fetch top artists
-            artists_data = []
-            artists_resp = await client.get(
-                f"{_SPOTIFY_API_BASE}/me/top/artists",
-                headers=headers,
-                params={"limit": 10, "time_range": "medium_term"},
-            )
-            if artists_resp.status_code == 200:
-                artists_data = artists_resp.json().get("items", [])
-
-            # Fetch top tracks
-            track_ids: list[str] = []
-            tracks_data: list[dict] = []
-            tracks_resp = await client.get(
-                f"{_SPOTIFY_API_BASE}/me/top/tracks",
-                headers=headers,
-                params={"limit": 20, "time_range": "medium_term"},
-            )
-            if tracks_resp.status_code == 200:
-                items = tracks_resp.json().get("items", [])
-                track_ids = [t["id"] for t in items]
-                tracks_data = items
-
-            # Fetch audio features (may be deprecated)
-            audio_features: list[dict] = []
-            if track_ids:
-                features_resp = await client.get(
-                    f"{_SPOTIFY_API_BASE}/audio-features",
-                    headers=headers,
-                    params={"ids": ",".join(track_ids)},
-                )
-                if features_resp.status_code == 200:
-                    audio_features = [f for f in features_resp.json().get("audio_features", []) if f]
-
-            # Supplement genres from track artists (top-artist genres often empty)
-            top_artist_ids = {a["id"] for a in artists_data if a.get("id")}
-            extra_artists = await _fetch_track_artist_genres(client, headers, tracks_data, top_artist_ids)
+            spotify_profile = await _fetch_and_distill_profile(client, headers)
 
     except HTTPException:
         raise
@@ -158,7 +122,6 @@ async def spotify_sync(user_id: UUID = Depends(get_current_user_id)):
         logger.exception("Spotify sync failed for user %s", user_id)
         raise HTTPException(status_code=502, detail=f"Spotify sync error: {exc}")
 
-    spotify_profile = _distill_profile(artists_data, audio_features, tracks_data, extra_artists)
     await store_provider_data(str(user_id), "spotify_data", spotify_profile)
 
     # Re-trigger Oracle synthesis (non-blocking)
@@ -225,51 +188,8 @@ async def spotify_callback(code: str, state: str):
 
         headers = {"Authorization": f"Bearer {access_token}"}
 
-        # 2. Fetch top artists (medium-term ~6 months)
-        artists_data = []
-        artists_resp = await client.get(
-            f"{_SPOTIFY_API_BASE}/me/top/artists",
-            headers=headers,
-            params={"limit": 10, "time_range": "medium_term"},
-        )
-        if artists_resp.status_code == 200:
-            artists_data = artists_resp.json().get("items", [])
-
-        # 3. Fetch top tracks to get audio features
-        track_ids: list[str] = []
-        tracks_resp = await client.get(
-            f"{_SPOTIFY_API_BASE}/me/top/tracks",
-            headers=headers,
-            params={"limit": 20, "time_range": "medium_term"},
-        )
-        if tracks_resp.status_code == 200:
-            track_ids = [t["id"] for t in tracks_resp.json().get("items", [])]
-
-        # 4. Fetch audio features for those tracks.
-        # NOTE: Spotify deprecated GET /audio-features (Nov 2024) for new apps
-        # and is removing access for all apps. We try the call and fall back to
-        # genre-based heuristics if it returns 403/404 or empty data.
-        audio_features: list[dict] = []
-        if track_ids:
-            features_resp = await client.get(
-                f"{_SPOTIFY_API_BASE}/audio-features",
-                headers=headers,
-                params={"ids": ",".join(track_ids)},
-            )
-            if features_resp.status_code == 200:
-                audio_features = [f for f in features_resp.json().get("audio_features", []) if f]
-
-        # 4b. Fetch track objects for popularity-based energy fallback
-        tracks_data: list[dict] = []
-        if tracks_resp.status_code == 200:
-            tracks_data = tracks_resp.json().get("items", [])
-
-        # 4c. Supplement genres from track artists (top-artist genres often empty)
-        top_artist_ids = {a["id"] for a in artists_data if a.get("id")}
-        extra_artists = await _fetch_track_artist_genres(client, headers, tracks_data, top_artist_ids)
-
-    # 5. Distill the audio profile
-    spotify_profile = _distill_profile(artists_data, audio_features, tracks_data, extra_artists)
+        # 2. Fetch top artists/tracks/audio-features and distill (shared with /sync)
+        spotify_profile = await _fetch_and_distill_profile(client, headers)
 
     # 6. Store tokens via shared helper
     await store_oauth_tokens(
@@ -310,6 +230,59 @@ async def spotify_callback(code: str, state: str):
     # 10. Redirect back to frontend
     frontend = settings.cors_origin_list[0] if settings.cors_origin_list else "http://localhost:5173"
     return RedirectResponse(f"{frontend}/calibrate/spotify")
+
+
+# ── Shared ingestion ─────────────────────────────────────────────────────────
+
+
+async def _fetch_and_distill_profile(client: httpx.AsyncClient, headers: dict) -> dict:
+    """Fetch top artists/tracks/audio-features from Spotify and distill a profile.
+
+    Shared by /callback (fresh authorization-code flow) and /sync (refresh-token
+    flow); both hold an authenticated httpx client and need the identical
+    ingestion. Individual calls degrade gracefully — a non-200 leaves that slice
+    empty and the distiller falls back to genre heuristics.
+    """
+    # Fetch top artists (medium-term ~6 months)
+    artists_data: list[dict] = []
+    artists_resp = await client.get(
+        f"{_SPOTIFY_API_BASE}/me/top/artists",
+        headers=headers,
+        params={"limit": 10, "time_range": "medium_term"},
+    )
+    if artists_resp.status_code == 200:
+        artists_data = artists_resp.json().get("items", [])
+
+    # Fetch top tracks
+    track_ids: list[str] = []
+    tracks_data: list[dict] = []
+    tracks_resp = await client.get(
+        f"{_SPOTIFY_API_BASE}/me/top/tracks",
+        headers=headers,
+        params={"limit": 20, "time_range": "medium_term"},
+    )
+    if tracks_resp.status_code == 200:
+        items = tracks_resp.json().get("items", [])
+        track_ids = [t["id"] for t in items]
+        tracks_data = items
+
+    # Fetch audio features. NOTE: Spotify deprecated GET /audio-features (Nov 2024)
+    # and is removing access; on 403/404/empty we fall back to genre heuristics.
+    audio_features: list[dict] = []
+    if track_ids:
+        features_resp = await client.get(
+            f"{_SPOTIFY_API_BASE}/audio-features",
+            headers=headers,
+            params={"ids": ",".join(track_ids)},
+        )
+        if features_resp.status_code == 200:
+            audio_features = [f for f in features_resp.json().get("audio_features", []) if f]
+
+    # Supplement genres from track artists (top-artist genres often empty)
+    top_artist_ids = {a["id"] for a in artists_data if a.get("id")}
+    extra_artists = await _fetch_track_artist_genres(client, headers, tracks_data, top_artist_ids)
+
+    return _distill_profile(artists_data, audio_features, tracks_data, extra_artists)
 
 
 # ── Profile distillation ─────────────────────────────────────────────────────
