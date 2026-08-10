@@ -49,7 +49,13 @@
         <div v-if="isExporting" class="absolute inset-0 flex items-center justify-center bg-black/50 z-30">
           <div class="text-center">
             <p class="text-white/80 text-sm tracking-[0.2em] uppercase mb-3">Exporting&hellip;</p>
-            <div class="w-48 h-1 bg-white/10 rounded-full overflow-hidden mx-auto">
+            <div
+              role="progressbar"
+              :aria-valuenow="Math.round(exportProgress * 100)"
+              aria-valuemin="0"
+              aria-valuemax="100"
+              class="w-48 h-1 bg-white/10 rounded-full overflow-hidden mx-auto"
+            >
               <div class="h-full bg-emerald-500 transition-all duration-150" :style="{ width: `${exportProgress * 100}%` }" />
             </div>
             <button @click="cancelExport" class="mt-4 text-xs text-white/30 hover:text-white/60 uppercase tracking-wider transition-colors">
@@ -90,13 +96,19 @@
 
       <!-- Transport -->
       <div class="flex items-center gap-3">
-        <button @click="togglePlay" :disabled="!hasMedia" class="ctrl-btn disabled:opacity-20">
+        <button
+          @click="togglePlay"
+          :disabled="!hasMedia"
+          :aria-label="isPlaying ? 'Pause' : 'Play'"
+          class="ctrl-btn disabled:opacity-20"
+        >
           <svg v-if="!isPlaying" class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
           <svg v-else class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
         </button>
 
         <span class="text-[10px] text-slate-500 font-mono w-10 text-right shrink-0">{{ fmt(currentTime) }}</span>
         <input
+          aria-label="Seek"
           type="range" min="0" :max="duration" :value="currentTime" @input="seek" step="0.1"
           class="flex-1 h-1 accent-white/40 cursor-pointer" :disabled="!hasMedia"
         />
