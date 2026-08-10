@@ -1,6 +1,55 @@
 <template>
   <div class="relative w-full h-screen bg-[#0a0a0a] overflow-hidden flex flex-col">
 
+    <!-- ── First-run entrainment intro ── -->
+    <Transition name="fade">
+      <div
+        v-if="showIntro"
+        class="absolute inset-0 z-40 flex items-center justify-center bg-[#0a0a0a]/96 backdrop-blur-sm"
+      >
+        <div class="max-w-sm w-full px-8 text-center space-y-6">
+          <div>
+            <h1 class="text-white/90 text-lg font-light tracking-[0.25em] uppercase mb-2">Glass Studio</h1>
+            <p class="text-slate-500 text-[10px] tracking-widest uppercase">Binaural Entrainment · Subliminal Authoring</p>
+          </div>
+
+          <p class="text-slate-400 text-sm leading-relaxed">
+            Layer subliminal intention onto any audio or video. Binaural beats — precise frequency
+            differentials played separately to each ear — guide your nervous system into specific
+            states: alpha for calm focus, theta for deep creativity, gamma for heightened clarity.
+          </p>
+
+          <div class="space-y-3 text-left">
+            <div class="flex gap-3 items-start">
+              <span class="text-slate-600 text-[10px] mt-0.5 shrink-0 font-mono">01</span>
+              <p class="text-slate-500 text-xs leading-relaxed">Upload a video or audio file as your carrier wave</p>
+            </div>
+            <div class="flex gap-3 items-start">
+              <span class="text-slate-600 text-[10px] mt-0.5 shrink-0 font-mono">02</span>
+              <p class="text-slate-500 text-xs leading-relaxed">Layer text that surfaces subliminally — intentions, affirmations, mantras</p>
+            </div>
+            <div class="flex gap-3 items-start">
+              <span class="text-slate-600 text-[10px] mt-0.5 shrink-0 font-mono">03</span>
+              <p class="text-slate-500 text-xs leading-relaxed">Activate binaural synthesis and export the composed session</p>
+            </div>
+          </div>
+
+          <div class="space-y-3 pt-2">
+            <button
+              @click="dismissIntroToRecipes"
+              class="w-full px-6 py-3 bg-white/5 hover:bg-white/10 border border-white/10 rounded-full text-white/70 hover:text-white/90 text-sm tracking-wider transition-all"
+            >
+              Browse Recipes
+            </button>
+            <label class="block w-full px-6 py-2 text-slate-600 hover:text-slate-400 text-xs tracking-wider cursor-pointer transition-all text-center rounded-full hover:bg-white/[0.03] relative">
+              Upload your own media
+              <input type="file" @change="handleUploadFromIntro" accept="video/*,audio/*" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer" />
+            </label>
+          </div>
+        </div>
+      </div>
+    </Transition>
+
     <!-- ── Main viewport ── -->
     <div class="flex-1 relative overflow-hidden min-h-0">
 
@@ -297,6 +346,24 @@ function drawViz(env: number) {
   grad.addColorStop(1, 'transparent')
   ctx.fillStyle = grad
   ctx.fillRect(0, 0, w, h)
+}
+
+// ── First-run intro ──
+const showIntro = ref(!localStorage.getItem('cz_glass_intro_seen'))
+
+function dismissIntro() {
+  localStorage.setItem('cz_glass_intro_seen', '1')
+  showIntro.value = false
+}
+
+function dismissIntroToRecipes() {
+  dismissIntro()
+  activePanel.value = 'recipes'
+}
+
+async function handleUploadFromIntro(e: Event) {
+  dismissIntro()
+  await handleUpload(e)
 }
 
 // ── Media handling ──
