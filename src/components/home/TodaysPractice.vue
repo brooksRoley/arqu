@@ -40,6 +40,14 @@ const steps = computed<PracticeStep[]>(() => [
   { route: '/journal',     label: 'Journal',  description: 'witness what surfaced',  icon: '◎' },
 ])
 
+// Optional deepening step — binaural entrainment on your own media
+const glassStep: PracticeStep = {
+  route: '/studio',
+  label: 'Glass Studio',
+  description: 'go deeper — binaural session',
+  icon: '🌡',
+}
+
 // today_active is true if the user has logged any session event today
 const todayDone = computed(() => streakData.value?.today_active ?? false)
 
@@ -68,6 +76,12 @@ onMounted(async () => {
         <span class="step-desc">{{ step.description }}</span>
       </button>
     </div>
+
+    <button class="practice-deepen" @click="router.push(glassStep.route)">
+      <span class="deepen-icon">{{ glassStep.icon }}</span>
+      <span class="deepen-label">{{ glassStep.label }}</span>
+      <span class="deepen-desc">{{ glassStep.description }}</span>
+    </button>
   </div>
 </template>
 
@@ -159,5 +173,54 @@ onMounted(async () => {
   font-size: 0.58rem;
   color: rgba(255,255,255,0.35);
   letter-spacing: 0.03em;
+}
+
+.practice-deepen {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+  margin-top: 0.5rem;
+  padding: 0.55rem 0.8rem;
+  background: rgba(16,185,129,0.05);
+  border: 1px solid rgba(16,185,129,0.18);
+  border-radius: 10px;
+  cursor: pointer;
+  transition: background 0.18s ease, border-color 0.18s ease, transform 0.12s ease;
+  text-align: left;
+}
+
+.practice-deepen:hover {
+  background: rgba(16,185,129,0.1);
+  border-color: rgba(16,185,129,0.32);
+  transform: translateY(-1px);
+}
+
+.practice-deepen:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px #10b981;
+}
+
+.practice-deepen:active {
+  transform: translateY(0);
+}
+
+.deepen-icon {
+  font-size: 1rem;
+  line-height: 1;
+}
+
+.deepen-label {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: rgba(255,255,255,0.85);
+  letter-spacing: 0.02em;
+}
+
+.deepen-desc {
+  font-size: 0.58rem;
+  color: rgba(16,185,129,0.7);
+  letter-spacing: 0.03em;
+  margin-left: auto;
 }
 </style>
