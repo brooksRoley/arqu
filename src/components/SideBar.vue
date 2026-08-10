@@ -1,12 +1,11 @@
 <script setup lang="ts">
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
-import { RouterLink, useRouter, useRoute } from 'vue-router'
+import { RouterLink, useRoute } from 'vue-router'
 import { useAuthStore } from '@/composables/useAuthStore'
 import { usePollStore } from '@/composables/usePollStore'
 import { useVibeStore } from '@/composables/useVibeStore'
 import ConnectorPanel from '@/components/ConnectorPanel.vue'
 
-const router = useRouter()
 const route = useRoute()
 const { isAuthenticated, user } = useAuthStore()
 const { token: pollToken } = usePollStore()
