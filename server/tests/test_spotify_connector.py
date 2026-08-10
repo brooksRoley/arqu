@@ -10,8 +10,9 @@ Run:  cd server && python -m pytest tests/ -v
 
 from __future__ import annotations
 
+import asyncio
 import json
-from unittest.mock import AsyncMock, patch
+from unittest.mock import ANY, AsyncMock, MagicMock, patch
 from uuid import UUID
 
 from fastapi import FastAPI
@@ -21,6 +22,7 @@ from app.auth.deps import get_current_user_id
 from app.spotify.router import (
     _distill_profile,
     _infer_valence_from_genres,
+    _ingest_spotify_data,
     router as spotify_router,
 )
 
@@ -246,3 +248,77 @@ class TestSpotifyConnectEndpoint:
             resp = TestClient(app).get("/api/spotify/connect", params={"ct": "dummy-connect-token"})
         assert resp.status_code == 503
         assert "not configured" in resp.json()["detail"].lower()
+
+
+# ── _ingest_spotify_data helper ───────────────────────────────────────────────
+
+
+def _mock_resp(status_code: int, data: dict) -> MagicMock:
+    m = MagicMock()
+    m.status_code = status_code
+    m.json.return_value = data
+    return m
+
+
+class TestIngestSpotifyData:
+    """Tests for the shared fetch-distill-store helper used by /sync and /callback."""
+
+    def test_builds_profile_with_artists_tracks_and_features(self):
+        """Happy path: artists + tracks + features all 200 → audio_avg from real data."""
+        client = AsyncMock()
+        client.get.side_effect = [
+            _mock_resp(200, {"items": SAMPLE_ARTISTS}),
+            _mock_resp(200, {"items": SAMPLE_TRACKS}),
+            _mock_resp(200, {"audio_features": SAMPLE_FEATURES}),
+            _mock_resp(200, {"artists": SAMPLE_EXTRA_ARTISTS}),
+        ]
+        with patch("app.spotify.router.store_provider_data", new=AsyncMock()):
+            result = asyncio.run(
+                _ingest_spotify_data(client, {"Authorization": "Bearer tok"}, "user-1")
+            )
+        assert result["top_artists"][0] == "Portishead"
+        assert result["audio_avg"]["valence"] == round((0.2 + 0.4) / 2, 3)
+        assert result["audio_avg"]["tempo"] == round((90.0 + 110.0) / 2, 3)
+
+    def test_audio_features_403_falls_back_to_genre_inference(self):
+        """Spotify returning 403 on /audio-features triggers genre-based valence fallback."""
+        client = AsyncMock()
+        client.get.side_effect = [
+            _mock_resp(200, {"items": SAMPLE_ARTISTS}),
+            _mock_resp(200, {"items": SAMPLE_TRACKS}),
+            _mock_resp(403, {}),
+            _mock_resp(200, {"artists": []}),
+        ]
+        with patch("app.spotify.router.store_provider_data", new=AsyncMock()):
+            result = asyncio.run(
+                _ingest_spotify_data(client, {"Authorization": "Bearer tok"}, "user-1")
+            )
+        assert result["audio_avg"]["tempo"] == 120.0
+
+    def test_empty_tracks_skips_audio_features_request(self):
+        """No tracks → no track IDs → /audio-features not called; only 2 HTTP calls made."""
+        client = AsyncMock()
+        client.get.side_effect = [
+            _mock_resp(200, {"items": []}),
+            _mock_resp(200, {"items": []}),
+        ]
+        with patch("app.spotify.router.store_provider_data", new=AsyncMock()):
+            result = asyncio.run(
+                _ingest_spotify_data(client, {"Authorization": "Bearer tok"}, "user-1")
+            )
+        assert client.get.call_count == 2
+        assert result["top_artists"] == []
+
+    def test_store_provider_data_called_with_correct_user_id(self):
+        """The helper must persist the profile under exactly the given user_id."""
+        client = AsyncMock()
+        client.get.side_effect = [
+            _mock_resp(200, {"items": []}),
+            _mock_resp(200, {"items": []}),
+        ]
+        store_mock = AsyncMock()
+        with patch("app.spotify.router.store_provider_data", new=store_mock):
+            asyncio.run(
+                _ingest_spotify_data(client, {"Authorization": "Bearer tok"}, "user-xyz")
+            )
+        store_mock.assert_called_once_with("user-xyz", "spotify_data", ANY)
