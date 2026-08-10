@@ -20,6 +20,7 @@ interface Session {
   title: string
   path: string
   description: string
+  featured?: boolean
 }
 
 interface Group {
@@ -28,6 +29,17 @@ interface Group {
 }
 
 const groups: Group[] = [
+  {
+    label: 'Authoring',
+    sessions: [
+      {
+        title: 'Glass Studio',
+        path: '/studio',
+        description: 'Upload video or audio, layer subliminal text overlays, and compose real binaural entrainment — then export the finished composition.',
+        featured: true
+      }
+    ]
+  },
   {
     label: 'Reading & Narrative',
     sessions: [
@@ -102,6 +114,7 @@ const groups: Group[] = [
           :key="s.path"
           :to="s.path"
           class="card"
+          :class="{ 'card--featured': s.featured }"
         >
           <h3 class="card-title">{{ s.title }}</h3>
           <p class="card-desc">{{ s.description }}</p>
@@ -192,6 +205,16 @@ const groups: Group[] = [
   background: rgba(15, 15, 35, 0.75);
   border-color: rgba(99, 102, 241, 0.3);
   box-shadow: 0 0 20px rgba(99, 102, 241, 0.08);
+}
+
+.card--featured {
+  border-color: rgba(129, 140, 248, 0.2);
+  background: rgba(10, 10, 30, 0.75);
+}
+
+.card--featured:hover {
+  border-color: rgba(129, 140, 248, 0.45);
+  box-shadow: 0 0 28px rgba(99, 102, 241, 0.12);
 }
 
 .card-title {
