@@ -21,6 +21,7 @@ from fastapi.testclient import TestClient
 from app.auth.deps import get_current_user_id
 from app.portrait.router import router as portrait_router
 from app.portrait.stitcher import PROVIDER_COLUMNS
+from app.ratelimit import limiter
 
 from .conftest import FakeConn, make_get_conn
 
@@ -71,6 +72,13 @@ def _client_with(rows: list, llm: bool = True) -> tuple[TestClient, FakeConn]:
 
 
 client_patches: list = []
+
+
+@pytest.fixture(autouse=True)
+def reset_limiter():
+    """Reset rate-limit counters so portrait/generate POST tests don't bleed across tests."""
+    limiter._storage.reset()
+    yield
 
 
 @pytest.fixture(autouse=True)
