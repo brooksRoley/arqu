@@ -11,9 +11,10 @@ import logging
 from datetime import datetime, timezone
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 
 from ..auth.deps import get_current_user_id
+from ..ratelimit import limiter
 from ..config import get_settings
 from ..llm.chat import llm_configured
 from .models import PortraitStatus
@@ -57,7 +58,8 @@ async def get_portrait(user_id: UUID = Depends(get_current_user_id)) -> Portrait
 
 
 @router.post("/generate")
-async def generate_portrait(user_id: UUID = Depends(get_current_user_id)):
+@limiter.limit("5/hour")
+async def generate_portrait(request: Request, user_id: UUID = Depends(get_current_user_id)):
     data = await fetch_portrait_data(user_id)
 
     if len(data.connected) < MIN_PROVIDERS:
