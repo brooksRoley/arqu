@@ -1,5 +1,5 @@
 """
-Tests for analytics router — event allowlist and provider validation.
+Tests for analytics router — event allowlist, provider validation, and rate limiting.
 
 Run:  cd server && python -m pytest tests/ -v
 """
@@ -13,9 +13,12 @@ from uuid import UUID
 import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
+from slowapi.errors import RateLimitExceeded
 
 from app.auth.deps import get_current_user_id
 from app.analytics.router import router as analytics_router, VALID_EVENTS, VALID_PROVIDERS
+from app.ratelimit import limiter
+from app.main import _rate_limit_exceeded_handler
 
 from .conftest import FakeConn, make_get_conn
 
@@ -26,6 +29,8 @@ def _make_app() -> FastAPI:
     app = FastAPI()
     app.include_router(analytics_router, prefix="/api/analytics")
     app.dependency_overrides[get_current_user_id] = lambda: USER_ID
+    app.state.limiter = limiter
+    app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
     return app
 
 
@@ -33,6 +38,13 @@ def _client_with(conn: FakeConn) -> TestClient:
     app = _make_app()
     with patch("app.analytics.router.get_conn", make_get_conn(conn)):
         return TestClient(app, raise_server_exceptions=True)
+
+
+@pytest.fixture(autouse=True)
+def reset_limiter():
+    """Clear in-memory rate-limit counters before each test."""
+    limiter._storage.reset()
+    yield
 
 
 # ── Event allowlist ──────────────────────────────────────────────────────────
@@ -146,3 +158,36 @@ class TestProviderAllowlist:
                 json={"provider": "spotify", "rating": 6},
             )
         assert r.status_code == 400
+
+
+# ── Event rate limiting ──────────────────────────────────────────────────────
+
+class TestEventRateLimit:
+    def test_first_event_not_rate_limited(self):
+        conn = FakeConn()
+        app = _make_app()
+        with patch("app.analytics.router.get_conn", make_get_conn(conn)):
+            client = TestClient(app, raise_server_exceptions=False)
+            r = client.post("/api/analytics/event", json={"event": "journal_session_started"})
+        assert r.status_code == 204
+
+    def test_61st_event_returns_429(self):
+        conn = FakeConn()
+        app = _make_app()
+        with patch("app.analytics.router.get_conn", make_get_conn(conn)):
+            client = TestClient(app, raise_server_exceptions=False)
+            for _ in range(60):
+                client.post("/api/analytics/event", json={"event": "journal_session_started"})
+            r = client.post("/api/analytics/event", json={"event": "journal_session_started"})
+        assert r.status_code == 429
+
+    def test_429_has_retry_after_header(self):
+        conn = FakeConn()
+        app = _make_app()
+        with patch("app.analytics.router.get_conn", make_get_conn(conn)):
+            client = TestClient(app, raise_server_exceptions=False)
+            for _ in range(60):
+                client.post("/api/analytics/event", json={"event": "journal_session_started"})
+            r = client.post("/api/analytics/event", json={"event": "journal_session_started"})
+        assert r.status_code == 429
+        assert "retry-after" in r.headers or "Retry-After" in r.headers
