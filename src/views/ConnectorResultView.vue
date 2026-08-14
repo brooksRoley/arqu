@@ -210,6 +210,19 @@
       </div>
     </section>
 
+    <!-- Section 6: Portrait CTA — shown when 2+ streams connected -->
+    <section v-if="connectedCount >= 2" class="relative max-w-2xl mx-auto px-6 pb-32 text-center">
+      <router-link
+        to="/portrait"
+        class="block rounded-2xl border border-indigo-400/40 bg-indigo-500/5 p-8 hover:bg-indigo-500/10 hover:border-indigo-400/60 transition-colors group"
+      >
+        <p class="text-xs uppercase tracking-[0.3em] text-indigo-400/60 font-mono mb-3">What it all means</p>
+        <h3 class="text-2xl font-bold text-indigo-200 group-hover:text-white transition-colors mb-2">Your Portrait</h3>
+        <p class="text-sm text-gray-500 font-mono">One synthesized reading across all your connected data. Your full self, in signal.</p>
+        <p class="mt-4 text-xs font-mono text-indigo-400/50 group-hover:text-indigo-400 transition-colors">Read it &rarr;</p>
+      </router-link>
+    </section>
+
     <!-- Back to calibrate link -->
     <div class="fixed bottom-6 left-6 z-20">
       <router-link
@@ -262,6 +275,9 @@ const { oauthState } = useVibeStore()
 // ── Provider resolution ──────────────────────────────────────────────────────
 const provider = computed(() => route.params.provider as string)
 const cfg = computed<ProviderConfig | undefined>(() => connectorConfigs[provider.value])
+const connectedCount = computed(() =>
+  Object.values(oauthState.value).filter((v) => v?.connected).length
+)
 
 // ── Redirect guard ───────────────────────────────────────────────────────────
 watch(provider, (p) => {
