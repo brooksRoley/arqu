@@ -207,6 +207,13 @@ const groups: Group[] = [
   box-shadow: 0 0 20px rgba(99, 102, 241, 0.08);
 }
 
+.card:focus-visible {
+  outline: 2px solid rgba(99, 102, 241, 0.8);
+  outline-offset: 2px;
+  border-color: rgba(99, 102, 241, 0.5);
+  box-shadow: 0 0 20px rgba(99, 102, 241, 0.1);
+}
+
 .card--featured {
   border-color: rgba(129, 140, 248, 0.2);
   background: rgba(10, 10, 30, 0.75);
