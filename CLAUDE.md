@@ -53,8 +53,6 @@ embedded psychoanalysis layer. The product is, in priority order:
     /journal      — Journal CRUD + vector embeddings
     /letterboxd   — Letterboxd API film taste ingestion
     /llm          — Encryption helpers (AES-256-GCM)
-    /match        — Accept/reject interactions + mutual match detection
-    /messages     — Encrypted mutual-match messaging
     /oracle       — 7D psychological synthesis + Pinecone upsert
     /poll         — Archetype poll tokens
     /psychometrics — Multi-part assessment scoring + profile generation
@@ -88,10 +86,9 @@ embedded psychoanalysis layer. The product is, in priority order:
 | `useCosmicPhysics` | Matter.js physics: orbs, particles, stars, spring attractors |
 | `useSpotifyPhysics` | Wraps cosmic physics with Spotify audio data (genre→color, valence field) |
 | `useAdminStore` | Admin analytics API calls (funnel, connectors, users, events) |
-| `useMessageStore` | Real-time messaging between matched users |
 
 ## Canvas / Physics Pattern
-- `useCosmicPhysics(canvasRef, options)` — base physics engine (Matter.js via CDN)
+- `useCosmicPhysics(canvasRef, options)` — base physics engine (Matter.js via npm)
 - Two-canvas pattern: base canvas (physics) + overlay canvas (labels, HUD)
 - `getOrbPositions()` returns current `{x, y, idx}[]` for overlay label placement
 - Custom `rrect()` helper for rounded rects (avoids TypeScript `ctx.roundRect` compat issues)
@@ -136,12 +133,11 @@ embedded psychoanalysis layer. The product is, in priority order:
 | `/calibrate` | yes | All connector OAuth (Spotify, X, Strava, CoStar, Letterboxd, Steam) |
 | `/intake` | yes | Psychometric confessional intake |
 | `/psychoanalysis` | yes | Psychometric assessment + narrative |
-| `/game` | yes | Oracle matching game |
+| `/calibrate/:provider` | yes | Per-connector data reading + psychoanalysis |
+| `/portrait` | yes | Integrated psychoanalytic portrait (2+ providers) |
 | `/universe` | yes | Solar system signal visualization |
 | `/spotify` | yes | Spotify sonic field physics |
 | `/x` | yes | X/Twitter signal visualization |
-| `/messages` | yes | Mutual match messaging |
-| `/messages/:userId` | yes | Thread view |
 | `/journal` | yes | Journal editor (text, drawing, audio, mood) |
 | `/checkin` | yes | Daily check-in + mood arc |
 | `/admin` | yes+admin | Analytics dashboard |
@@ -153,8 +149,6 @@ embedded psychoanalysis layer. The product is, in priority order:
 | `/studio` | no | Glass studio |
 | `/liquidglass` | no | Liquid glass experiment |
 | `/fitting` | no | Body/swimsuit configurator (standalone) |
-| `/fitting/:matchId` | yes | Pre-reveal avatar ritual (self + ideal) |
-| `/reveal/:matchId` | yes | Match reveal scroll narrative |
 | `/poll` | no | Archetype poll |
 | `/reader` | no | Reader view |
 | `/webaudio` | no | WebAudio experiment |
