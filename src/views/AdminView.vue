@@ -35,29 +35,6 @@
         </div>
       </section>
 
-      <!-- Match Rate Trends -->
-      <section v-if="matchTrends">
-        <h2 class="text-xs font-semibold uppercase tracking-widest text-gray-500 mb-4">Match Rate Trends</h2>
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div class="bg-gray-900 border border-gray-800 rounded-xl p-5">
-            <div class="text-xs text-gray-500 mb-2">Last 7 Days</div>
-            <div class="text-3xl font-bold text-white">{{ matchTrends.seven_day.rate_pct }}%</div>
-            <div class="h-1.5 bg-gray-800 rounded-full mt-3 mb-2">
-              <div class="h-1.5 bg-purple-500 rounded-full transition-all" :style="{ width: `${Math.min(matchTrends.seven_day.rate_pct, 100)}%` }"></div>
-            </div>
-            <div class="text-xs text-gray-500">{{ matchTrends.seven_day.matched }} matched / {{ matchTrends.seven_day.players }} played</div>
-          </div>
-          <div class="bg-gray-900 border border-gray-800 rounded-xl p-5">
-            <div class="text-xs text-gray-500 mb-2">Last 30 Days</div>
-            <div class="text-3xl font-bold text-white">{{ matchTrends.thirty_day.rate_pct }}%</div>
-            <div class="h-1.5 bg-gray-800 rounded-full mt-3 mb-2">
-              <div class="h-1.5 bg-indigo-500 rounded-full transition-all" :style="{ width: `${Math.min(matchTrends.thirty_day.rate_pct, 100)}%` }"></div>
-            </div>
-            <div class="text-xs text-gray-500">{{ matchTrends.thirty_day.matched }} matched / {{ matchTrends.thirty_day.players }} played</div>
-          </div>
-        </div>
-      </section>
-
       <!-- Connector Stats -->
       <section>
         <h2 class="text-xs font-semibold uppercase tracking-widest text-gray-500 mb-4">Connectors</h2>
@@ -589,12 +566,12 @@ import { useAdminStore } from '@/composables/useAdminStore'
 
 const router = useRouter()
 const { user } = useAuthStore()
-const { users, usersTotal, usersPage, funnel, connectors, matchTrends,
+const { users, usersTotal, usersPage, funnel, connectors,
         spotifyProfiles, spotifyTotal, spotifyPage,
         psychProfiles, psychTotal, psychPage,
         archetypes, archetypesTotal, attachmentStyles, attachmentTotal, connectorDepth,
         loading, error,
-        fetchUsers, fetchFunnel, fetchConnectors, fetchMatchTrends,
+        fetchUsers, fetchFunnel, fetchConnectors,
         fetchSpotifyProfiles, fetchPsychProfiles,
         fetchArchetypes, fetchAttachmentStyles, fetchConnectorDepth,
         fetchUserConnectors } = useAdminStore()
@@ -652,7 +629,7 @@ onMounted(async () => {
 })
 
 async function refresh() {
-  await Promise.all([fetchFunnel(), fetchConnectors(), fetchMatchTrends(), fetchUsers(1, perPage), fetchSpotifyProfiles(1, 12), fetchPsychProfiles(1, 12), fetchArchetypes(), fetchAttachmentStyles(), fetchConnectorDepth()])
+  await Promise.all([fetchFunnel(), fetchConnectors(), fetchUsers(1, perPage), fetchSpotifyProfiles(1, 12), fetchPsychProfiles(1, 12), fetchArchetypes(), fetchAttachmentStyles(), fetchConnectorDepth()])
 }
 
 const spotifyPerPage = 12
