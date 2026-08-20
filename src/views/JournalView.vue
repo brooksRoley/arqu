@@ -265,6 +265,17 @@ function formatDate(ts: number): string {
         </div>
       </div>
     </div>
+
+    <!-- What's next — continuation into the daily ritual loop -->
+    <nav v-if="activeEntry" class="next-steps" aria-label="Continue your practice">
+      <span class="next-steps-label">What's next</span>
+      <div class="next-steps-row">
+        <RouterLink to="/checkin" class="next-pill">Daily check-in</RouterLink>
+        <RouterLink to="/portrait" class="next-pill next-pill--accent">Your Portrait</RouterLink>
+        <RouterLink to="/studio" class="next-pill next-pill--emerald">Glass Studio</RouterLink>
+        <RouterLink to="/" class="next-pill next-pill--muted">Return home</RouterLink>
+      </div>
+    </nav>
   </div>
 </template>
 
@@ -673,5 +684,73 @@ function formatDate(ts: number): string {
   opacity: 0;
   max-height: 0;
   transform: translateY(-8px);
+}
+
+/* ── What's next continuation ── */
+.next-steps {
+  margin-top: 2rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid rgba(100, 100, 255, 0.1);
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+.next-steps-label {
+  font-size: 0.68rem;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: #64748b;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+.next-steps-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+}
+
+.next-pill {
+  font-size: 0.75rem;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  padding: 0.55rem 1.1rem;
+  border-radius: 999px;
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  color: #94a3b8;
+  background: transparent;
+  text-decoration: none;
+  transition: border-color 0.15s, color 0.15s, background 0.15s;
+}
+
+.next-pill:hover {
+  border-color: rgba(99, 102, 241, 0.55);
+  color: #a5b4fc;
+  background: rgba(99, 102, 241, 0.06);
+}
+
+.next-pill:focus-visible {
+  outline: 2px solid rgba(99, 102, 241, 0.8);
+  outline-offset: 2px;
+}
+
+.next-pill--accent:hover {
+  border-color: rgba(129, 140, 248, 0.6);
+  color: #c7d2fe;
+}
+
+.next-pill--emerald:hover {
+  border-color: rgba(52, 211, 153, 0.55);
+  color: #6ee7b7;
+  background: rgba(52, 211, 153, 0.06);
+}
+
+.next-pill--muted {
+  color: #64748b;
+}
+
+.next-pill--muted:hover {
+  border-color: rgba(148, 163, 184, 0.5);
+  color: #cbd5e1;
+  background: transparent;
 }
 </style>
