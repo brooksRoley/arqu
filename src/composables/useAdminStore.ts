@@ -1,7 +1,7 @@
 import { ref, readonly } from 'vue'
 import { useAuthStore } from './useAuthStore'
 
-// ── Types ────────────────────────────────────────────────────────────────────
+// ── Types ──────────────────────────────────────────────────────────────────────────────
 
 export interface AdminUser {
   id: string
@@ -16,12 +16,7 @@ export interface AdminUser {
   tone: string | null
   connected_providers: string[] | null
   connector_count: number
-  karma_total: number
-  matches_accepted: number
-  matches_rejected: number
-  received_accepts: number
   journal_entry_count: number
-  messages_sent: number
   has_vibe_vector: boolean
   has_psychometrics: boolean
   has_spotify: boolean
@@ -97,7 +92,7 @@ export interface ConnectorDepthBucket {
   count: number
 }
 
-// ── State ────────────────────────────────────────────────────────────────────
+// ── State ────────────────────────────────────────────────────────────────────────────
 
 const users = ref<AdminUser[]>([])
 const usersTotal = ref(0)
@@ -118,7 +113,7 @@ const connectorDepth = ref<ConnectorDepthBucket[]>([])
 const loading = ref(false)
 const error = ref<string | null>(null)
 
-// ── Actions ──────────────────────────────────────────────────────────────────
+// ── Actions ──────────────────────────────────────────────────────────────────────────
 
 async function fetchUsers(page = 1, perPage = 50) {
   const { apiFetch } = useAuthStore()
@@ -236,7 +231,7 @@ async function logEvent(event: string, metadata: Record<string, unknown> = {}) {
   } catch { /* non-blocking */ }
 }
 
-// ── Export ───────────────────────────────────────────────────────────────────
+// ── Export ──────────────────────────────────────────────────────────────────────────
 
 export function useAdminStore() {
   return {
