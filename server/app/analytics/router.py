@@ -7,11 +7,12 @@ from datetime import datetime, timedelta, timezone
 from typing import Optional
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from pydantic import BaseModel
 
 from ..auth.deps import get_current_user_id, require_admin
 from ..db import get_conn
+from ..ratelimit import limiter
 
 router = APIRouter()
 
@@ -76,7 +77,9 @@ class EventRequest(BaseModel):
 # ── User-facing: log a session event ────────────────────────────────────────
 
 @router.post("/event", status_code=204)
+@limiter.limit("60/minute")
 async def log_event(
+    request: Request,
     body: EventRequest,
     user_id: UUID = Depends(get_current_user_id),
 ):

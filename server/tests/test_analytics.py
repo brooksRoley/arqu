@@ -12,20 +12,34 @@ from uuid import UUID
 
 import pytest
 from fastapi import FastAPI
+from fastapi.responses import JSONResponse
 from fastapi.testclient import TestClient
+from slowapi.errors import RateLimitExceeded
 
 from app.auth.deps import get_current_user_id
 from app.analytics.router import router as analytics_router, VALID_EVENTS, VALID_PROVIDERS
+from app.ratelimit import limiter
 
 from .conftest import FakeConn, make_get_conn
 
 USER_ID = UUID("00000000-0000-0000-0000-000000000002")
 
 
+@pytest.fixture(autouse=True)
+def reset_limiter():
+    limiter._storage.reset()
+    yield
+
+
 def _make_app() -> FastAPI:
     app = FastAPI()
     app.include_router(analytics_router, prefix="/api/analytics")
     app.dependency_overrides[get_current_user_id] = lambda: USER_ID
+    app.state.limiter = limiter
+    app.add_exception_handler(
+        RateLimitExceeded,
+        lambda req, exc: JSONResponse(status_code=429, content={"detail": "rate limit exceeded"}),
+    )
     return app
 
 
