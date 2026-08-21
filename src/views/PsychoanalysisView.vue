@@ -499,13 +499,24 @@
           <span class="text-xs uppercase tracking-widest text-lime-500 block group-hover:text-lime-300 transition-colors">Zeromind</span>
           <span class="text-[10px] text-lime-800 mt-1 block">Enter trance — let this settle</span>
         </router-link>
+        <!-- Portrait CTA when 2+ providers unlocked; Calibrate nudge otherwise -->
         <router-link
+          v-if="connectedProviders.length >= 2"
+          to="/portrait"
+          class="block border border-indigo-800/60 p-5 hover:border-indigo-600 hover:bg-indigo-900/20 transition-all group focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:outline-none"
+        >
+          <span class="text-xl mb-2 block">◉</span>
+          <span class="text-xs uppercase tracking-widest text-indigo-400 block group-hover:text-indigo-200 transition-colors">Your Portrait</span>
+          <span class="text-[10px] text-indigo-800 mt-1 block">Read what your data reveals</span>
+        </router-link>
+        <router-link
+          v-else
           to="/calibrate"
           class="block border border-lime-800/60 p-5 hover:border-lime-600 hover:bg-lime-900/20 transition-all group focus-visible:ring-2 focus-visible:ring-lime-500 focus-visible:outline-none"
         >
           <span class="text-xl mb-2 block">◈</span>
           <span class="text-xs uppercase tracking-widest text-lime-500 block group-hover:text-lime-300 transition-colors">Calibrate</span>
-          <span class="text-[10px] text-lime-800 mt-1 block">Connect more signal sources</span>
+          <span class="text-[10px] text-lime-800 mt-1 block">Connect 2 sources to unlock your Portrait</span>
         </router-link>
       </div>
     </div>
