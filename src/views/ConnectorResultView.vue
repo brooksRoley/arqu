@@ -153,12 +153,15 @@
     <section class="relative max-w-4xl mx-auto px-6 py-16">
       <button
         @click="rawExpanded = !rawExpanded"
+        :aria-expanded="rawExpanded"
+        aria-controls="raw-signal-content"
         class="flex items-center gap-3 text-xs uppercase tracking-[0.3em] text-gray-600 font-mono hover:text-gray-400 transition-colors"
       >
         <span class="transform transition-transform duration-300" :class="rawExpanded ? 'rotate-90' : ''">&#9654;</span>
         Raw Signal
       </button>
       <div
+        id="raw-signal-content"
         v-if="rawExpanded && profile"
         class="mt-6 bg-gray-900/60 border border-gray-800 rounded-2xl p-6 overflow-x-auto"
       >
@@ -229,12 +232,13 @@
         step="0.05"
         :value="audioVolume"
         @input="(e) => { audioVolume = Number((e.target as HTMLInputElement).value); synthHandle?.setVolume(audioVolume) }"
+        aria-label="Volume"
         class="w-20 h-1 appearance-none bg-gray-700 rounded-full cursor-pointer accent-gray-500 opacity-60 hover:opacity-100 transition-opacity"
       />
       <button
         @click="synthHandle?.toggle()"
+        :aria-label="synthHandle?.isStarted.value ? 'Mute audio' : 'Unmute audio'"
         class="w-9 h-9 flex items-center justify-center rounded-full border border-gray-700 bg-gray-900/80 text-gray-400 hover:text-gray-200 hover:border-gray-500 transition-colors text-xs font-mono"
-        :title="synthHandle?.isStarted.value ? 'Mute' : 'Unmute'"
       >
         <span v-if="synthHandle?.isStarted.value">&#9834;</span>
         <span v-else>&#9835;</span>
@@ -648,4 +652,11 @@ onUnmounted(() => {
 
 <style scoped>
 .result-bg { background: #08060e; }
+
+button:focus-visible,
+input[type="range"]:focus-visible {
+  outline: 2px solid rgba(99, 102, 241, 0.8);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
 </style>
