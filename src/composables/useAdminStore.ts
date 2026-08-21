@@ -82,11 +82,6 @@ export interface PsychometricProfile {
   created_at: string
 }
 
-export interface MatchTrends {
-  seven_day: { players: number; matched: number; rate_pct: number }
-  thirty_day: { players: number; matched: number; rate_pct: number }
-}
-
 export interface ArchetypeCount {
   archetype: string
   count: number
@@ -109,7 +104,6 @@ const usersTotal = ref(0)
 const usersPage = ref(1)
 const funnel = ref<FunnelStep[]>([])
 const connectors = ref<ConnectorStat[]>([])
-const matchTrends = ref<MatchTrends | null>(null)
 const spotifyProfiles = ref<SpotifyProfile[]>([])
 const spotifyTotal = ref(0)
 const spotifyPage = ref(1)
@@ -157,15 +151,6 @@ async function fetchConnectors() {
   const { apiFetch } = useAuthStore()
   try {
     connectors.value = await apiFetch<ConnectorStat[]>('/api/analytics/connectors')
-  } catch (e: any) {
-    error.value = e.message
-  }
-}
-
-async function fetchMatchTrends() {
-  const { apiFetch } = useAuthStore()
-  try {
-    matchTrends.value = await apiFetch<MatchTrends>('/api/analytics/match-trends')
   } catch (e: any) {
     error.value = e.message
   }
@@ -260,7 +245,6 @@ export function useAdminStore() {
     usersPage: readonly(usersPage),
     funnel: readonly(funnel),
     connectors: readonly(connectors),
-    matchTrends: readonly(matchTrends),
     spotifyProfiles: readonly(spotifyProfiles),
     spotifyTotal: readonly(spotifyTotal),
     spotifyPage: readonly(spotifyPage),
@@ -278,7 +262,6 @@ export function useAdminStore() {
     fetchUsers,
     fetchFunnel,
     fetchConnectors,
-    fetchMatchTrends,
     fetchSpotifyProfiles,
     fetchPsychProfiles,
     fetchArchetypes,

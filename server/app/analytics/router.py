@@ -419,66 +419,6 @@ async def admin_connectors(_: UUID = Depends(require_admin)):
     return results
 
 
-# ── Admin: match rate trends ──────────────────────────────────────────────────
-
-@router.get("/match-trends")
-async def admin_match_trends(_: UUID = Depends(require_admin)):
-    """Return match rate trends for the last 7 and 30 days."""
-    async with get_conn() as conn:
-        row = await conn.fetchrow(
-            """
-            SELECT
-                -- Users who played the game (made any interaction)
-                COUNT(DISTINCT mi.actor_id) FILTER (
-                    WHERE mi.created_at >= now() - interval '7 days'
-                ) AS players_7d,
-                COUNT(DISTINCT mi.actor_id) FILTER (
-                    WHERE mi.created_at >= now() - interval '30 days'
-                ) AS players_30d,
-
-                -- Users who got a mutual match
-                COUNT(DISTINCT mm.user_id) FILTER (
-                    WHERE mm.matched_at >= now() - interval '7 days'
-                ) AS matched_7d,
-                COUNT(DISTINCT mm.user_id) FILTER (
-                    WHERE mm.matched_at >= now() - interval '30 days'
-                ) AS matched_30d
-
-            FROM match_interactions mi
-            FULL OUTER JOIN (
-                SELECT
-                    CASE WHEN a.actor_id < a.target_id THEN a.actor_id ELSE a.target_id END AS user_id,
-                    GREATEST(a.created_at, b.created_at) AS matched_at
-                FROM match_interactions a
-                JOIN match_interactions b
-                    ON  a.actor_id  = b.target_id
-                    AND a.target_id = b.actor_id
-                WHERE a.action = 'accept' AND b.action = 'accept'
-                  AND a.actor_id < a.target_id
-            ) mm ON TRUE
-            """
-        )
-
-    data = dict(row)
-    p7 = data["players_7d"] or 0
-    p30 = data["players_30d"] or 0
-    m7 = data["matched_7d"] or 0
-    m30 = data["matched_30d"] or 0
-
-    return {
-        "seven_day": {
-            "players": p7,
-            "matched": m7,
-            "rate_pct": round(m7 / p7 * 100, 1) if p7 > 0 else 0,
-        },
-        "thirty_day": {
-            "players": p30,
-            "matched": m30,
-            "rate_pct": round(m30 / p30 * 100, 1) if p30 > 0 else 0,
-        },
-    }
-
-
 # ── Admin: recent session events ─────────────────────────────────────────────
 
 @router.get("/events")
