@@ -94,7 +94,7 @@ function cardStyle(key: string) {
       @pointerleave="onCardLeave('checkin')"
     >
       <span class="card-title">Check-In</span>
-      <span class="card-desc">Journal, intake, and the game — your daily pipeline</span>
+      <span class="card-desc">Journal, intake — your daily practice</span>
       <div class="card-glare"></div>
     </router-link>
 
@@ -111,7 +111,8 @@ function cardStyle(key: string) {
       <div class="card-glare"></div>
     </router-link>
 
-    <div
+    <button
+      type="button"
       class="nav-card nav-card--meditation"
       :style="cardStyle('meditation')"
       @pointermove="onCardMove($event, 'meditation')"
@@ -122,7 +123,7 @@ function cardStyle(key: string) {
       <span class="card-title">Meditation</span>
       <span class="card-desc">Guided affirmations with gentle music and nature sounds</span>
       <div class="card-glare"></div>
-    </div>
+    </button>
 
     <router-link
       to="/reader"
@@ -190,7 +191,15 @@ function cardStyle(key: string) {
   overflow: hidden;
   will-change: transform;
   cursor: pointer;
+  font: inherit;
   transition: border-color 0.3s, box-shadow 0.3s, background 0.3s;
+}
+
+.nav-card:focus-visible {
+  outline: none;
+  box-shadow:
+    0 0 0 2px rgba(129, 140, 248, 0.8),
+    0 0 0 4px rgba(129, 140, 248, 0.2);
 }
 
 .nav-card:hover {
