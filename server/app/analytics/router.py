@@ -216,27 +216,8 @@ async def admin_users(
                 (SELECT COUNT(*) FROM oauth_tokens ot WHERE ot.user_id = u.id)
                     AS connector_count,
 
-                (SELECT COALESCE(SUM(karma_delta), 0)
-                 FROM karma_ledger kl WHERE kl.user_id = u.id)
-                    AS karma_total,
-
-                (SELECT COUNT(*) FROM match_interactions mi
-                 WHERE mi.actor_id = u.id AND mi.action = 'accept')
-                    AS matches_accepted,
-
-                (SELECT COUNT(*) FROM match_interactions mi
-                 WHERE mi.actor_id = u.id AND mi.action = 'reject')
-                    AS matches_rejected,
-
-                (SELECT COUNT(*) FROM match_interactions mi
-                 WHERE mi.target_id = u.id AND mi.action = 'accept')
-                    AS received_accepts,
-
                 (SELECT COUNT(*) FROM journal_entries je WHERE je.user_id = u.id)
                     AS journal_entry_count,
-
-                (SELECT COUNT(*) FROM messages m WHERE m.sender_id = u.id)
-                    AS messages_sent,
 
                 (vv.user_id IS NOT NULL)  AS has_vibe_vector,
                 (pm.user_id IS NOT NULL)  AS has_psychometrics,
@@ -287,9 +268,6 @@ async def admin_funnel(_: UUID = Depends(require_admin)):
                 COUNT(*) FILTER (WHERE ot.provider_count > 0)             AS connected_any,
                 COUNT(*) FILTER (WHERE ot.provider_count >= 2)            AS connected_2plus,
                 COUNT(*) FILTER (WHERE pm.user_id IS NOT NULL)            AS completed_psychometrics,
-                COUNT(*) FILTER (WHERE mi.actor_id IS NOT NULL)           AS played_game,
-                COUNT(*) FILTER (WHERE mm.user_id IS NOT NULL)            AS got_mutual_match,
-                COUNT(*) FILTER (WHERE msg.sender_id IS NOT NULL)         AS sent_message,
                 COUNT(*) FILTER (WHERE se_open.user_id IS NOT NULL)       AS opened_self_expression_view,
                 COUNT(*) FILTER (WHERE se_done.user_id IS NOT NULL)       AS completed_session,
                 COUNT(*) FILTER (WHERE se_return.user_id IS NOT NULL)     AS returned_next_day
@@ -301,20 +279,6 @@ async def admin_funnel(_: UUID = Depends(require_admin)):
                 SELECT user_id, COUNT(DISTINCT provider) AS provider_count
                 FROM oauth_tokens GROUP BY user_id
             ) ot ON ot.user_id = u.id
-            LEFT JOIN (
-                SELECT DISTINCT actor_id FROM match_interactions
-            ) mi ON mi.actor_id = u.id
-            LEFT JOIN (
-                SELECT DISTINCT
-                    CASE WHEN actor_id < target_id THEN actor_id ELSE target_id END AS user_id
-                FROM match_interactions a
-                JOIN match_interactions b
-                    ON a.actor_id = b.target_id AND a.target_id = b.actor_id
-                WHERE a.action = 'accept' AND b.action = 'accept'
-            ) mm ON mm.user_id = u.id
-            LEFT JOIN (
-                SELECT DISTINCT sender_id FROM messages
-            ) msg ON msg.sender_id = u.id
             -- Self-expression / hypnosis core loop (journal, check-in, zeromind)
             LEFT JOIN (
                 SELECT DISTINCT user_id FROM session_events
@@ -346,10 +310,7 @@ async def admin_funnel(_: UUID = Depends(require_admin)):
         ("connected_2plus",       data["connected_2plus"]),
         ("has_vibe_vector",       data["has_vibe_vector"]),
         ("completed_psychometrics", data["completed_psychometrics"]),
-        ("played_game",           data["played_game"]),
-        ("got_mutual_match",      data["got_mutual_match"]),
-        ("sent_message",          data["sent_message"]),
-        # New core-loop steps (sourced from session_events)
+        # Core-loop steps (sourced from session_events)
         ("opened_self_expression_view", data["opened_self_expression_view"]),
         ("completed_session",           data["completed_session"]),
         ("returned_next_day",           data["returned_next_day"]),
@@ -563,8 +524,12 @@ async def admin_connector_depth(_: UUID = Depends(require_admin)):
             """
             SELECT bucket, COUNT(*) AS count FROM (
                 SELECT u.id,
-                    LEAST((SELECT COUNT(*) FROM oauth_tokens ot WHERE ot.user_id = u.id), 3) AS bucket
+                    LEAST(COALESCE(ot.provider_count, 0), 3) AS bucket
                 FROM users u
+                LEFT JOIN (
+                    SELECT user_id, COUNT(DISTINCT provider) AS provider_count
+                    FROM oauth_tokens GROUP BY user_id
+                ) ot ON ot.user_id = u.id
             ) sub
             GROUP BY bucket
             ORDER BY bucket
@@ -630,7 +595,7 @@ async def admin_psychometrics(
 
 @router.get("/users/{user_id}/connectors")
 async def admin_user_connectors(
-    user_id: str,
+    user_id: UUID,
     _: UUID = Depends(require_admin),
 ):
     """Return all connector JSONB data for a specific user. Admin only."""
