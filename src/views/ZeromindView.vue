@@ -662,6 +662,7 @@ onUnmounted(() => {
     <canvas
       ref="canvas"
       class="zeromind-canvas"
+      aria-hidden="true"
       @mousemove="onMouseMove"
       @mousedown.prevent="onMouseDown"
       @mouseup="onMouseUp"
@@ -671,9 +672,15 @@ onUnmounted(() => {
       @touchend="onTouchEnd"
     />
 
+    <!-- Screen-reader live region: mirrors trance instruction / story word from canvas -->
+    <div class="sr-only" role="status" aria-live="polite" aria-atomic="true">
+      {{ sessionActive && currentInstruction ? currentInstruction : currentWord }}
+    </div>
+
     <!-- Mode carousel -->
     <nav
       class="mode-carousel"
+      aria-label="Trance mode selector"
       @touchstart.stop="onCarouselSwipeStart"
       @touchend.stop="onCarouselSwipeEnd"
     >
@@ -685,6 +692,7 @@ onUnmounted(() => {
           :key="m.id"
           :class="['mode-chip', { 'mode-chip--active': i === modeIndex }]"
           :style="{ '--c': m.colors[2], '--cd': m.colors[0] }"
+          :aria-pressed="i === modeIndex"
           @click="setMode(i)"
         >
           <span class="chip-glyph">{{ m.glyph }}</span>
@@ -701,6 +709,8 @@ onUnmounted(() => {
         v-if="sessionActive && phase !== 'idle'"
         class="phase-badge"
         :style="{ '--accent': phaseAccent }"
+        aria-live="polite"
+        aria-atomic="true"
       >
         <span class="badge-dot" />
         {{ phaseDisplayName }}
@@ -726,6 +736,18 @@ onUnmounted(() => {
   background: #0c0a12;
   overflow: hidden;
   user-select: none;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
 }
 
 .zeromind-canvas {
