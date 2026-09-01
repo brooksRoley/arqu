@@ -20,7 +20,7 @@ from uuid import UUID
 
 import httpx
 from fastapi import APIRouter, Depends, HTTPException, status
-from pydantic import BaseModel
+from pydantic import BaseModel, SecretStr
 
 from ..auth.deps import get_current_user_id
 from ..config import get_settings
@@ -35,7 +35,7 @@ _COSTAR_API_BASE = "https://api.costarastrology.com"
 
 class CoStarIngestRequest(BaseModel):
     costar_username: str
-    costar_password: str
+    costar_password: SecretStr
 
 
 class CoStarManualRequest(BaseModel):
@@ -67,7 +67,7 @@ async def costar_ingest(
                 f"{_COSTAR_API_BASE}/auth/login",
                 json={
                     "email": req.costar_username,
-                    "password": req.costar_password,
+                    "password": req.costar_password.get_secret_value(),
                 },
             )
 
