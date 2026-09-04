@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, reactive, computed, nextTick, watch, onMounted, onUnmounted } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRouter, RouterLink } from 'vue-router'
 import { usePollStore } from '@/composables/usePollStore'
 import { useAnalytics, type StreakData } from '@/composables/useAnalytics'
 import { useCosmicPhysics } from '@/composables/useCosmicPhysics'
@@ -496,6 +496,16 @@ onUnmounted(() => {
             </div>
           </div>
 
+          <!-- Streak return nudge — shown when user has an active streak -->
+          <nav v-if="streak && streak.streak > 0" class="streak-nudge" aria-label="Continue your practice">
+            <span class="streak-nudge-label">Day {{ streak.streak }} — your practice continues</span>
+            <div class="streak-nudge-row">
+              <RouterLink to="/journal" class="streak-pill">Journal</RouterLink>
+              <RouterLink to="/zeromind" class="streak-pill streak-pill--violet">Zeromind</RouterLink>
+              <RouterLink to="/checkin" class="streak-pill streak-pill--orange">Check-in</RouterLink>
+            </div>
+          </nav>
+
           <!-- Today's Practice — three-step daily ritual sequence -->
           <TodaysPractice v-if="token" />
 
@@ -861,6 +871,67 @@ onUnmounted(() => {
 
 .streak-dot--active {
   background: #fb923c;
+}
+
+/* ── Streak return nudge ── */
+.streak-nudge {
+  margin: 0 0 1.25rem;
+  padding: 1rem 1.125rem;
+  background: rgba(30, 27, 48, 0.7);
+  border: 1px solid rgba(99, 102, 241, 0.18);
+  border-radius: 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  text-align: left;
+}
+
+.streak-nudge-label {
+  font-size: 0.7rem;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: #64748b;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+.streak-nudge-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.streak-pill {
+  font-size: 0.75rem;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  padding: 0.5rem 1rem;
+  border-radius: 999px;
+  border: 1px solid rgba(148, 163, 184, 0.22);
+  color: #94a3b8;
+  text-decoration: none;
+  transition: border-color 0.15s, color 0.15s, background 0.15s;
+}
+
+.streak-pill:hover {
+  border-color: rgba(99, 102, 241, 0.55);
+  color: #a5b4fc;
+  background: rgba(99, 102, 241, 0.06);
+}
+
+.streak-pill:focus-visible {
+  outline: 2px solid rgba(99, 102, 241, 0.8);
+  outline-offset: 2px;
+}
+
+.streak-pill--violet:hover {
+  border-color: rgba(167, 139, 250, 0.55);
+  color: #c4b5fd;
+  background: rgba(167, 139, 250, 0.06);
+}
+
+.streak-pill--orange:hover {
+  border-color: rgba(249, 115, 22, 0.45);
+  color: #fb923c;
+  background: rgba(249, 115, 22, 0.06);
 }
 
 </style>
