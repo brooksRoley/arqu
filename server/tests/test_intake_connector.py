@@ -11,7 +11,7 @@ from __future__ import annotations
 
 import datetime
 from contextlib import asynccontextmanager
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, patch
 from uuid import UUID
 
 import pytest
@@ -88,7 +88,9 @@ class TestConfess:
         assert resp.json()["attachment_style"] == "dismissive-avoidant"
 
     async def test_attachment_fearful_avoidant(self):
-        resp, _ = await self._post(["I want to be close but when they get close I push them away."])
+        # Pattern: push.{0,10}pull — "push and pull" matches in 5 chars.
+        # Must not contain anxious/dismissive trigger words (afraid, alone, etc.)
+        resp, _ = await self._post(["I push and pull in every relationship — I can never decide."])
         assert resp.json()["attachment_style"] == "fearful-avoidant"
 
     async def test_defense_humor(self):
