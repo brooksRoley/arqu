@@ -19,9 +19,9 @@ from fastapi import FastAPI
 from httpx import ASGITransport, AsyncClient
 from fastapi.testclient import TestClient
 
-from server.app.intake.router import router
-from server.app.auth.deps import get_current_user_id
-from server.tests.conftest import FakeConn, make_get_conn
+from app.intake.router import router
+from app.auth.deps import get_current_user_id
+from tests.conftest import FakeConn, make_get_conn
 
 USER_ID = UUID("aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee")
 _FAKE_ENCRYPTED = (b"enc", b"nonce")
@@ -45,7 +45,7 @@ def _make_tx(conn: FakeConn):
     return _tx
 
 
-# ── /confess  — async tests ───────────────────────────────────────────────────────────────
+# ── /confess  — async tests ────────────────────────────────────────────────────────────────────
 
 
 @pytest.mark.anyio
@@ -57,14 +57,12 @@ class TestConfess:
         app = _build_app()
         body = {"confessions": confessions, **(extra or {})}
         with (
-            patch("server.app.intake.router.query_relevant_journal",
+            patch("app.intake.router.query_relevant_journal",
                   new_callable=AsyncMock, return_value=memories or []),
-            patch("server.app.intake.router.encrypt_api_key", return_value=_FAKE_ENCRYPTED),
-            patch("server.app.intake.router.get_tx", new=_make_tx(conn)),
-            patch("server.app.intake.router.upsert_user_vector", new_callable=AsyncMock),
-            patch("server.app.intake.router.asyncio") as mock_asyncio,
+            patch("app.intake.router.encrypt_api_key", return_value=_FAKE_ENCRYPTED),
+            patch("app.intake.router.get_tx", new=_make_tx(conn)),
+            patch("app.intake.router.upsert_user_vector", new_callable=AsyncMock),
         ):
-            mock_asyncio.create_task = MagicMock()
             async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as c:
                 resp = await c.post("/intake/confess", json=body)
         return resp, conn
@@ -111,6 +109,7 @@ class TestConfess:
         assert resp.json()["memories"] == ["echo one", "echo two"]
 
     async def test_readiness_nudged_by_memories(self):
+        # 2 memories add 6 to readiness; confirm score is >= baseline
         memories = [{"text_preview": "a"}, {"text_preview": "b"}]
         resp_no_mem, _ = await self._post(["neutral"])
         resp_with_mem, _ = await self._post(["neutral"], memories=memories)
@@ -139,13 +138,13 @@ class TestConfess:
         assert resp.status_code == 200
 
     async def test_longer_text_increases_readiness(self):
-        resp_short, _ = await self._post(["hi"])
+        short_resp, _ = await self._post(["hi"])
         long_text = "I feel deeply and completely overwhelmed by everything around me. " * 5
-        resp_long, _ = await self._post([long_text])
-        assert resp_long.json()["readiness_score"] >= resp_short.json()["readiness_score"]
+        long_resp, _ = await self._post([long_text])
+        assert long_resp.json()["readiness_score"] >= short_resp.json()["readiness_score"]
 
 
-# ── /confess — pydantic validation (sync) ──────────────────────────────────────────────
+# ── /confess — pydantic validation (sync) ────────────────────────────────────────────────────────
 
 
 class TestConfessValidation:
@@ -168,7 +167,7 @@ class TestConfessValidation:
         assert client.post("/intake/confess", json={}).status_code == 422
 
 
-# ── GET /intake/vector ──────────────────────────────────────────────────────────────
+# ── GET /intake/vector ──────────────────────────────────────────────────────────────────────────
 
 
 @pytest.mark.anyio
@@ -185,7 +184,7 @@ class TestVibeVector:
         }
         conn = FakeConn(fetchrow_results=[row])
         app = _build_app()
-        with patch("server.app.intake.router.get_conn", new=make_get_conn(conn)):
+        with patch("app.intake.router.get_conn", new=make_get_conn(conn)):
             async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as c:
                 resp = await c.get("/intake/vector")
 
@@ -197,14 +196,14 @@ class TestVibeVector:
     async def test_404_when_no_vector(self):
         conn = FakeConn(fetchrow_results=[None])
         app = _build_app()
-        with patch("server.app.intake.router.get_conn", new=make_get_conn(conn)):
+        with patch("app.intake.router.get_conn", new=make_get_conn(conn)):
             async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as c:
                 resp = await c.get("/intake/vector")
 
         assert resp.status_code == 404
 
 
-# ── POST /intake/fitting ──────────────────────────────────────────────────────────────
+# ── POST /intake/fitting ──────────────────────────────────────────────────────────────────────────
 
 
 @pytest.mark.anyio
@@ -212,7 +211,7 @@ class TestFitting:
     async def _post_fitting(self, phase: str, data: dict):
         conn = FakeConn()
         app = _build_app()
-        with patch("server.app.intake.router.get_conn", new=make_get_conn(conn)):
+        with patch("app.intake.router.get_conn", new=make_get_conn(conn)):
             async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as c:
                 resp = await c.post("/intake/fitting", json={"phase": phase, "data": data})
         return resp, conn
